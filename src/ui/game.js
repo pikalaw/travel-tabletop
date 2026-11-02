@@ -16,7 +16,7 @@ const timeNow = () => new Date().toLocaleTimeString([], { hour: '2-digit', minut
 /**
  * @param {{ session: any, onExit: () => void, onRematch?: () => void, pairing?: any }} props
  */
-export function Game({ session, onExit, onRematch, pairing, lock }) {
+export function Game({ session, onExit, onRematch, pairing }) {
   const same = session.kind === 'same-device';
   const [, setTick] = useState(0);
   const [viewer, setViewer] = useState(same ? 'nobody' : session.me);
@@ -29,7 +29,7 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   const [sheet, setSheet] = useState(null);
   const [full, setFull] = useState(null);          // { cardId }
   const [shown, setShown] = useState(null);        // { actor, cardIds }: the reveal screen
-  const [pinFor, setPinFor] = useState(null);      // player asked for their code before unblinding
+  const [confirmFor, setConfirmFor] = useState(null); // player asked "are you sure you are …?" before unblinding
   const [pointMode, setPointMode] = useState(false);
   const [attaching, setAttaching] = useState(null); // { cardId, zone }: waiting for the card to attach it to
   const [combat, setCombat] = useState(false);       // combat mode: taps mark attackers and blockers
@@ -343,11 +343,8 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   }
 
   // ----- same-device blind / unblind -----
-  /** Ask for the player's code (if the game has codes), then unblind. */
-  function unblind(pl) {
-    if (lock) { setPinFor(pl); return; }
-    doUnblind(pl);
-  }
+  /** Check it is really that player in front of the screen, then unblind. */
+  function unblind(pl) { setConfirmFor(pl); }
 
   function doUnblind(pl) {
     setViewer(pl);
@@ -529,9 +526,8 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
       </div>
       ${footer}
     </footer>
-    ${pinFor ? html`<${PinDialog} name=${state.players[pinFor].name} otherName=${state.players[other(pinFor)].name}
-        check=${(code) => lock.check(pinFor, code)} reset=${(otherCode, code) => lock.reset(pinFor, otherCode, code)}
-        onOk=${() => { const pl = pinFor; setPinFor(null); doUnblind(pl); }} onCancel=${() => setPinFor(null)}/>` : null}
+    ${confirmFor ? html`<${ConfirmPlayer} pl=${confirmFor} name=${state.players[confirmFor].name}
+        onOk=${() => { const pl = confirmFor; setConfirmFor(null); doUnblind(pl); }} onCancel=${() => setConfirmFor(null)}/>` : null}
     ${shown ? html`<${RevealScreen} ctx=${ctx} shown=${shown} onClose=${() => setShown(null)}/>` : null}
     ${pointer ? html`<div class="pointer-ring ${pointer.actor}" style=${`left:${pointer.rect.left - 4}px;top:${pointer.rect.top - 4}px;width:${pointer.rect.width + 8}px;height:${pointer.rect.height + 8}px`}></div>` : null}
   </div>`;
@@ -555,50 +551,17 @@ function RevealScreen({ ctx, shown, onClose }) {
   </div>`;
 }
 
-/** Code entry before unblinding a hand, with a reset that needs the other player's code. */
-function PinDialog({ name, otherName, check, reset, onOk, onCancel }) {
-  const [mode, setMode] = useState('enter');
-  const [code, setCode] = useState('');
-  const [otherCode, setOtherCode] = useState('');
-  const [newCode, setNewCode] = useState('');
-  const [err, setErr] = useState('');
-  const digits = (v) => v.replace(/\D/g, '').slice(0, 4);
-  const tryCode = async (v) => {
-    setCode(v); setErr('');
-    if (v.length < 4) return;
-    if (await check(v)) onOk();
-    else { setErr('Wrong code.'); setCode(''); }
-  };
-  const doReset = async (e) => {
-    e.preventDefault();
-    const problem = await reset(otherCode, newCode);
-    if (problem) { setErr(problem); setOtherCode(''); return; }
-    onOk();
-  };
-  const field = (value, onInput, label, autofocus) => html`<label>${label}
-    <input class="code-input" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="••••"
-      autoFocus=${autofocus} value=${value} onInput=${(e) => { const v = digits(e.currentTarget.value); e.currentTarget.value = v; onInput(v); }}/>
-  </label>`;
-  return html`<div class="pin-screen" role="dialog" aria-label=${`Code for ${name}`}>
-    ${mode === 'enter' ? html`<div class="pin-box">
-      <h3>${name}, enter your code</h3>
-      ${field(code, tryCode, '', true)}
-      ${err ? html`<p class="error">${err}</p>` : null}
-      <div class="pin-actions">
-        <button class="btn ghost" onClick=${() => { setMode('reset'); setErr(''); }}>Forgot code?</button>
+/** "Are you sure you are …?" before unblinding, in that player's colour (the colour of their button). */
+function ConfirmPlayer({ pl, name, onOk, onCancel }) {
+  return html`<div class="confirm-screen" role="dialog" aria-label=${`Are you sure you are ${name}?`} onClick=${(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+    <div class="confirm-box ${pl}">
+      <h3>Are you sure you are ${name}?</h3>
+      <p>Your hand will be shown face up.</p>
+      <div class="confirm-actions">
         <button class="btn" onClick=${onCancel}>Cancel</button>
+        <button class="btn yes" onClick=${onOk} autoFocus>Yes, I’m ${name}</button>
       </div>
-    </div>` : html`<form class="pin-box" onSubmit=${doReset}>
-      <h3>Set a new code for ${name}</h3>
-      <p class="muted small">${otherName} confirms with their code, then ${name} picks a new one.</p>
-      ${field(otherCode, setOtherCode, `${otherName}'s code`, true)}
-      ${field(newCode, setNewCode, `New code for ${name}`, false)}
-      ${err ? html`<p class="error">${err}</p>` : null}
-      <div class="pin-actions">
-        <button class="btn ghost" type="button" onClick=${() => { setMode('enter'); setErr(''); }}>Back</button>
-        <button class="btn primary" type="submit" disabled=${otherCode.length < 4 || newCode.length < 4}>Set code and unblind</button>
-      </div>
-    </form>`}
+    </div>
   </div>`;
 }
 

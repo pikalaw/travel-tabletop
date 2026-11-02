@@ -39,8 +39,8 @@ button { font: inherit; color: inherit; }
 .btn.on { background: #3a5a4c; border-color: rgba(255,255,255,.25); }
 .btn.big { min-height: 48px; font-size: 16px; padding: 10px 18px; }
 .btn.round { min-height: 34px; min-width: 34px; padding: 0; border-radius: 50%; font-size: 18px; }
-.btn.p1c { border-color: var(--p1); color: var(--p1); }
-.btn.p2c { border-color: var(--p2); color: var(--p2); }
+.btn.p1c { background: var(--p1); border-color: var(--p1); color: #12160f; font-weight: 600; }
+.btn.p2c { background: var(--p2); border-color: var(--p2); color: #12160f; font-weight: 600; }
 input, textarea {
   background: #0b1511; color: var(--ink); border: 1px solid var(--cell-line); border-radius: 8px;
   padding: 8px 10px; font: inherit; font-size: 16px; width: 100%;
@@ -306,11 +306,14 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 .reveal-hint { font-size: 12px; color: var(--ink-3); }
 
 /* Code entry before unblinding (one device) */
-.pin-screen { position: fixed; inset: 0; z-index: 1600; background: #050a08; display: grid; place-items: center; padding: 16px; }
-.pin-box { display: grid; gap: 12px; width: min(92vw, 340px); }
-.pin-box h3 { margin: 0; font-size: 18px; }
-.code-input { font-size: 28px; letter-spacing: 12px; text-align: center; font-family: ui-monospace, Menlo, monospace; }
-.pin-actions { display: flex; justify-content: space-between; gap: 8px; }
+.confirm-screen { position: fixed; inset: 0; z-index: 1600; background: rgba(0,0,0,.72); display: grid; place-items: center; padding: 16px; }
+.confirm-box { display: grid; gap: 10px; width: min(92vw, 360px); padding: 20px; border-radius: 14px; color: #12160f; box-shadow: 0 12px 40px rgba(0,0,0,.6); }
+.confirm-box.p1 { background: var(--p1); } .confirm-box.p2 { background: var(--p2); }
+.confirm-box h3 { margin: 0; font-size: 20px; }
+.confirm-box p { margin: 0; font-size: 14px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.confirm-box .btn { background: rgba(0,0,0,.18); border-color: rgba(0,0,0,.35); color: #12160f; }
+.confirm-box .btn.yes { background: #12160f; color: #fff; border-color: transparent; font-weight: 600; }
 
 .deck-pick.tall { max-height: 52vh; }
 .file-btn { position: relative; overflow: hidden; }

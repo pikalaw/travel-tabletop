@@ -157,7 +157,7 @@ Both players can share one device: the board stays visible to both, and only han
 - While blinded, the footer adds **unblind to \<player 1 name>** and **unblind to \<player 2 name>**.
 - Unblinding to a player also switches the board to that player's perspective: their rows move to the bottom and their hand fills (5,2). Switching perspective is only a re-render; state does not change.
 - Blinding keeps the board in the last perspective, so both players can work out blocks on one shared view.
-- Only one hand is ever unblinded at a time. Each player sets a hidden 4-digit code on the setup screen; unblinding asks for that player's code. A forgotten code is reset by entering the other player's code, then a new one. The action log export is unavailable until the game ends, because the log shows both hands. Codes deter a casual peek; they are not strong security.
+- Only one hand is ever unblinded at a time. Unblinding first asks "Are you sure you are <name>?" in a dialog coloured like that player's unblind button, so the wrong player notices before a hand is shown. There are no codes: a blinded hand can still be dragged onto the board, so a code would protect nothing; players rely on trust and on the ticker, which shows such moves. The action log export is unavailable until the game ends, because the log shows both hands.
 
 **Private views.** Peek, reveal-to-self and library search open only while the acting player's hand is unblinded, so private cards never show on a blinded screen.
 

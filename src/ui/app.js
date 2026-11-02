@@ -11,7 +11,6 @@ import { createOffer, acceptAnswer, answerOffer, unlockLocalNetwork } from '../t
 import { ensureFixtures } from '../storage/fixtures.js';
 import { listDecks, gamePersistence, listGames, getGame, loadSnapshots, loadLog, deleteGame, getMeta, setMeta } from '../storage/db.js';
 import { APP_VERSION } from '../version.js';
-import { CODE_RE, makePins, makeLock } from '../client/lock.js';
 
 import { newGameId, parseGameLink, setGameLink } from './link.js';
 
@@ -152,7 +151,6 @@ function Setup({ go, startGame }) {
   const [names, setNames] = useState({ p1: 'Player 1', p2: 'Player 2' });
   const [pick, setPick] = useState({ p1: [], p2: [] });
   const [life, setLife] = useState(20);
-  const [codes, setCodes] = useState({ p1: '', p2: '' }); // never saved in plain text
   const [stage, setStage] = useState('form');
   const [err, setErr] = useState('');
   useEffect(() => {
@@ -170,12 +168,9 @@ function Setup({ go, startGame }) {
 
   const startSame = async () => {
     if (!pick.p1.length || !pick.p2.length) { setErr('Each player needs at least one deck.'); return; }
-    if (!CODE_RE.test(codes.p1) || !CODE_RE.test(codes.p2)) { setErr('Each player needs a 4-digit code.'); return; }
     await saveSetup();
     const setup = { p1: { name: names.p1, deckIds: pick.p1 }, p2: { name: names.p2, deckIds: pick.p2 }, life };
-    const lock = await makePins(codes);
-    setCodes({ p1: '', p2: '' });
-    await startGame({ kind: 'same-device', setup, lock });
+    await startGame({ kind: 'same-device', setup });
   };
 
   if (stage === 'host') {
@@ -202,10 +197,6 @@ function Setup({ go, startGame }) {
   const playerForm = (pl, title) => html`<fieldset class="player-form">
     <legend>${title}</legend>
     <label>Name <input value=${names[pl]} onInput=${(e) => setNames({ ...names, [pl]: e.currentTarget.value })}/></label>
-    ${mode === 'same' ? html`<label>4-digit code (needed to see your hand)
-      <input class="code-input" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="••••"
-        value=${codes[pl]} onInput=${(e) => { const v = e.currentTarget.value.replace(/\D/g, '').slice(0, 4); e.currentTarget.value = v; setCodes((c) => ({ ...c, [pl]: v })); }}/>
-    </label>` : null}
     <div class="muted small">Decks: pick one or more. Cards from all chosen decks are shuffled into one library. Both players may pick the same deck.</div>
     <${DeckPicker} decks=${decks} selected=${pick[pl]} onToggle=${(id, on) => setPick((prev) => ({ ...prev, [pl]: on ? [...prev[pl].filter((x) => x !== id), id] : prev[pl].filter((x) => x !== id) }))}/>
   </fieldset>`;
@@ -343,7 +334,7 @@ function App() {
 
   async function startGame(opts) {
     if (opts.kind === 'same-device') {
-      const meta = { mode: 'same-device', role: 'host', setup: opts.setup, ...(opts.lock || {}) };
+      const meta = { mode: 'same-device', role: 'host', setup: opts.setup };
       const host = await makeHost(meta);
       const payload = await startPayload(opts.setup, newGameId(), 'same-device');
       host.dispatch({ type: 'startGame', actor: 'host', payload });
@@ -406,8 +397,7 @@ function App() {
       const payload = await startPayload(meta.setup, newGameId(), session.state.mode, meta.setup.p2?.spec ? { name: meta.setup.p2.name, spec: meta.setup.p2.spec } : null);
       session.host.dispatch({ type: 'startGame', actor: 'host', payload });
     } : null;
-    const lock = session.kind === 'same-device' ? makeLock(meta, () => session.state.gameId) : null;
-    setGame({ session, rematch, pairing, lock });
+    setGame({ session, rematch, pairing });
     go('game');
   }
 
@@ -416,7 +406,7 @@ function App() {
     if (!rec) return;
     const snaps = await loadSnapshots(id);
     const log = await loadLog(id);
-    const meta = { mode: rec.mode, role: rec.role, setup: rec.setup, pins: rec.pins, pinSalt: rec.pinSalt };
+    const meta = { mode: rec.mode, role: rec.role, setup: rec.setup };
     const host = await makeHost(meta, rec.state, snaps, log.length ? log[log.length - 1].seq : 0);
     const session = new LocalSession(host, { mode: rec.mode === 'networked' ? 'host' : 'same-device', me: 'p1' });
     openGame(session, meta);
@@ -453,7 +443,7 @@ function App() {
         catch (e) { toast(String(e.message || e), 'warn', 8000); }
       }}/>
     </div>`; break;
-    case 'game': screen = game ? html`<${Game} key=${game.session.state.gameId} session=${game.session} onExit=${exitGame} onRematch=${game.rematch} pairing=${game.pairing} lock=${game.lock}/>` : null; break;
+    case 'game': screen = game ? html`<${Game} key=${game.session.state.gameId} session=${game.session} onExit=${exitGame} onRematch=${game.rematch} pairing=${game.pairing}/>` : null; break;
     default: screen = null;
   }
   return html`${screen}

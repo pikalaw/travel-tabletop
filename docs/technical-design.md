@@ -197,7 +197,7 @@ function viewFor(state: GameState, perspective: PlayerId, viewer: Viewer): Board
 - **Peek and search trays** read the library from local state and render only when viewer = that library's owner, or the inspecting player in networked mode.
 - Visibility is enforced only in the view. Both devices hold the full state, which the PRD accepts.
 
-**Unblind codes** (`src/client/lock.js`). At setup, each player's 4-digit code is hashed as SHA-256 of `salt:player:code` with a random per-game salt; only `pins` and `pinSalt` are stored, on the game record, so resume and rematch keep them. Unblind checks the hash before changing the viewer. A reset verifies the other player's code, replaces the hash, and saves the record at once. With 10,000 possible codes and the hashes on the device, this deters a casual peek; it does not stop someone who opens the browser's storage.
+**Unblinding.** Same-device unblind asks "Are you sure you are <name>?" in a dialog filled with that player's colour (the same fill as their unblind button) before changing the viewer. The 4-digit codes that used to guard this were removed: the blinded hand stays on the board and can be dragged out, so codes protected nothing. Saved games from before may still hold `pins` and `pinSalt`; they are ignored.
 
 ## Transport, pairing and protocol
 
