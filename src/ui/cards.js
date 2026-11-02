@@ -46,10 +46,16 @@ export function Card({ ctx, card, zone, h, override, style = '', interactive = t
   if (card.faceDown) markers.push(html`<span class="mark fd" title="Face down">FD</span>`);
   if (card.revealed && zoneKind(zone) === 'hand') markers.push(html`<span class="mark rev" title="Revealed">R</span>`);
   if (card.face === 'back' && img.visible) markers.push(html`<span class="mark flip" title="Flipped">↻</span>`);
+  // Combat marks: ⚔n on an attacker, 🛡n on a blocker for each attacker it blocks.
+  if (card.attacking) markers.unshift(html`<span class="mark atk" title="Attacking">⚔${card.attacking}</span>`);
+  if (card.blocking?.length) {
+    const nums = card.blocking.map((id) => ctx.state.cards[id]?.attacking).filter(Boolean).join(' ');
+    markers.unshift(html`<span class="mark blk" title="Blocking">🛡${nums}</span>`);
+  }
   // Top-left stays visible when the next card overlaps this one in a crowded row.
   if (attachedN) markers.unshift(html`<span class="mark att-count" title="${attachedN} attached">+${attachedN}</span>`);
   return html`
-    <div class="card ${tapped ? 'tapped' : ''} ${tucked ? 'tucked' : ''} ${ctx.pointed === card.id ? 'pointed' : ''}" data-card=${card.id} data-zone=${zone}
+    <div class="card ${tapped ? 'tapped' : ''} ${tucked ? 'tucked' : ''} ${ctx.pointed === card.id ? 'pointed' : ''} ${ctx.selected === card.id ? 'selected' : ''}" data-card=${card.id} data-zone=${zone}
          data-card-target=${card.id} data-attached-to=${card.attachedTo || null} style=${`width:${boxW}px;height:${h}px;${style}`}>
       <div class="card-inner" style=${`width:${w}px;height:${h}px`}>
         ${img.url

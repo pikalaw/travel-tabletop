@@ -27,6 +27,10 @@ export interface CardInstance {
   counters: Counters;
   /** id of the card this one is attached to (same battlefield zone; one level only) */
   attachedTo?: string;
+  /** attack number (1, 2, …) while marked as attacking */
+  attacking?: number;
+  /** ids of the attackers this card blocks */
+  blocking?: string[];
 }
 
 export interface PlayerCounter { key: string; value: number }

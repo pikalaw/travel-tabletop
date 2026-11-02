@@ -255,6 +255,78 @@ describe('attachments', () => {
   });
 });
 
+describe('combat marks', () => {
+  const send = (h, type, payload, actor = 'p1') => h.dispatch({ type, actor, payload });
+  function setup() {
+    const h = started();
+    const [a1, a2] = h.state.zones['p1.hand'];
+    const [b1, b2] = h.state.zones['p2.hand'];
+    for (const id of [a1, a2]) send(h, 'move', { cardId: id, from: 'p1.hand', to: 'p1.battlefield' });
+    for (const id of [b1, b2]) send(h, 'move', { cardId: id, from: 'p2.hand', to: 'p2.battlefield' }, 'p2');
+    return { h, a1, a2, b1, b2 };
+  }
+
+  it('numbers attackers in order and keeps numbers when one stops', () => {
+    const { h, a1, a2 } = setup();
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield' });
+    send(h, 'attack', { cardId: a2, from: 'p1.battlefield' });
+    expect([h.state.cards[a1].attacking, h.state.cards[a2].attacking]).toEqual([1, 2]);
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield' }); // toggles off
+    expect(h.state.cards[a1].attacking).toBeUndefined();
+    expect(h.state.cards[a2].attacking).toBe(2);
+  });
+
+  it('blocks need an attacker; several blockers on one, one blocker on several, toggling', () => {
+    const { h, a1, a2, b1, b2 } = setup();
+    expect(send(h, 'block', { cardId: b1, from: 'p2.battlefield', attackerId: a1, attackerZone: 'p1.battlefield' }, 'p2')).toMatchObject({ ok: false, error: 'invalid' });
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield' });
+    send(h, 'attack', { cardId: a2, from: 'p1.battlefield' });
+    send(h, 'block', { cardId: b1, from: 'p2.battlefield', attackerId: a1, attackerZone: 'p1.battlefield' }, 'p2');
+    send(h, 'block', { cardId: b2, from: 'p2.battlefield', attackerId: a1, attackerZone: 'p1.battlefield' }, 'p2');
+    send(h, 'block', { cardId: b2, from: 'p2.battlefield', attackerId: a2, attackerZone: 'p1.battlefield' }, 'p2');
+    expect(h.state.cards[b1].blocking).toEqual([a1]);
+    expect(h.state.cards[b2].blocking).toEqual([a1, a2]);
+    send(h, 'block', { cardId: b2, from: 'p2.battlefield', attackerId: a1, attackerZone: 'p1.battlefield' }, 'p2');
+    expect(h.state.cards[b2].blocking).toEqual([a2]);
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('an attacker that stops attacking or leaves play frees its blockers', () => {
+    const { h, a1, a2, b1 } = setup();
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield' });
+    send(h, 'attack', { cardId: a2, from: 'p1.battlefield' });
+    send(h, 'block', { cardId: b1, from: 'p2.battlefield', attackerId: a1, attackerZone: 'p1.battlefield' }, 'p2');
+    send(h, 'block', { cardId: b1, from: 'p2.battlefield', attackerId: a2, attackerZone: 'p1.battlefield' }, 'p2');
+    send(h, 'move', { cardId: a1, from: 'p1.battlefield', to: 'p1.graveyard' });
+    expect(h.state.cards[a1].attacking).toBeUndefined();
+    expect(h.state.cards[b1].blocking).toEqual([a2]);
+    send(h, 'attack', { cardId: a2, from: 'p1.battlefield', value: false });
+    expect(h.state.cards[b1].blocking).toBeUndefined();
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('end combat and pass turn clear every mark; moving within play keeps them', () => {
+    const { h, a1, b1 } = setup();
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield' });
+    send(h, 'block', { cardId: b1, from: 'p2.battlefield', attackerId: a1, attackerZone: 'p1.battlefield' }, 'p2');
+    send(h, 'move', { cardId: b1, from: 'p2.battlefield', to: 'p2.battlefield', toIndex: 0 });
+    expect(h.state.cards[b1].blocking).toEqual([a1]);
+    send(h, 'endCombat', {});
+    expect(h.state.cards[a1].attacking).toBeUndefined();
+    expect(h.state.cards[b1].blocking).toBeUndefined();
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield' });
+    expect(h.state.cards[a1].attacking).toBe(1); // numbering restarts after combat
+    send(h, 'passTurn', {});
+    expect(h.state.cards[a1].attacking).toBeUndefined();
+  });
+
+  it('only cards in play can attack', () => {
+    const h = started();
+    const id = h.state.zones['p1.hand'][0];
+    expect(send(h, 'attack', { cardId: id, from: 'p1.hand' })).toMatchObject({ ok: false, error: 'invalid' });
+  });
+});
+
 // ---------- Property tests ----------
 
 const ZONES = allZones();
@@ -278,6 +350,11 @@ const cmdArb = fc.oneof(
   fc.record({ type: fc.constant('attach'), pick: fc.nat(), target: fc.nat() }),
   fc.record({ type: fc.constant('attach'), pick: fc.nat(), target: fc.nat() }),
   fc.record({ type: fc.constant('detach'), pick: fc.nat() }),
+  fc.record({ type: fc.constant('attack'), target: fc.nat() }),
+  fc.record({ type: fc.constant('attack'), target: fc.nat() }),
+  fc.record({ type: fc.constant('block'), target: fc.nat(), pick: fc.nat() }),
+  fc.record({ type: fc.constant('block'), target: fc.nat(), pick: fc.nat() }),
+  fc.record({ type: fc.constant('endCombat') }),
 );
 
 /** Turn an abstract step into a concrete command against the current state. */
@@ -302,6 +379,16 @@ function concretize(state, step) {
       const [t, tz] = field.length ? field[step.target % field.length] : ['none', 'p1.battlefield'];
       return { type: 'attach', actor: 'p1', payload: { cardId: id, from, toCardId: t, toZone: tz } };
     }
+    case 'attack': case 'block': {
+      const field = ['p1.battlefield', 'p2.battlefield', 'p1.lands'].flatMap((z) => state.zones[z].map((c) => [c, z]));
+      if (!field.length) return { type: 'endCombat', actor: 'p1', payload: {} };
+      const [c, z] = field[step.target % field.length];
+      if (step.type === 'attack') return { type: 'attack', actor: 'p1', payload: { cardId: c, from: z } };
+      const atk = field.filter(([x]) => state.cards[x].attacking);
+      const [a, az] = atk.length ? atk[step.pick % atk.length] : field[step.pick % field.length];
+      return { type: 'block', actor: 'p2', payload: { cardId: c, from: z, attackerId: a, attackerZone: az } };
+    }
+    case 'endCombat': return { type: 'endCombat', actor: 'p1', payload: {} };
     case 'detach': {
       const att = Object.values(state.cards).filter((c) => c.attachedTo).map((c) => c.id).sort();
       const a = att.length ? att[step.pick % att.length] : id;
@@ -312,17 +399,19 @@ function concretize(state, step) {
 
 describe('properties', () => {
   it('card conservation holds after any command sequence', () => {
-    let attachedSeen = 0;
+    let attachedSeen = 0, blocksSeen = 0;
     fc.assert(fc.property(fc.array(cmdArb, { maxLength: 60 }), fc.integer({ min: 1, max: 1e6 }), (steps, seed) => {
       const h = started(new Host({ random: seeded(seed) }));
       for (const step of steps) {
         const r = h.dispatch(concretize(h.state, step));
         if (r.ok && step.type === 'attach') attachedSeen++;
+        if (r.ok && step.type === 'block') blocksSeen++;
         const bad = checkInvariants(h.state);
         if (bad) throw new Error(bad);
       }
     }), { numRuns: 150 });
     expect(attachedSeen).toBeGreaterThan(10); // the generator really exercises attachments
+    expect(blocksSeen).toBeGreaterThan(10);   // …and blocks
   });
 
   it('undo restores the prior state exactly', () => {

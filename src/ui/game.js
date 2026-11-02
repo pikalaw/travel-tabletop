@@ -30,6 +30,8 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   const [pinFor, setPinFor] = useState(null);      // player asked for their code before unblinding
   const [pointMode, setPointMode] = useState(false);
   const [attaching, setAttaching] = useState(null); // { cardId, zone }: waiting for the card to attach it to
+  const [combat, setCombat] = useState(false);       // combat mode: taps mark attackers and blockers
+  const [blocker, setBlocker] = useState(null);      // { cardId, zone }: chosen blocker, waiting for its attacker
   const [label, setLabel] = useState('loyalty');
   const [art, setArt] = useState(new Map());
   const [tokenDecks, setTokenDecks] = useState([]);
@@ -156,6 +158,7 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
       setAttaching(null);
       return;
     }
+    if (combat) { combatTap(el); return; }
     if (pointMode) {
       const cardId = el.dataset.card || null;
       const zone = el.dataset.zone || el.dataset.slot || slotOf(el)?.dataset.slot || null;
@@ -197,6 +200,33 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
       else if (el.dataset.collapsed || el.dataset.groups) setOpenSlot(zone);
     }
   }
+
+  /**
+   * Combat mode. A card on the active player's side toggles attacking. A card on the other side
+   * is picked as a blocker; the next tap on an attacker pairs them (tap again to undo the pair).
+   */
+  function combatTap(el) {
+    const zone = el.dataset.zone;
+    const k = zoneKind(zone);
+    if (!el.dataset.card || el.closest('.sheet') || (k !== 'battlefield' && k !== 'lands')) {
+      toast('In combat, tap creatures on the battlefield. Done returns to normal play.', 'info');
+      return;
+    }
+    const row = el.closest('[data-drop]');
+    const c = state.cards[el.dataset.card];
+    const id = c?.attachedTo && !row?.dataset.fanned ? c.attachedTo : el.dataset.card; // a tucked strip means its card
+    if (zoneOwner(zone) === state.activePlayer) {
+      if (blocker) {
+        if (!state.cards[id]?.attacking) { toast('Mark that creature as attacking first.', 'info'); return; }
+        send('block', { cardId: blocker.cardId, from: findZone(state, blocker.cardId) || blocker.zone, attackerId: id, attackerZone: zone });
+        setBlocker(null);
+      } else send('attack', { cardId: id, from: zone });
+      return;
+    }
+    setBlocker(blocker?.cardId === id ? null : { cardId: id, zone });
+  }
+  const hasCombatMarks = Object.values(state.cards).some((c) => c.attacking || c.blocking);
+  function endCombat() { send('endCombat', {}); setBlocker(null); setCombat(false); }
 
   function pileTap(zone) {
     if (zoneKind(zone) === 'library') { setLib(zone); setLibN(1); setOpenSlot(null); return; }
@@ -350,7 +380,7 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
     { label: 'Leave to home screen', onClick: onExit },
   ];
 
-  const ctx = { state, viewer, art, pointed: null };
+  const ctx = { state, viewer, art, pointed: null, selected: combat ? blocker?.cardId : null };
   const O = other(P);
   const fullZone = full ? (findZone(state, full.cardId) || full.zone) : null;
   const isOffline = session.kind !== 'same-device' && session.status !== 'open';
@@ -373,12 +403,26 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
       <button class="btn" onClick=${() => send('setFaceDown', { cardId: card.id, from: fullZone, value: !card.faceDown })}>${card.faceDown ? 'Face up' : 'Face down'}</button>
       ${k === 'hand' ? html`<button class="btn" onClick=${() => revealCard(card, fullZone)}>Reveal</button>` : null}
       ${k === 'battlefield' || k === 'lands' ? html`<button class="btn" onClick=${() => send('tap', { cardId: card.id, from: fullZone })}>${card.tapped ? 'Untap' : 'Tap'}</button>` : null}
+      ${(k === 'battlefield' || k === 'lands') && zoneOwner(fullZone) === state.activePlayer
+        ? html`<button class="btn" onClick=${() => send('attack', { cardId: card.id, from: fullZone })}>${card.attacking ? 'Stop attacking' : 'Attack'}</button>` : null}
+      ${(k === 'battlefield' || k === 'lands') && zoneOwner(fullZone) !== state.activePlayer
+        ? html`<button class="btn" onClick=${() => { setCombat(true); setBlocker({ cardId: card.id, zone: fullZone }); setFull(null); setSheet(null); }}>Block</button>` : null}
       ${card.attachedTo
         ? html`<button class="btn" onClick=${() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button>`
         : k !== 'library' ? html`<button class="btn" onClick=${() => { setAttaching({ cardId: card.id, zone: fullZone }); setFull(null); setSheet(null); }}>Attach</button>` : null}
       <${CounterChips} label=${label}/>
       <span class="spacer"></span>
       <button class="btn primary" onClick=${() => setFull(null)}>Close</button>
+    </div>`;
+  } else if (combat) {
+    const b = blocker && state.cards[blocker.cardId];
+    const bName = b && (canSeeFace(state, b, findZone(state, b.id) || blocker.zone, viewer) ? b.name : 'card');
+    footer = html`<div class="bar combat">
+      <span class="attach-hint">${b
+        ? html`<b>${bName}</b> blocks: tap the attacker`
+        : html`Tap ${state.players[state.activePlayer].name}’s attackers, or a blocker then its attacker.`}</span>
+      <button class="btn warn" onClick=${endCombat}>End combat</button>
+      <button class="btn primary" onClick=${() => { setCombat(false); setBlocker(null); }}>Done</button>
     </div>`;
   } else if (attaching && state.cards[attaching.cardId]) {
     const c = state.cards[attaching.cardId];
@@ -407,6 +451,8 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
       <button class="btn" onClick=${() => send('undo', {})} title="Undo the last action">Undo</button>
       <button class="btn" onClick=${() => send('untapAll', { player: actingPlayer })}>Untap all</button>
       <button class="btn" onClick=${() => send('passTurn', { to: other(state.activePlayer) })}>Pass turn</button>
+      <button class="btn" onClick=${() => { setCombat(true); setBlocker(null); setPointMode(false); setOpenSlot(null); }}>Combat</button>
+      ${hasCombatMarks ? html`<button class="btn warn" onClick=${endCombat}>End combat</button>` : null}
       <${CounterChips} label=${label}/>
       <button class="btn token-btn" data-trash onClick=${() => setSheet({ kind: 'tokens' })} title="Tokens (drop a token here to remove it)">Tokens</button>
       <button class="btn" onClick=${() => setSheet({ kind: 'dice' })}>Dice</button>

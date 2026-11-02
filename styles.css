@@ -341,3 +341,11 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 .ctr-group { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 20px; background: rgba(0,0,0,.6); }
 .ctr-step { min-width: 34px; min-height: 34px; padding: 0; font-size: 18px; line-height: 1; }
 .notice.warn { border-color: rgba(240,138,75,.5); color: #ffd2b8; }
+
+/* Combat marks */
+.mark.atk { background: #b8322a; color: #fff; font-size: 10px; }
+.mark.blk { background: #2f5fa8; color: #fff; font-size: 10px; }
+.card.selected .card-inner { outline: 3px solid #5aa0ff; outline-offset: 1px; border-radius: 6px; }
+.bar.combat { background: #1a1210; }
+.bar.combat .attach-hint { flex: 1; min-width: 0; white-space: normal; font-size: 12px; line-height: 1.25; }
+.bar.combat .btn { flex: none; }

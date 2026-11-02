@@ -20,6 +20,7 @@ export const STATE_COMMANDS = new Set([
   'addCounter', 'removeCounter', 'createToken', 'removeToken', 'draw', 'mill',
   'shuffle', 'setLibraryTopFaceUp', 'setPlayerCounter', 'addPlayerCounter',
   'removePlayerCounter', 'passTurn', 'concede', 'endGame', 'attach', 'detach',
+  'attack', 'block', 'endCombat',
 ]);
 
 /** An empty state with no cards, used before startGame. @returns {GameState} */
@@ -98,6 +99,29 @@ function changeZone(c, from, to) {
 /** Cards in `zone` attached to `hostId`, in zone order. */
 function attachmentsOf(state, zone, hostId) {
   return state.zones[zone].filter((id) => state.cards[id]?.attachedTo === hostId);
+}
+
+/** Remove every combat mark. @param {GameState} state */
+function clearCombat(state) {
+  for (const c of Object.values(state.cards)) { delete c.attacking; delete c.blocking; }
+}
+
+/**
+ * Keep combat marks consistent after any command: only cards on a battlefield or lands zone carry
+ * them, and a blocker only names attackers that are still attacking.
+ * @param {GameState} state
+ */
+export function fixCombat(state) {
+  const onField = new Set();
+  for (const [z, ids] of Object.entries(state.zones)) if (isBattlefieldZone(z)) ids.forEach((id) => onField.add(id));
+  for (const c of Object.values(state.cards)) {
+    if (!onField.has(c.id)) { delete c.attacking; delete c.blocking; }
+  }
+  for (const c of Object.values(state.cards)) {
+    if (!c.blocking) continue;
+    c.blocking = c.blocking.filter((id) => state.cards[id]?.attacking);
+    if (!c.blocking.length) delete c.blocking;
+  }
 }
 
 /**
@@ -229,6 +253,41 @@ export function apply(input, cmd) {
       dst.splice(idx, 0, ...group);
       moved.push({ id: c.id, from: p.from, to: p.toZone, toIndex: idx + group.length - 1 });
       for (const [i, id] of own.entries()) moved.push({ id, from: p.from, to: p.toZone, toIndex: idx + i });
+      break;
+    }
+
+    case 'attack': {
+      const bad = need(); if (bad) return bad;
+      if (!isBattlefieldZone(p.from)) return fail('invalid', 'only a card on the battlefield can attack');
+      const c = card();
+      const on = typeof p.value === 'boolean' ? p.value : !c.attacking;
+      if (on && !c.attacking) {
+        // Numbers are given in declaration order and kept, so a blocker's mark never changes under it.
+        const used = Object.values(state.cards).map((x) => x.attacking || 0);
+        c.attacking = Math.max(0, ...used) + 1;
+      } else if (!on) delete c.attacking;
+      break;
+    }
+
+    case 'block': {
+      const bad = need(); if (bad) return bad;
+      if (!isBattlefieldZone(p.from)) return fail('invalid', 'only a card on the battlefield can block');
+      if (!isBattlefieldZone(p.attackerZone) || !state.zones[p.attackerZone].includes(p.attackerId)) return fail('stale', 'attacker moved');
+      const a = state.cards[p.attackerId];
+      if (!a.attacking) return fail('invalid', 'that card is not attacking');
+      if (a.id === p.cardId) return fail('invalid', 'a card cannot block itself');
+      const c = card();
+      const list = c.blocking || [];
+      const has = list.includes(a.id);
+      const on = typeof p.value === 'boolean' ? p.value : !has;
+      if (on && !has) c.blocking = [...list, a.id];
+      if (!on && has) c.blocking = list.filter((id) => id !== a.id);
+      if (c.blocking && !c.blocking.length) delete c.blocking;
+      break;
+    }
+
+    case 'endCombat': {
+      clearCombat(state);
       break;
     }
 
@@ -383,6 +442,7 @@ export function apply(input, cmd) {
       const to = playerOk(p.to) ? p.to : other(state.activePlayer);
       state.activePlayer = to;
       state.turn += 1;
+      clearCombat(state);
       for (const z of [`${to}.battlefield`, `${to}.lands`]) {
         for (const id of state.zones[z]) state.cards[id].tapped = false;
       }
@@ -405,6 +465,7 @@ export function apply(input, cmd) {
   }
 
   fixAttachments(state);
+  fixCombat(state);
   state.seq = input.seq + 1;
   return { state, moved };
 }
@@ -434,6 +495,10 @@ export function checkInvariants(state) {
     if (host.attachedTo) return `card ${c.id} attached to an attached card`;
     const ids = state.zones[z], hi = ids.indexOf(host.id), ci = ids.indexOf(c.id);
     if (ci > hi || ids.slice(ci, hi).some((id) => state.cards[id].attachedTo !== host.id)) return `attachments of ${host.id} not just before it`;
+  }
+  for (const c of Object.values(state.cards)) {
+    if ((c.attacking || c.blocking) && !isBattlefieldZone(seen.get(c.id))) return `card ${c.id} has combat marks off the battlefield`;
+    for (const a of c.blocking || []) if (!state.cards[a]?.attacking) return `card ${c.id} blocks ${a}, which is not attacking`;
   }
   return null;
 }

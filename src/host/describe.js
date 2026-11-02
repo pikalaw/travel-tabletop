@@ -54,6 +54,16 @@ export function describeCommand(cmd, before, after, moved = []) {
       const hostId = st.cards[p.cardId]?.attachedTo || p.toCardId;
       return `${name} attached ${cardName(before, after, p.cardId, p.from, p.toZone)} to ${cardName(before, after, hostId, p.toZone, p.toZone)}`;
     }
+    case 'attack': return st.cards[p.cardId]?.attacking
+      ? `${name}: ${cardName(before, after, p.cardId, p.from, p.from)} attacks (⚔${st.cards[p.cardId].attacking})`
+      : `${name}: ${cardName(before, after, p.cardId, p.from, p.from)} no longer attacks`;
+    case 'block': {
+      const blocks = (st.cards[p.cardId]?.blocking || []).includes(p.attackerId);
+      const an = cardName(before, after, p.attackerId, p.attackerZone, p.attackerZone);
+      const num = (after || before).cards[p.attackerId]?.attacking;
+      return `${name}: ${cardName(before, after, p.cardId, p.from, p.from)} ${blocks ? 'blocks' : 'stops blocking'} ${an}${num ? ` (⚔${num})` : ''}`;
+    }
+    case 'endCombat': return `${name} ended combat`;
     case 'detach': return `${name} detached ${cardName(before, after, p.cardId, p.from, p.from)}`;
     case 'tap': {
       const c = st.cards[p.cardId];

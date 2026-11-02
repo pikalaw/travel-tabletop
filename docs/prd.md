@@ -108,6 +108,15 @@ A card can be attached to another card on the battlefield or lands, such as an A
 - **Leaving play.** When the card leaves the battlefield, its attachments detach and stay where they are; the players move them as the rules say.
 - **Not covered:** cards exiled "under" another card, and merged cards (mutate).
 
+## Combat marks
+
+Players can mark attackers and blockers so both can see who blocks what. The marks are a record only; the app works out no damage and checks no legality.
+
+- **Combat mode.** Tap **Combat** in the footer. Tapping a creature on the active player's side marks it attacking (tap again to unmark); attackers are numbered ⚔1, ⚔2… in the order declared. Tapping a creature on the other side picks it as a blocker; then tapping an attacker pairs them, and the blocker shows 🛡 with that attacker's number. Several blockers can block one attacker, and one blocker can block several (🛡1 2). Repeating a pair removes it. Taps in combat mode never tap or untap creatures. **Done** returns to normal play and keeps the marks.
+- **Full-screen view.** A creature on the active player's side has **Attack** / **Stop attacking**; one on the other side has **Block**, which opens combat mode with it picked as the blocker.
+- **Clearing.** **End combat** (in combat mode, and in the footer whenever marks exist) clears every mark. Passing the turn clears them too, and a card that leaves the battlefield loses its marks. An attacker that stops attacking frees its blockers.
+- No lines are drawn between cards; the numbered marks stay readable in collapsed or scrolled slots and after a perspective switch.
+
 ## Counters, tokens and footer tools
 
 Card counters, tokens, player counters and randomness are all manual tools; the app never interprets them.
@@ -191,7 +200,7 @@ The same decks must be imported on both devices.
 **Lifecycle**
 
 - **New game:** pick roles, pair, each player selects one or more decks (no upper limit), and both players may pick the same deck; all of a player's chosen decks are shuffled into one library, set starting life (default 20; 40 for Commander). The app shuffles each library and deals 7 cards to each hand. Mulligans are manual.
-- **Pass turn:** hands the turn to the other player, untaps that player's permanents, and logs a turn marker.
+- **Pass turn:** hands the turn to the other player, untaps that player's permanents, clears combat marks, and logs a turn marker.
 - **Concede** ends the game, and the log records the result.
 - **Rematch** starts a new game with the same decks.
 - **Resume:** the host can reopen its saved game and re-pair with the guest. During a game the address bar holds a link to it (#game=<id>); opening that link, or reloading the page, reopens the game on the device that has it. On a guest device it opens the reconnect screen. Any other device says the game isn't saved there, since a game is kept only on its host. Game ids carry the date plus 80 random bits, so ids from different devices never clash in practice.

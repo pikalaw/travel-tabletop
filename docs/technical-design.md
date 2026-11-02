@@ -82,6 +82,8 @@ interface CardInstance {
   faceDown: boolean;          // hidden from non-owner
   revealed: boolean;          // owner showed it from a private zone
   attachedTo?: string;        // card it is attached to (same battlefield zone, one level)
+  attacking?: number;         // attack number (1, 2, …) while marked attacking
+  blocking?: string[];        // ids of the attackers it blocks
   counters: { plus: number; minus: number; labeled: Record<string, number> };
 }
 
@@ -119,6 +121,8 @@ These declarations live in `src/types.d.ts`. They are used only by `tsc --checkJ
 - A card dropped inside a group lands before the group.
 
 `move` of a host to a battlefield or lands zone carries its attachments as a block; `toIndex` is counted without them, and the client's drop index skips them too. `move` of an attached card detaches it. Attach and detach are ordinary commands, so undo, the log, replay and sync need nothing new. `checkInvariants` checks all of this, and the property tests now generate attach and detach.
+
+**Combat marks.** `attacking` is a number given in declaration order (max in use + 1), so a blocker's 🛡n never changes under it; numbering restarts once marks are cleared. `fixCombat` runs after every command next to `fixAttachments`. It drops marks from any card not on a battlefield or lands zone, and drops a blocker's reference to any card no longer attacking. `checkInvariants` checks both rules, and the property tests generate attack, block and endCombat. In the UI, combat mode decides by zone owner: a tap on the active player's side toggles attacking or completes a pending block; a tap on the other side picks the pending blocker.
 
 **Game links** (`src/ui/link.js`). `newGameId()` is the ISO date plus 16 Crockford base32 characters from `crypto.getRandomValues` (80 bits; it works on plain-HTTP pages, unlike `crypto.subtle`). The game screen keeps `#game=<id>` in the address bar with `history.replaceState`, and clears it on leaving. At startup and on `hashchange`, the app looks the id up in the `games` store and resumes it, opens the guest reconnect flow when it matches the stored `guestGame`, or shows that the game isn't on this device. During a game, a changed hash is put back. The service worker's `controllerchange` reload only happens when a controller already existed, so the first install doesn't reload away the link or the message.
 
@@ -164,6 +168,9 @@ interface Command<T extends string, P> {
 | `undo` | — | a snapshot exists |
 | `attach` | cardId, from, toCardId, toZone | card is in from; target is in toZone, a battlefield or lands zone; not itself |
 | `detach` | cardId, from | card is in from and attached |
+| `attack` | cardId, from, value? | card is in from, a battlefield or lands zone |
+| `block` | cardId, from, attackerId, attackerZone, value? | both in play; the attacker is attacking; not itself |
+| `endCombat` | — | — (clears every mark; passTurn does too) |
 
 **Notices** (logged, broadcast, not state): `peek` (player, n), `searchOpen`, `searchClose`, `point` (target card or zone), showCard (a hand card revealed once; the opponent's device shows it full screen; replaces the lasting `reveal` flag in the UI), and `inspectLibrary`. A `searchClose` is followed by a host-issued `shuffle`.
 
