@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "allowJs": true,
+    "noEmit": true,
+    "strict": false,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "skipLibCheck": true,
+    "paths": {
+      "preact": ["./node_modules/preact"],
+      "preact/hooks": ["./node_modules/preact/hooks"],
+      "htm": ["./node_modules/htm"],
+      "idb": ["./node_modules/idb"],
+      "uqr": ["./node_modules/uqr"],
+      "jsqr": ["./node_modules/jsqr"],
+      "fflate": ["./node_modules/fflate"]
+    }
+  },
+  "include": ["src/engine/**/*.js", "src/host/**/*.js", "src/transport/codec.js", "src/types.d.ts"]
+}
