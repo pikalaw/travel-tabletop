@@ -112,7 +112,7 @@ A card can be attached to another card on the battlefield or lands, such as an A
 
 Card counters, tokens, player counters and randomness are all manual tools; the app never interprets them.
 
-**Card counters.** Three footer icons: +1/+1, −1/−1, and a labeled counter named when dropped (loyalty, lore, charge, time, shield and so on). Drag one onto a card to add it, or off a card to remove it. Works on the board or in the full-screen view.
+**Card counters.** Three footer icons: +1/+1, −1/−1, and a labeled counter named when dropped (loyalty, lore, charge, time, shield and so on). Drag one onto a card to add it, or off a card to remove it. Works on the board or in the full-screen view. In the full-screen view, where the card fills most of the screen, each counter also has − and + buttons, and any drag of a counter removes one.
 
 **Tokens.** The footer token icon opens the token deck, a deck of token images. Dragging one onto a battlefield creates a copy. Dragging a token back to the footer removes it. A token that leaves the battlefield disappears.
 
