@@ -432,7 +432,7 @@ export function Game({ session, onExit, onRematch, pairing }) {
       ${card.attachedTo
         ? html`<button class="btn" onClick=${() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button>`
         : k !== 'library' ? html`<button class="btn" onClick=${() => { setAttaching({ cardId: card.id, zone: fullZone }); setFull(null); setSheet(null); }}>Attach</button>` : null}
-      <${CounterChips} label=${label}/>
+      <${CounterChips} label=${label} attack=${actor === 'table' || actingPlayer === state.activePlayer}/>
       <span class="spacer"></span>
       <button class="btn primary" onClick=${() => setFull(null)}>Close</button>
     </div>`;
@@ -475,7 +475,7 @@ export function Game({ session, onExit, onRematch, pairing }) {
       <button class="btn" onClick=${passTurn}>Pass turn</button>
       <button class="btn" onClick=${() => { setCombat(true); setBlocker(null); setPointMode(false); }}>Combat</button>
       ${hasCombatMarks ? html`<button class="btn warn" onClick=${endCombat}>End combat</button>` : null}
-      <${CounterChips} label=${label}/>
+      <${CounterChips} label=${label} attack=${actor === 'table' || actingPlayer === state.activePlayer}/>
       <button class="btn token-btn" data-trash onClick=${() => setSheet({ kind: 'tokens' })} title="Tokens (drop a token here to remove it)">Tokens</button>
       <button class="btn" onClick=${() => setSheet({ kind: 'dice' })}>Dice</button>
       <button class="btn ${pointMode ? 'on' : ''}" onClick=${() => setPointMode(!pointMode)}>${pointMode ? 'Tap a card…' : 'Point'}</button>
@@ -564,11 +564,12 @@ function ConfirmPlayer({ pl, name, onOk, onCancel }) {
   </div>`;
 }
 
-function CounterChips({ label }) {
+/** Counter tags for the footer; the ⚔ Attack tag only for the player whose turn it is (or the table). */
+function CounterChips({ label, attack = true }) {
   return html`<span class="chips">
     <span class="chip plus" data-counter="plus" title="Drag onto a card">+1/+1</span>
     <span class="chip minus" data-counter="minus" title="Drag onto a card">−1/−1</span>
     <span class="chip label" data-counter="label" title="Drag onto a card; tap to rename">${label}</span>
-    <span class="chip attack" data-counter="attack" title="Drag onto a creature to mark it attacking">⚔ Attack</span>
+    ${attack ? html`<span class="chip attack" data-counter="attack" title="Drag onto a creature to mark it attacking">⚔ Attack</span>` : null}
   </span>`;
 }

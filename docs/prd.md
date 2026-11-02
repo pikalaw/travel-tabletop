@@ -37,7 +37,7 @@ Each player sees the same 5×3 grid from their own side: rows 1–2 are the oppo
 > *Diagram omitted in this export: board layout · 5×3 grid plus footer, one player's view.*
 
 - **Shared zone.** The stack (5,3) is one shared zone shown identically on both devices.
-- **Not shown.** The opponent's hand. Its card count appears right-aligned on the opponent's lands row ("Claire: 5 in hand"). The player's own hand is labelled with its owner ("Lawrence's hand", or "(hidden)" while blinded), which also shows whose view the board is in. A faint wash runs from red on the active (attacking) player's side to blue on the defender's.
+- **Not shown.** The opponent's hand. Its card count appears right-aligned on the opponent's lands row ("Claire: 5 in hand"). The player's own hand is labelled with its owner ("Lawrence's hand", or "(hidden)" while blinded), which also shows whose view the board is in. A clear wash runs from red on the active (attacking) player's side to blue on the defender's.
 - **Orientation.** Any device, portrait or landscape, one responsive layout. Rotating changes only the layout, never game state.
 - **Sizing.** Rows have unequal heights: the player's battlefield and hand are tallest, the opponent's lands shortest, the footer thin. Columns 1 and 3 are narrow; column 2 takes the remaining width. Extra space on larger screens enlarges the rows.
 - **Phone readability.** On phones the board shows card art only; reading a card means a long-press.
@@ -115,7 +115,7 @@ Players can mark attackers and blockers so both can see who blocks what. The mar
 - **Combat mode.** Tap **Combat** in the footer. Tapping a creature on the active player's side marks it attacking (tap again to unmark); attackers are numbered ⚔1, ⚔2… in the order declared. Tapping a creature on the other side picks it as a blocker; then tapping an attacker pairs them, and the blocker shows 🛡 with that attacker's number. Several blockers can block one attacker, and one blocker can block several (🛡1 2). Repeating a pair removes it. Taps in combat mode never tap or untap creatures. **Done** returns to normal play and keeps the marks.
 - **Full-screen view.** A creature on the active player's side has **Attack** / **Stop attacking**; one on the other side has **Block**, which opens combat mode with it picked as the blocker.
 - **Clearing.** **End combat** (in combat mode, and in the footer whenever marks exist) clears every mark. Passing the turn clears them too, and a card that leaves the battlefield loses its marks. An attacker that stops attacking frees its blockers.
-- No lines are drawn between cards; the numbered marks stay readable in collapsed or scrolled slots and after a perspective switch. The marks behave like tags: a ⚔ Attack tag in the footer can be dragged onto a creature to mark it attacking, and dragging a ⚔ or 🛡 mark off a card removes it (a 🛡 removes that one pairing). They sit at the card's top-left corner, also when it is tapped, and the full-screen view shows them as tags too.
+- No lines are drawn between cards; the numbered marks stay readable in collapsed or scrolled slots and after a perspective switch. The marks behave like tags: a ⚔ Attack tag in the footer, shown only to the player whose turn it is (and while hands are blinded), can be dragged onto a creature to mark it attacking, and dragging a ⚔ or 🛡 mark off a card removes it (a 🛡 removes that one pairing). They sit at the card's top-left corner, also when it is tapped, and the full-screen view shows them as tags too.
 
 ## Counters, tokens and footer tools
 

@@ -214,8 +214,8 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 .opp-hand { position: absolute; right: 6px; top: 3px; z-index: 2; font-size: 10px; letter-spacing: .3px; color: var(--ink-2); pointer-events: none; text-transform: uppercase; white-space: nowrap; }
 .c12 .row.collapsed::after, .c12 .row-box.open::before { top: auto; bottom: 3px; }
 /* Turn side: a faint red wash from the attacking (active) player's side to blue on the defender's. */
-.board.my-turn { background: linear-gradient(to top, rgba(214, 64, 52, .16), rgba(214, 64, 52, .03) 45%, rgba(60, 110, 220, .03) 55%, rgba(60, 110, 220, .16)); }
-.board.their-turn { background: linear-gradient(to bottom, rgba(214, 64, 52, .16), rgba(214, 64, 52, .03) 45%, rgba(60, 110, 220, .03) 55%, rgba(60, 110, 220, .16)); }
+.board.my-turn { background: linear-gradient(to top, rgba(214, 64, 52, .38), rgba(214, 64, 52, .12) 42%, rgba(60, 110, 220, .12) 58%, rgba(60, 110, 220, .38)); }
+.board.their-turn { background: linear-gradient(to bottom, rgba(214, 64, 52, .38), rgba(214, 64, 52, .12) 42%, rgba(60, 110, 220, .12) 58%, rgba(60, 110, 220, .38)); }
 .ctr-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; font-size: 11px; line-height: 1.15; overflow: hidden; }
 .ctr-line.p1 .ctr-name { color: var(--p1); } .ctr-line.p2 .ctr-name { color: var(--p2); }
 .ctr-name { font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
