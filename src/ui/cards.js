@@ -46,11 +46,13 @@ export function Card({ ctx, card, zone, h, override, style = '', interactive = t
   if (card.faceDown) markers.push(html`<span class="mark fd" title="Face down">FD</span>`);
   if (card.revealed && zoneKind(zone) === 'hand') markers.push(html`<span class="mark rev" title="Revealed">R</span>`);
   if (card.face === 'back' && img.visible) markers.push(html`<span class="mark flip" title="Flipped">↻</span>`);
-  // Combat marks: ⚔n on an attacker, 🛡n on a blocker for each attacker it blocks.
-  if (card.attacking) markers.unshift(html`<span class="mark atk" title="Attacking">⚔${card.attacking}</span>`);
-  if (card.blocking?.length) {
-    const nums = card.blocking.map((id) => ctx.state.cards[id]?.attacking).filter(Boolean).join(' ');
-    markers.unshift(html`<span class="mark blk" title="Blocking">🛡${nums}</span>`);
+  // Combat marks: ⚔n on an attacker, 🛡n on a blocker for each attacker it blocks. Like counters,
+  // they can be dragged off the card to remove them.
+  const drag = interactive ? (kind) => kind : () => null;
+  if (card.attacking) markers.unshift(html`<span class="mark atk" title="Attacking" data-badge=${drag('attack')} data-card-of=${card.id} data-zone=${zone}>⚔${card.attacking}</span>`);
+  for (const a of [...(card.blocking || [])].reverse()) {
+    const n = ctx.state.cards[a]?.attacking;
+    if (n) markers.unshift(html`<span class="mark blk" title="Blocking" data-badge=${drag('block')} data-attacker=${a} data-card-of=${card.id} data-zone=${zone}>🛡${n}</span>`);
   }
   // Top-left stays visible when the next card overlaps this one in a crowded row.
   if (attachedN) markers.unshift(html`<span class="mark att-count" title="${attachedN} attached">+${attachedN}</span>`);
@@ -62,9 +64,9 @@ export function Card({ ctx, card, zone, h, override, style = '', interactive = t
           ? html`<img class="card-face ${card.faceDown && img.visible ? 'dim' : ''}" src=${img.url} alt=${img.visible ? card.name : 'Card back'} draggable=${false}/>`
           : html`<div class="card-face missing"><span>${card.name}</span></div>`}
         ${img.visible && img.missing ? html`<div class="missing-name">${card.name}</div>` : null}
-        <div class="marks">${markers}</div>
         ${tucked ? null : html`<${Badges} card=${card} zone=${zone} interactive=${interactive}/>`}
       </div>
+      <div class="marks" style=${tapped ? `top:${Math.round((h - w) / 2) + 2}px` : ''}>${markers}</div>
     </div>`;
 }
 

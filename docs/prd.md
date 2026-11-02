@@ -62,7 +62,7 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 
 1. A slot with overlapping cards is **collapsed**. A tap opens it; nothing else works until it is open.
 2. In an **open** slot, cards do not overlap. The user can swipe to scroll, tap to tap or untap (battlefield and lands), long-press to view a card full screen, and drag cards or counters.
-3. A slot whose cards fit without overlapping behaves as open.
+3. A slot whose cards fit without overlapping behaves as open. Several slots can be open at once; each stays open until tapped again, and Close slots closes them all.
 
 **Full-screen card view** (long-press)
 
@@ -115,7 +115,7 @@ Players can mark attackers and blockers so both can see who blocks what. The mar
 - **Combat mode.** Tap **Combat** in the footer. Tapping a creature on the active player's side marks it attacking (tap again to unmark); attackers are numbered ⚔1, ⚔2… in the order declared. Tapping a creature on the other side picks it as a blocker; then tapping an attacker pairs them, and the blocker shows 🛡 with that attacker's number. Several blockers can block one attacker, and one blocker can block several (🛡1 2). Repeating a pair removes it. Taps in combat mode never tap or untap creatures. **Done** returns to normal play and keeps the marks.
 - **Full-screen view.** A creature on the active player's side has **Attack** / **Stop attacking**; one on the other side has **Block**, which opens combat mode with it picked as the blocker.
 - **Clearing.** **End combat** (in combat mode, and in the footer whenever marks exist) clears every mark. Passing the turn clears them too, and a card that leaves the battlefield loses its marks. An attacker that stops attacking frees its blockers.
-- No lines are drawn between cards; the numbered marks stay readable in collapsed or scrolled slots and after a perspective switch.
+- No lines are drawn between cards; the numbered marks stay readable in collapsed or scrolled slots and after a perspective switch. The marks behave like tags: a ⚔ Attack tag in the footer can be dragged onto a creature to mark it attacking, and dragging a ⚔ or 🛡 mark off a card removes it (a 🛡 removes that one pairing). They sit at the card's top-left corner, also when it is tapped, and the full-screen view shows them as tags too.
 
 ## Counters, tokens and footer tools
 
@@ -200,7 +200,7 @@ The same decks must be imported on both devices.
 **Lifecycle**
 
 - **New game:** pick roles, pair, each player selects one or more decks (no upper limit), and both players may pick the same deck; all of a player's chosen decks are shuffled into one library, set starting life (default 20; 40 for Commander). The app shuffles each library and deals 7 cards to each hand. Mulligans are manual.
-- **Pass turn:** hands the turn to the other player, untaps that player's permanents, clears combat marks, and logs a turn marker.
+- **Pass turn:** after a confirmation, hands the turn to the other player, untaps that player's permanents, clears combat marks, and logs a turn marker.
 - **Concede** ends the game, and the log records the result.
 - **Rematch** starts a new game with the same decks.
 - **Resume:** the host can reopen its saved game and re-pair with the guest. During a game the address bar holds a link to it (#game=<id>); opening that link, or reloading the page, reopens the game on the device that has it. On a guest device it opens the reconnect screen. Any other device says the game isn't saved there, since a game is kept only on its host. Game ids carry the date plus 80 random bits, so ids from different devices never clash in practice.

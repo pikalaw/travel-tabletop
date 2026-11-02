@@ -36,15 +36,15 @@ function Counters({ ctx, P }) {
 }
 
 /**
- * @param {{ ctx: any, P: 'p1' | 'p2', openSlot: string | null }} props
+ * @param {{ ctx: any, P: 'p1' | 'p2', openSlots: string[] }} props
  */
-export function Board({ ctx, P, openSlot }) {
+export function Board({ ctx, P, openSlots }) {
   const z = cellsFor(P);
   const st = ctx.state;
   const name = (pl) => st.players[pl].name;
   const O = other(P);
   const topFace = (zone) => !!st.players[zone.split('.')[0]].libraryTopFaceUp;
-  const row = (zone, label, cls = '') => html`<${Row} ctx=${ctx} zone=${zone} ids=${st.zones[zone]} open=${openSlot === zone} label=${label} extraClass=${cls}/>`;
+  const row = (zone, label, cls = '') => html`<${Row} ctx=${ctx} zone=${zone} ids=${st.zones[zone]} open=${openSlots.includes(zone)} label=${label} extraClass=${cls}/>`;
   return html`
     <div class="board persp-${P} ${st.activePlayer === P ? 'my-turn' : 'their-turn'}">
       <div class="cell c11 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppExile} label="Exile"/>`}</div>

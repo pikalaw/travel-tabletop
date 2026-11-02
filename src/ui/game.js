@@ -21,7 +21,9 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   const [, setTick] = useState(0);
   const [viewer, setViewer] = useState(same ? 'nobody' : session.me);
   const [persp, setPersp] = useState(same ? (session.state.activePlayer || 'p1') : session.me);
-  const [openSlot, setOpenSlot] = useState(null);
+  const [openSlots, setOpenSlots] = useState([]);  // slots opened by the viewer; several may be open at once
+  const openSlot = (zone) => setOpenSlots((cur) => (cur.includes(zone) ? cur : [...cur, zone]));
+  const closeSlot = (zone) => setOpenSlots((cur) => cur.filter((z) => z !== zone));
   const [lib, setLib] = useState(null);            // library zone whose actions are in the footer
   const [libN, setLibN] = useState(1);
   const [sheet, setSheet] = useState(null);
@@ -147,6 +149,8 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   function slotOf(el) { return el.closest('[data-slot]'); }
 
   function onTap(el) {
+    // A tap on a counter or combat mark on the board means its card (dragging is what moves the mark).
+    if (el.dataset.badge && !el.closest('.full-wrap')) el = el.closest('[data-card]') || el;
     if (attaching) {
       const targetId = el.dataset.card;
       const zone = el.dataset.zone;
@@ -170,6 +174,7 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
       send('createToken', { defId: el.dataset.tokenDef, name: el.dataset.tokenName, to: `${actingPlayer}.battlefield`, owner: actingPlayer });
       return;
     }
+    if (el.dataset.counter === 'attack') { toast('Drag ⚔ Attack onto a creature to mark it attacking; drag the mark off to remove it.', 'info'); return; }
     if (el.dataset.counter === 'label') {
       const v = window.prompt('Counter name for the labeled counter (e.g. loyalty, lore, charge, time):', label);
       if (v && v.trim()) setLabel(v.trim().slice(0, 16));
@@ -184,7 +189,7 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
       if (inSheet) return;
       if (el.closest('.pile')) return pileTap(zone);
       const row = el.closest('[data-drop]');
-      if (row?.dataset.collapsed) { setOpenSlot(zone); return; }
+      if (row?.dataset.collapsed) { openSlot(zone); return; }
       const k = zoneKind(zone);
       // A tucked attachment is a thin strip: a tap on it is meant for the card it is attached to.
       const c = state.cards[el.dataset.card];
@@ -196,8 +201,8 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
     if (tap === 'slot') {
       const zone = el.dataset.slot;
       if (el.closest('.sheet')) return;
-      if (openSlot === zone) setOpenSlot(null);
-      else if (el.dataset.collapsed || el.dataset.groups) setOpenSlot(zone);
+      if (openSlots.includes(zone)) closeSlot(zone);
+      else if (el.dataset.collapsed || el.dataset.groups) openSlot(zone);
     }
   }
 
@@ -225,11 +230,16 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
     }
     setBlocker(blocker?.cardId === id ? null : { cardId: id, zone });
   }
+  function passTurn() {
+    const from = state.players[state.activePlayer].name, to = state.players[other(state.activePlayer)].name;
+    if (!window.confirm(`End ${from}’s turn and pass it to ${to}?`)) return;
+    send('passTurn', { to: other(state.activePlayer) });
+  }
   const hasCombatMarks = Object.values(state.cards).some((c) => c.attacking || c.blocking);
   function endCombat() { send('endCombat', {}); setBlocker(null); setCombat(false); }
 
   function pileTap(zone) {
-    if (zoneKind(zone) === 'library') { setLib(zone); setLibN(1); setOpenSlot(null); return; }
+    if (zoneKind(zone) === 'library') { setLib(zone); setLibN(1); return; }
     setSheet({ kind: 'zone', zone });
   }
 
@@ -251,6 +261,12 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
       const cardId = src.dataset.cardOf;
       // In the full-screen view the card fills most of the screen, so any drag of a counter removes one.
       if (!src.closest('.full-wrap') && (d.onCard === cardId || d.cardId === cardId)) return;
+      if (src.dataset.badge === 'attack') { send('attack', { cardId, from: src.dataset.zone, value: false }); return; }
+      if (src.dataset.badge === 'block') {
+        const atk = src.dataset.attacker;
+        send('block', { cardId, from: src.dataset.zone, attackerId: atk, attackerZone: findZone(state, atk), value: false });
+        return;
+      }
       send('removeCounter', { cardId, from: src.dataset.zone, kind: src.dataset.badge, label: src.dataset.label });
       return;
     }
@@ -259,6 +275,13 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
     if (src.dataset.counter) {
       if (!d.cardId) return;
       const kind = src.dataset.counter;
+      if (kind === 'attack') {
+        const k = zoneKind(d.zone);
+        if (k !== 'battlefield' && k !== 'lands') { toast('Only a card on the battlefield can attack.', 'info'); return; }
+        const c = state.cards[d.cardId];
+        send('attack', { cardId: c?.attachedTo || d.cardId, from: d.zone, value: true });
+        return;
+      }
       send('addCounter', { cardId: d.cardId, from: d.zone, kind, label: kind === 'label' ? label : undefined });
       return;
     }
@@ -329,7 +352,7 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   function doUnblind(pl) {
     setViewer(pl);
     setPersp(pl);
-    setOpenSlot(null);
+    setOpenSlots([]);
     setLib(null);
     const lines = awayLines.current.slice(seen.current[pl]).filter((l) => l.actor !== pl).map((l) => l.text);
     seen.current[pl] = awayLines.current.length;
@@ -369,7 +392,7 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   // ----- menu -----
   const menuItems = [
     same && viewer !== 'nobody' ? { label: 'Blind my hand', onClick: () => { blind(); setSheet(null); } } : null,
-    { label: 'Pass the turn', onClick: () => { send('passTurn', { to: other(state.activePlayer) }); setSheet(null); } },
+    { label: 'Pass the turn', onClick: () => { setSheet(null); passTurn(); } },
     !same || state.result ? { label: 'Export action log (JSON Lines)', onClick: exportLog } : null,
     session.kind === 'host' && pairing ? { label: 'Re-pair the guest device', onClick: () => setSheet({ kind: 'pair' }) } : null,
     session.kind === 'guest' && pairing ? { label: 'Reconnect to the host', onClick: () => setSheet({ kind: 'pair' }) } : null,
@@ -450,14 +473,14 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
     footer = html`<div class="bar">
       <button class="btn" onClick=${() => send('undo', {})} title="Undo the last action">Undo</button>
       <button class="btn" onClick=${() => send('untapAll', { player: actingPlayer })}>Untap all</button>
-      <button class="btn" onClick=${() => send('passTurn', { to: other(state.activePlayer) })}>Pass turn</button>
-      <button class="btn" onClick=${() => { setCombat(true); setBlocker(null); setPointMode(false); setOpenSlot(null); }}>Combat</button>
+      <button class="btn" onClick=${passTurn}>Pass turn</button>
+      <button class="btn" onClick=${() => { setCombat(true); setBlocker(null); setPointMode(false); }}>Combat</button>
       ${hasCombatMarks ? html`<button class="btn warn" onClick=${endCombat}>End combat</button>` : null}
       <${CounterChips} label=${label}/>
       <button class="btn token-btn" data-trash onClick=${() => setSheet({ kind: 'tokens' })} title="Tokens (drop a token here to remove it)">Tokens</button>
       <button class="btn" onClick=${() => setSheet({ kind: 'dice' })}>Dice</button>
       <button class="btn ${pointMode ? 'on' : ''}" onClick=${() => setPointMode(!pointMode)}>${pointMode ? 'Tap a card…' : 'Point'}</button>
-      ${openSlot ? html`<button class="btn" onClick=${() => setOpenSlot(null)}>Close slot</button>` : null}
+      ${openSlots.length ? html`<button class="btn" onClick=${() => setOpenSlots([])}>${openSlots.length > 1 ? 'Close slots' : 'Close slot'}</button>` : null}
       ${same && viewer !== 'nobody' ? html`<button class="btn warn" onClick=${blind}>Blind my hand</button>` : null}
       ${same && viewer === 'nobody' ? html`
         <button class="btn p1c" onClick=${() => unblind('p1')}>Unblind to ${state.players.p1.name}</button>
@@ -490,7 +513,7 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
 
   return html`<div class="game ${isOffline && session.kind === 'guest' ? 'readonly' : ''} ${pointMode ? 'pointing' : ''}" ref=${rootRef}>
     <div class="board-wrap">
-      <${Board} ctx=${ctx} P=${P} openSlot=${openSlot}/>
+      <${Board} ctx=${ctx} P=${P} openSlots=${openSlots}/>
       ${full ? html`<div class="full-wrap"><${FullCard} ctx=${ctx} cardId=${full.cardId} zone=${fullZone} group=${fullGroup}
           onCounter=${(type, kind, lbl) => send(type, { cardId: full.cardId, from: fullZone, kind, label: lbl })} onPick=${(id) => setFull({ cardId: id, zone: fullZone })}/></div>` : null}
       ${sheetEl}
@@ -584,5 +607,6 @@ function CounterChips({ label }) {
     <span class="chip plus" data-counter="plus" title="Drag onto a card">+1/+1</span>
     <span class="chip minus" data-counter="minus" title="Drag onto a card">−1/−1</span>
     <span class="chip label" data-counter="label" title="Drag onto a card; tap to rename">${label}</span>
+    <span class="chip attack" data-counter="attack" title="Drag onto a creature to mark it attacking">⚔ Attack</span>
   </span>`;
 }

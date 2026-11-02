@@ -86,6 +86,11 @@ export function FullCard({ ctx, cardId, zone, group = null, onPick = (id) => {},
     <div class="fullcard-inner" data-card-target=${card.id} data-zone=${zone} onPointerDown=${down} onPointerUp=${up}>
       ${img.url ? html`<img src=${img.url} alt=${card.name} draggable=${false}/>` : html`<div class="card-face missing big"><span>${card.name}</span></div>`}
       <div class="full-badges">
+        ${card.attacking ? html`<span class="badge atk big" data-badge="attack" data-card-of=${card.id} data-zone=${zone}>⚔${card.attacking} attacking</span>` : null}
+        ${(card.blocking || []).map((a) => {
+          const att = ctx.state.cards[a];
+          return att?.attacking ? html`<span class="badge blk big" data-badge="block" data-attacker=${a} data-card-of=${card.id} data-zone=${zone}>🛡 blocks ⚔${att.attacking}</span>` : null;
+        })}
         ${[
           c.plus ? { kind: 'plus', text: `+1/+1 × ${c.plus}` } : null,
           c.minus ? { kind: 'minus', text: `−1/−1 × ${c.minus}` } : null,

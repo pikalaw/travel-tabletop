@@ -174,7 +174,9 @@ body.dragging .pile[data-layout="library"].drop-hover .drop-hint { display: bloc
 .card-face.missing { display: grid; place-items: center; background: #2a2f2c; border: 1px solid #555; padding: 4px; text-align: center; font-size: 10px; color: var(--ink-2); overflow: hidden; }
 .card-face.missing.big { width: min(80vw, 360px); aspect-ratio: 63/88; font-size: 18px; }
 .missing-name { position: absolute; left: 0; right: 0; bottom: 0; font-size: 9px; background: rgba(0,0,0,.7); padding: 1px 3px; }
-.marks { position: absolute; left: 2px; top: 2px; display: flex; gap: 2px; pointer-events: none; }
+.marks { position: absolute; left: 2px; top: 2px; z-index: 2; display: flex; flex-wrap: wrap; gap: 2px; pointer-events: none; max-width: calc(100% - 4px); }
+.marks .mark[data-badge] { pointer-events: auto; touch-action: none; cursor: grab; position: relative; }
+.marks .mark[data-badge]::after { content: ""; position: absolute; inset: -6px -3px; }
 .mark { font-size: 9px; font-weight: 700; background: rgba(0,0,0,.75); border-radius: 3px; padding: 0 3px; line-height: 14px; }
 .mark.token { color: #c9a65a; } .mark.fd { color: #9ec7ff; } .mark.rev { color: var(--warn); } .mark.flip { color: var(--p2); }
 .badges { position: absolute; left: 0; right: 0; bottom: 2px; display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
@@ -349,3 +351,5 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 .bar.combat { background: #1a1210; }
 .bar.combat .attach-hint { flex: 1; min-width: 0; white-space: normal; font-size: 12px; line-height: 1.25; }
 .bar.combat .btn { flex: none; }
+.badge.atk { color: #fff; background: #b8322a; } .badge.blk { color: #fff; background: #2f5fa8; }
+.chip.attack { color: #ff9b93; }
