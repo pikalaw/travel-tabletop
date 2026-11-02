@@ -151,6 +151,12 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
   content: "tap to open"; position: absolute; right: 6px; top: 3px; font-size: 9px; color: var(--ink-3);
   text-transform: uppercase; letter-spacing: .3px; pointer-events: none;
 }
+.sheet .row-box.open::before { content: none; } /* trays in sheets don't close by tapping */
+/* Same place as "tap to open", but on the box outside the scroller so it stays put while the slot scrolls. */
+.row-box.open::before {
+  content: "tap to close"; position: absolute; right: 6px; top: 3px; z-index: 2; font-size: 9px; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: .3px; pointer-events: none;
+}
 .row-box.open::after {
   content: ""; position: absolute; z-index: 2; inset: 0; border: 1px solid rgba(201,166,90,.6); border-radius: 8px; pointer-events: none;
 }
