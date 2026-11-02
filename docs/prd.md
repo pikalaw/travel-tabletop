@@ -194,7 +194,7 @@ The same decks must be imported on both devices.
 - **Pass turn:** hands the turn to the other player, untaps that player's permanents, and logs a turn marker.
 - **Concede** ends the game, and the log records the result.
 - **Rematch** starts a new game with the same decks.
-- **Resume:** the host can reopen its saved game and re-pair with the guest.
+- **Resume:** the host can reopen its saved game and re-pair with the guest. During a game the address bar holds a link to it (#game=<id>); opening that link, or reloading the page, reopens the game on the device that has it. On a guest device it opens the reconnect screen. Any other device says the game isn't saved there, since a game is kept only on its host. Game ids carry the date plus 80 random bits, so ids from different devices never clash in practice.
 
 ## Action log
 

@@ -13,7 +13,7 @@ import { listDecks, gamePersistence, listGames, getGame, loadSnapshots, loadLog,
 import { APP_VERSION } from '../version.js';
 import { CODE_RE, makePins, makeLock } from '../client/lock.js';
 
-const newGameId = () => `${new Date().toISOString().slice(0, 10)}-${Math.random().toString(36).slice(2, 8)}`;
+import { newGameId, parseGameLink, setGameLink } from './link.js';
 
 // ---------- Pairing flows (shared by first pairing and re-pairing) ----------
 
@@ -237,7 +237,7 @@ function Setup({ go, startGame }) {
 
 // ---------- Home ----------
 
-function Home({ go, resume, rejoin, update }) {
+function Home({ go, resume, rejoin, update, notice }) {
   const [games, setGames] = useState([]);
   const [guestGame, setGuestGame] = useState(null);
   const [build, setBuild] = useState('');
@@ -251,6 +251,7 @@ function Home({ go, resume, rejoin, update }) {
       <h1>Travel Tabletop</h1>
       <p class="muted">A rules-free Magic playmat for one or two devices. Works offline.</p>
     </div>
+    ${notice ? html`<div class="notice warn">${notice}</div>` : null}
     ${update ? html`<div class="notice">A new version is ready. <button class="btn primary" onClick=${update}>Update now</button></div>` : null}
     <div class="home-actions">
       <button class="btn primary big" onClick=${() => go('setup')}>New game</button>
@@ -277,11 +278,13 @@ function App() {
   const [route, setRoute] = useState({ name: 'loading' });
   const [game, setGame] = useState(null);   // { session, rematch, pairing }
   const [update, setUpdate] = useState(null);
+  const gameRef = useRef(null);
+  gameRef.current = game;
   const toasts = useToasts();
   const go = (name, arg) => setRoute({ name, arg });
 
   useEffect(() => {
-    ensureFixtures().catch((e) => toast(`Could not set up sample decks: ${e.message}`, 'warn')).finally(() => go('home'));
+    ensureFixtures().catch((e) => toast(`Could not set up sample decks: ${e.message}`, 'warn')).finally(() => openLink(location.hash));
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       navigator.serviceWorker.register('sw.js').then((reg) => {
         const offer = (w) => setUpdate(() => () => { w.postMessage('skipWaiting'); });
@@ -291,9 +294,32 @@ function App() {
           w?.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) offer(w); });
         });
       }).catch(() => {});
+      // Reload when an update takes over, but not on the very first visit, when the first install
+      // takes control of a page that is already running the same files.
+      const hadController = !!navigator.serviceWorker.controller;
       let reloading = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloading) { reloading = true; location.reload(); } });
+      navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !reloading) { reloading = true; location.reload(); } });
     }
+  }, []);
+
+  // A game link (#game=<id>) reopens that game if this device has it.
+  async function openLink(hash) {
+    const id = parseGameLink(hash);
+    if (!id) { go('home'); return; }
+    const rec = await getGame(id).catch(() => null);
+    if (rec && !rec.over && rec.state?.turn > 0) { await resume(id); return; }
+    const guest = await getMeta('guestGame').catch(() => null);
+    if (guest?.gameId === id) { setGameLink(null); await rejoin(guest); return; }
+    setGameLink(null);
+    go('home', {
+      notice: rec ? 'That game has ended.'
+        : 'That game isn’t saved on this device. A game is kept only on the device that hosts it, so open the link there.',
+    });
+  }
+  useEffect(() => {
+    const onHash = () => { if (!gameRef.current) openLink(location.hash); else setGameLink(gameRef.current.session.state.gameId); };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
   // Host-side game construction.
@@ -412,7 +438,7 @@ function App() {
   let screen;
   switch (route.name) {
     case 'loading': screen = html`<div class="page"><p>Getting the table ready…</p></div>`; break;
-    case 'home': screen = html`<${Home} go=${go} resume=${resume} rejoin=${rejoin} update=${update}/>`; break;
+    case 'home': screen = html`<${Home} go=${go} resume=${resume} rejoin=${rejoin} update=${update} notice=${route.arg?.notice}/>`; break;
     case 'decks': screen = html`<${DecksScreen} go=${go}/>`; break;
     case 'deck': screen = html`<${DeckScreen} go=${go} id=${route.arg}/>`; break;
     case 'import': screen = html`<${ImportScreen} go=${go}/>`; break;

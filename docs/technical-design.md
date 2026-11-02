@@ -120,6 +120,8 @@ These declarations live in `src/types.d.ts`. They are used only by `tsc --checkJ
 
 `move` of a host to a battlefield or lands zone carries its attachments as a block; `toIndex` is counted without them, and the client's drop index skips them too. `move` of an attached card detaches it. Attach and detach are ordinary commands, so undo, the log, replay and sync need nothing new. `checkInvariants` checks all of this, and the property tests now generate attach and detach.
 
+**Game links** (`src/ui/link.js`). `newGameId()` is the ISO date plus 16 Crockford base32 characters from `crypto.getRandomValues` (80 bits; it works on plain-HTTP pages, unlike `crypto.subtle`). The game screen keeps `#game=<id>` in the address bar with `history.replaceState`, and clears it on leaving. At startup and on `hashchange`, the app looks the id up in the `games` store and resumes it, opens the guest reconnect flow when it matches the stored `guestGame`, or shows that the game isn't on this device. During a game, a changed hash is put back. The service worker's `controllerchange` reload only happens when a controller already existed, so the first install doesn't reload away the link or the message.
+
 ## Commands and engine rules
 
 Every state change is a command applied by the host through the pure engine; notices are logged events that change nothing.

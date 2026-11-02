@@ -1,7 +1,7 @@
 // Service worker: cache-first for the app shell so the app runs fully offline.
 // VERSION and FILES are rewritten by tools/gen-sw-list.js on every release.
 
-const VERSION = '0.1.0-3b2095cc5d';
+const VERSION = '0.1.0-857aac147e';
 const FILES = [
   "./",
   "./index.html",
@@ -32,6 +32,7 @@ const FILES = [
   "./src/ui/game.js",
   "./src/ui/gestures.js",
   "./src/ui/h.js",
+  "./src/ui/link.js",
   "./src/ui/overlays.js",
   "./src/ui/pairing.js",
   "./src/version.js",

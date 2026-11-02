@@ -5,6 +5,7 @@ import { Board } from './board.js';
 import { cardImage } from './cards.js';
 import { saveFile } from './files.js';
 import { attachGestures } from './gestures.js';
+import { setGameLink } from './link.js';
 import { CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, AwaySheet, Sheet, zoneTitle } from './overlays.js';
 import { ShowCode, ReadCode } from './pairing.js';
 import { zoneKind, zoneOwner, other, handCount, findZone, canSeeFace } from '../engine/view.js';
@@ -38,6 +39,8 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   const awayLines = useRef([]);
   const rootRef = useRef(null);
   const state = session.state;
+  // The address bar names this game, so the page can be bookmarked or reopened from history.
+  useEffect(() => { setGameLink(state.gameId); return () => setGameLink(null); }, [state.gameId]);
 
   const P = same ? persp : session.me;
   const actor = same ? (viewer === 'nobody' ? 'table' : viewer) : session.me;
