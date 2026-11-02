@@ -45,25 +45,27 @@ export function Board({ ctx, P, openSlots }) {
   const z = cellsFor(P);
   const st = ctx.state;
   const name = (pl) => st.players[pl].name;
+  // A player's name in the attacker (hot) or defender (cool) colour.
+  const who = (pl) => html`<span class=${st.activePlayer === pl ? 'role-atk' : 'role-def'}>${name(pl)}</span>`;
   const O = other(P);
   const topFace = (zone) => !!st.players[zone.split('.')[0]].libraryTopFaceUp;
   const row = (zone, label, cls = '') => html`<${Row} ctx=${ctx} zone=${zone} ids=${st.zones[zone]} open=${openSlots.includes(zone)} label=${label} extraClass=${cls}/>`;
   return html`
     <div class="board persp-${P} ${st.activePlayer === P ? 'my-turn' : 'their-turn'}">
       <div class="cell c11 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppExile} label="Exile"/>`}</div>
-      <div class="cell c12 opp">${row(z.oppLands, `${name(O)} · lands`)}<span class="opp-hand">${name(O)}: ${handCount(st, O)} in hand</span></div>
+      <div class="cell c12 opp">${row(z.oppLands, html`${who(O)} · lands`)}<span class="opp-hand">${who(O)}: ${handCount(st, O)} in hand</span></div>
       <div class="cell c13 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppGrave} label="Graveyard"/>`}</div>
       <div class="cell c21 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppCmd} label="Command"/>`}</div>
-      <div class="cell c22 opp">${row(z.oppField, `${name(O)} · battlefield`)}</div>
+      <div class="cell c22 opp">${row(z.oppField, html`${who(O)} · battlefield`)}</div>
       <div class="cell c23 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppLib} label="Library" layout="library" extraClass=${topFace(z.oppLib) ? 'top-up' : ''}/>`}</div>
       <div class="cell c31 me">${html`<${Pile} ctx=${ctx} zone=${z.myCmd} label="Command"/>`}</div>
-      <div class="cell c32 me">${row(z.myField, `${name(P)} · battlefield`, 'field')}</div>
+      <div class="cell c32 me">${row(z.myField, html`${who(P)} · battlefield`, 'field')}</div>
       <div class="cell c33 me">${html`<${Pile} ctx=${ctx} zone=${z.myLib} label="Library" layout="library" extraClass=${topFace(z.myLib) ? 'top-up' : ''}/>`}</div>
       <div class="cell c41 me">${html`<${Pile} ctx=${ctx} zone=${z.myExile} label="Exile"/>`}</div>
-      <div class="cell c42 me">${row(z.myLands, `${name(P)} · lands`)}</div>
+      <div class="cell c42 me">${row(z.myLands, html`${who(P)} · lands`)}</div>
       <div class="cell c43 me">${html`<${Pile} ctx=${ctx} zone=${z.myGrave} label="Graveyard"/>`}</div>
       <div class="cell c51 me"><${Counters} ctx=${ctx}/></div>
-      <div class="cell c52 me">${row(z.myHand, html`<span class=${st.activePlayer === P ? 'role-atk' : 'role-def'}>${name(P)}’s hand</span>${ctx.viewer === P ? '' : ' (hidden)'}`, 'hand')}</div>
+      <div class="cell c52 me">${row(z.myHand, html`${who(P)}’s hand${ctx.viewer === P ? '' : ' (hidden)'}`, 'hand')}</div>
       <div class="cell c53 shared">${html`<${Pile} ctx=${ctx} zone="stack" label="Stack"/>`}</div>
     </div>`;
 }

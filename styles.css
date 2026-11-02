@@ -218,8 +218,8 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 .ctr-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; font-size: 11px; line-height: 1.15; overflow: hidden; }
 /* Attacking (active) player in the hot colour, defending player in the cool one, matching the board gradient. */
 :root { --hot: #ff7b5f; --cool: #7aa7ff; }
-.turn-label.role-atk, .ctr-line.role-atk .ctr-name, .slot-label .role-atk { color: var(--hot); }
-.ctr-line.role-def .ctr-name, .slot-label .role-def { color: var(--cool); }
+.turn-label.role-atk, .ctr-line.role-atk .ctr-name, .slot-label .role-atk, .opp-hand .role-atk { color: var(--hot); }
+.ctr-line.role-def .ctr-name, .slot-label .role-def, .opp-hand .role-def { color: var(--cool); }
 .ctr-name { font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ctr-life { font-size: 17px; font-weight: 700; }
 @media (max-height: 520px) {
