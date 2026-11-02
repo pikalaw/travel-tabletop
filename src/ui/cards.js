@@ -36,7 +36,7 @@ function Badges({ card, zone, interactive }) {
  * One card. `h` is its height in px.
  * @param {{ ctx: any, card: any, zone: string, h: number, override?: boolean, style?: string, interactive?: boolean }} p
  */
-export function Card({ ctx, card, zone, h, override, style = '', interactive = true }) {
+export function Card({ ctx, card, zone, h, override, style = '', interactive = true, tucked = false, attachedN = 0 }) {
   const img = cardImage(ctx, card, zone, override, h);
   const w = Math.round(h * RATIO);
   const tapped = card.tapped && (zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands');
@@ -46,51 +46,71 @@ export function Card({ ctx, card, zone, h, override, style = '', interactive = t
   if (card.faceDown) markers.push(html`<span class="mark fd" title="Face down">FD</span>`);
   if (card.revealed && zoneKind(zone) === 'hand') markers.push(html`<span class="mark rev" title="Revealed">R</span>`);
   if (card.face === 'back' && img.visible) markers.push(html`<span class="mark flip" title="Flipped">↻</span>`);
+  // Top-left stays visible when the next card overlaps this one in a crowded row.
+  if (attachedN) markers.unshift(html`<span class="mark att-count" title="${attachedN} attached">+${attachedN}</span>`);
   return html`
-    <div class="card ${tapped ? 'tapped' : ''} ${ctx.pointed === card.id ? 'pointed' : ''}" data-card=${card.id} data-zone=${zone}
-         data-card-target=${card.id} style=${`width:${boxW}px;height:${h}px;${style}`}>
+    <div class="card ${tapped ? 'tapped' : ''} ${tucked ? 'tucked' : ''} ${ctx.pointed === card.id ? 'pointed' : ''}" data-card=${card.id} data-zone=${zone}
+         data-card-target=${card.id} data-attached-to=${card.attachedTo || null} style=${`width:${boxW}px;height:${h}px;${style}`}>
       <div class="card-inner" style=${`width:${w}px;height:${h}px`}>
         ${img.url
           ? html`<img class="card-face ${card.faceDown && img.visible ? 'dim' : ''}" src=${img.url} alt=${img.visible ? card.name : 'Card back'} draggable=${false}/>`
           : html`<div class="card-face missing"><span>${card.name}</span></div>`}
         ${img.visible && img.missing ? html`<div class="missing-name">${card.name}</div>` : null}
         <div class="marks">${markers}</div>
-        <${Badges} card=${card} zone=${zone} interactive=${interactive}/>
+        ${tucked ? null : html`<${Badges} card=${card} zone=${zone} interactive=${interactive}/>`}
       </div>
     </div>`;
 }
 
+/** How much of an attached card shows from behind the card it is attached to. */
+export const PEEK = 0.25;
+
 /**
  * A horizontal row of cards in a slot. Overlaps cards when they do not fit, unless `open`.
+ * Attached cards come just before their host in the zone and are drawn tucked behind it,
+ * peeking out to its left; an open slot fans each group out instead.
  */
 export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'row', offset = 0, override = false, emptyText = '' }) {
   const ref = useRef(null);
   const { w, h } = useSize(ref);
   const cardH = Math.max(28, h - 14);
   const cardW = cardH * RATIO;
-  const widths = ids.map((id) => {
-    const c = ctx.state.cards[id];
-    const tapped = c?.tapped && (zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands');
-    return tapped ? cardH : cardW;
+  const cards = ids.map((id) => ctx.state.cards[id]).filter(Boolean);
+  const field = zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands';
+  const widths = cards.map((c) => (c.tapped && field ? cardH : cardW));
+  const groupOf = (c) => (field && c.attachedTo) || c.id;
+  const hasGroups = field && cards.some((c) => c.attachedTo);
+  const sameGroup = (i) => i > 0 && groupOf(cards[i]) === groupOf(cards[i - 1]);
+  const gap = 4, innerGap = 3, groupGap = 14;
+  const fanned = open && hasGroups;
+  const units = cards.filter((c, i) => !sameGroup(i)).length;
+  // Width of the row before any collapsing: tucked attachments show PEEK of their width.
+  let natural = 0;
+  cards.forEach((c, i) => {
+    if (sameGroup(i)) natural += fanned ? innerGap + widths[i] : widths[i] - widths[i - 1] * (1 - PEEK);
+    else natural += (i ? (fanned ? groupGap : gap) : 0) + widths[i];
   });
-  const gap = 4;
-  const total = widths.reduce((a, b) => a + b, 0) + gap * Math.max(0, ids.length - 1);
-  const overflow = total > w - 8 && ids.length > 1;
+  const overflow = natural > w - 8 && units > 1;
   const collapsed = overflow && !open;
-  let overlap = 0;
-  if (collapsed) overlap = (total - (w - 8)) / (ids.length - 1);
+  const overlap = collapsed ? (natural - (w - 8) + gap * (units - 1)) / (units - 1) : 0;
+  const scrolls = open && (overflow || natural > w - 8);
+  const attachedN = new Map();
+  if (field) for (const c of cards) if (c.attachedTo) attachedN.set(c.attachedTo, (attachedN.get(c.attachedTo) || 0) + 1);
   // The label and the open-slot outline sit outside the scroller so they stay put while it scrolls.
-  return html`<div class="row-box ${open && overflow ? 'open' : ''}">
+  return html`<div class="row-box ${scrolls || fanned ? 'open' : ''}">
     ${label ? html`<span class="slot-label">${label}${ids.length ? html` <b>${ids.length}</b>` : ''}</span>` : null}
-    <div ref=${ref} class="row ${collapsed ? 'collapsed' : ''} ${open && overflow ? 'open' : ''} ${extraClass}"
-         data-drop=${zone} data-layout=${layout} data-offset=${offset} data-collapsed=${collapsed ? '1' : null} data-tap=${'slot'} data-slot=${zone}>
+    <div ref=${ref} class="row ${collapsed ? 'collapsed' : ''} ${scrolls ? 'open' : ''} ${extraClass}"
+         data-drop=${zone} data-layout=${layout} data-offset=${offset} data-collapsed=${collapsed ? '1' : null}
+         data-groups=${hasGroups ? '1' : null} data-fanned=${fanned ? '1' : null} data-tap=${'slot'} data-slot=${zone}>
       ${ids.length === 0 && emptyText ? html`<span class="slot-empty">${emptyText}</span>` : null}
-      <div class="row-cards" style=${`gap:${collapsed ? 0 : gap}px`}>
-        ${h > 0 && ids.map((id, i) => {
-          const card = ctx.state.cards[id];
-          if (!card) return null;
-          const style = collapsed && i > 0 ? `margin-left:${gap - overlap}px` : '';
-          return html`<${Card} key=${id} ctx=${ctx} card=${card} zone=${zone} h=${cardH} style=${style} override=${override}/>`;
+      <div class="row-cards">
+        ${h > 0 && cards.map((card, i) => {
+          let ml = 0;
+          if (sameGroup(i)) ml = fanned ? innerGap : -widths[i - 1] * (1 - PEEK);
+          else if (i > 0) ml = fanned ? groupGap : collapsed ? gap - overlap : gap;
+          const tucked = field && !fanned && !!card.attachedTo;
+          return html`<${Card} key=${card.id} ctx=${ctx} card=${card} zone=${zone} h=${cardH} style=${ml ? `margin-left:${ml}px` : ''}
+            override=${override} tucked=${tucked} attachedN=${fanned ? 0 : attachedN.get(card.id) || 0}/>`;
         })}
       </div>
     </div></div>`;

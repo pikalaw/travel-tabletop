@@ -149,6 +149,112 @@ describe('visibility', () => {
   });
 });
 
+describe('attachments', () => {
+  const mv = (h, id, from, to, toIndex) => h.dispatch({ type: 'move', actor: 'p1', payload: { cardId: id, from, to, toIndex } });
+  const att = (h, id, from, toCardId, toZone) => h.dispatch({ type: 'attach', actor: 'p1', payload: { cardId: id, from, toCardId, toZone } });
+  function setup() {
+    const h = started();
+    const [a, b, c, d] = h.state.zones['p1.hand'];
+    for (const id of [a, b, c]) mv(h, id, 'p1.hand', 'p1.battlefield');
+    return { h, a, b, c, d };
+  }
+
+  it('attaches from hand onto a creature, tucked just before it', () => {
+    const { h, a, b, c, d } = setup();
+    expect(att(h, d, 'p1.hand', b, 'p1.battlefield').ok).toBe(true);
+    expect(h.state.zones['p1.battlefield']).toEqual([a, d, b, c]);
+    expect(h.state.cards[d].attachedTo).toBe(b);
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('moves into the host zone, even the opponent battlefield', () => {
+    const h = started();
+    const mine = h.state.zones['p1.hand'][0], theirs = h.state.zones['p2.hand'][0];
+    h.dispatch({ type: 'move', actor: 'p2', payload: { cardId: theirs, from: 'p2.hand', to: 'p2.battlefield' } });
+    expect(att(h, mine, 'p1.hand', theirs, 'p2.battlefield').ok).toBe(true);
+    expect(h.state.zones['p2.battlefield']).toEqual([mine, theirs]);
+    expect(h.state.cards[mine].owner).toBe('p1');
+  });
+
+  it('attaching to an attached card goes onto its host (one level)', () => {
+    const { h, b, c, d } = setup();
+    att(h, d, 'p1.hand', b, 'p1.battlefield');
+    expect(att(h, c, 'p1.battlefield', d, 'p1.battlefield').ok).toBe(true);
+    expect(h.state.cards[c].attachedTo).toBe(b);
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('a host attached elsewhere brings its attachments; self-attach is refused', () => {
+    const { h, a, b, c, d } = setup();
+    att(h, d, 'p1.hand', b, 'p1.battlefield');
+    expect(att(h, b, 'p1.battlefield', d, 'p1.battlefield')).toMatchObject({ ok: false, error: 'invalid' });
+    expect(att(h, b, 'p1.battlefield', c, 'p1.battlefield').ok).toBe(true);
+    expect(h.state.cards[b].attachedTo).toBe(c);
+    expect(h.state.cards[d].attachedTo).toBe(c);
+    expect(h.state.zones['p1.battlefield']).toEqual([a, d, b, c]);
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('moving the host carries its attachments; tapping taps only the host', () => {
+    const { h, a, b, c, d } = setup();
+    att(h, d, 'p1.hand', b, 'p1.battlefield');
+    h.dispatch({ type: 'tap', actor: 'p1', payload: { cardId: b, from: 'p1.battlefield' } });
+    expect(h.state.cards[b].tapped).toBe(true);
+    expect(h.state.cards[d].tapped).toBe(false);
+    mv(h, b, 'p1.battlefield', 'p1.battlefield', 2); // index counted without the group: after c
+    expect(h.state.zones['p1.battlefield']).toEqual([a, c, d, b]);
+    mv(h, b, 'p1.battlefield', 'p2.battlefield');
+    expect(h.state.zones['p2.battlefield']).toEqual([d, b]);
+    expect(h.state.cards[d].attachedTo).toBe(b);
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('leaving play detaches; attachments stay where they were', () => {
+    const { h, a, b, c, d } = setup();
+    att(h, d, 'p1.hand', b, 'p1.battlefield');
+    mv(h, b, 'p1.battlefield', 'p1.graveyard', 0);
+    expect(h.state.zones['p1.battlefield']).toEqual([a, d, c]);
+    expect(h.state.cards[d].attachedTo).toBeUndefined();
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('a removed token host frees its attachments', () => {
+    const { h, d } = setup();
+    h.dispatch({ type: 'createToken', actor: 'p1', payload: { defId: 'tok', name: 'T', to: 'p1.battlefield' } });
+    const t = h.state.zones['p1.battlefield'].at(-1);
+    att(h, d, 'p1.hand', t, 'p1.battlefield');
+    h.dispatch({ type: 'removeToken', actor: 'p1', payload: { cardId: t, from: 'p1.battlefield' } });
+    expect(h.state.cards[d].attachedTo).toBeUndefined();
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('dragging an attachment away detaches it; detach puts it right of the host', () => {
+    const { h, a, b, c, d } = setup();
+    att(h, d, 'p1.hand', b, 'p1.battlefield');
+    mv(h, d, 'p1.battlefield', 'p1.battlefield', 0);
+    expect(h.state.cards[d].attachedTo).toBeUndefined();
+    expect(h.state.zones['p1.battlefield']).toEqual([d, a, b, c]);
+    att(h, d, 'p1.battlefield', b, 'p1.battlefield');
+    expect(h.dispatch({ type: 'detach', actor: 'p1', payload: { cardId: d, from: 'p1.battlefield' } }).ok).toBe(true);
+    expect(h.state.zones['p1.battlefield']).toEqual([a, b, d, c]);
+    expect(h.dispatch({ type: 'detach', actor: 'p1', payload: { cardId: d, from: 'p1.battlefield' } })).toMatchObject({ ok: false });
+  });
+
+  it('a card dropped into the middle of a group lands before the group', () => {
+    const { h, a, b, c, d } = setup();
+    att(h, d, 'p1.hand', b, 'p1.battlefield');
+    mv(h, c, 'p1.battlefield', 'p1.battlefield', 2); // [a, d, | c, b] -> c before d
+    expect(h.state.zones['p1.battlefield']).toEqual([a, c, d, b]);
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('cannot attach to a card outside the battlefield', () => {
+    const h = started();
+    const [x, y] = h.state.zones['p1.hand'];
+    expect(att(h, x, 'p1.hand', y, 'p1.hand')).toMatchObject({ ok: false, error: 'invalid' });
+  });
+});
+
 // ---------- Property tests ----------
 
 const ZONES = allZones();
@@ -166,6 +272,12 @@ const cmdArb = fc.oneof(
   fc.record({ type: fc.constant('untapAll'), player: fc.constantFrom('p1', 'p2') }),
   fc.record({ type: fc.constant('passTurn') }),
   fc.record({ type: fc.constant('undo') }),
+  fc.record({ type: fc.constant('play'), pick: fc.nat(), to: fc.constantFrom('p1.battlefield', 'p2.battlefield', 'p1.lands'), toIndex: fc.option(fc.nat(6), { nil: undefined }) }),
+  fc.record({ type: fc.constant('play'), pick: fc.nat(), to: fc.constantFrom('p1.battlefield', 'p2.battlefield', 'p1.lands'), toIndex: fc.option(fc.nat(6), { nil: undefined }) }),
+  fc.record({ type: fc.constant('play'), pick: fc.nat(), to: fc.constantFrom('p1.battlefield', 'p2.battlefield', 'p1.lands'), toIndex: fc.option(fc.nat(6), { nil: undefined }) }),
+  fc.record({ type: fc.constant('attach'), pick: fc.nat(), target: fc.nat() }),
+  fc.record({ type: fc.constant('attach'), pick: fc.nat(), target: fc.nat() }),
+  fc.record({ type: fc.constant('detach'), pick: fc.nat() }),
 );
 
 /** Turn an abstract step into a concrete command against the current state. */
@@ -184,19 +296,33 @@ function concretize(state, step) {
     case 'untapAll': return { type: 'untapAll', actor: step.player, payload: { player: step.player } };
     case 'passTurn': return { type: 'passTurn', actor: 'p1', payload: {} };
     case 'undo': return { type: 'undo', actor: 'table', payload: {} };
+    case 'play': return { type: 'move', actor: 'p1', payload: { cardId: id, from, to: step.to, toIndex: step.toIndex } };
+    case 'attach': {
+      const field = ['p1.battlefield', 'p2.battlefield', 'p1.lands'].flatMap((z) => state.zones[z].map((c) => [c, z]));
+      const [t, tz] = field.length ? field[step.target % field.length] : ['none', 'p1.battlefield'];
+      return { type: 'attach', actor: 'p1', payload: { cardId: id, from, toCardId: t, toZone: tz } };
+    }
+    case 'detach': {
+      const att = Object.values(state.cards).filter((c) => c.attachedTo).map((c) => c.id).sort();
+      const a = att.length ? att[step.pick % att.length] : id;
+      return { type: 'detach', actor: 'p1', payload: { cardId: a, from: ZONES.find((z) => state.zones[z].includes(a)) || from } };
+    }
   }
 }
 
 describe('properties', () => {
   it('card conservation holds after any command sequence', () => {
+    let attachedSeen = 0;
     fc.assert(fc.property(fc.array(cmdArb, { maxLength: 60 }), fc.integer({ min: 1, max: 1e6 }), (steps, seed) => {
       const h = started(new Host({ random: seeded(seed) }));
       for (const step of steps) {
-        h.dispatch(concretize(h.state, step));
+        const r = h.dispatch(concretize(h.state, step));
+        if (r.ok && step.type === 'attach') attachedSeen++;
         const bad = checkInvariants(h.state);
         if (bad) throw new Error(bad);
       }
     }), { numRuns: 150 });
+    expect(attachedSeen).toBeGreaterThan(10); // the generator really exercises attachments
   });
 
   it('undo restores the prior state exactly', () => {

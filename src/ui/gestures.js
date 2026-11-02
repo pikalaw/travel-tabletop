@@ -196,7 +196,9 @@ function describeDrop(t, x, y, srcEl) {
   }
   if (layout === 'pile') return { zone, index: 0, onCard };
   // Row or tray: index = number of cards whose centre is left of the pointer (excluding the dragged card).
-  const cards = [...t.querySelectorAll(':scope [data-card]')].filter((el) => el !== srcEl && el.closest('[data-drop]') === t);
+  // A dragged host carries its attachments, so they do not count either.
+  const cards = [...t.querySelectorAll(':scope [data-card]')].filter((el) => el !== srcEl && el.closest('[data-drop]') === t &&
+    !(srcEl.dataset.card && el.dataset.attachedTo === srcEl.dataset.card));
   let index = 0;
   for (const el of cards) {
     const r = el.getBoundingClientRect();

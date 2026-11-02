@@ -81,6 +81,7 @@ interface CardInstance {
   face: 'front' | 'back';     // flip
   faceDown: boolean;          // hidden from non-owner
   revealed: boolean;          // owner showed it from a private zone
+  attachedTo?: string;        // card it is attached to (same battlefield zone, one level)
   counters: { plus: number; minus: number; labeled: Record<string, number> };
 }
 
@@ -109,6 +110,15 @@ These declarations live in `src/types.d.ts`. They are used only by `tsc --checkJ
 - **Counters:** +1/+1 and −1/−1 are stored separately and never cancelled automatically, because the app does not apply rules.
 - **Not in state:** view and blind status, open or collapsed slots, and the peek tray. These are local UI state per device.
 - **Card definitions** (images, names) live in storage, not in the game state; the state carries only `defId`.
+
+**Attachments.** `attachedTo` links a card to its host. After every command the engine's `fixAttachments` pass restores four rules:
+
+- An attachment sits in its host's zone, and that zone is a battlefield or lands zone. Otherwise the link is dropped, which is how a host leaving play frees its attachments where they lie.
+- Hosts are never attached themselves: attaching to an attached card targets its host.
+- A host's attachments come immediately before it in the zone array, so DOM order matches the drawn left-to-right order (strips peek out to the host's left).
+- A card dropped inside a group lands before the group.
+
+`move` of a host to a battlefield or lands zone carries its attachments as a block; `toIndex` is counted without them, and the client's drop index skips them too. `move` of an attached card detaches it. Attach and detach are ordinary commands, so undo, the log, replay and sync need nothing new. `checkInvariants` checks all of this, and the property tests now generate attach and detach.
 
 ## Commands and engine rules
 
@@ -150,6 +160,8 @@ interface Command<T extends string, P> {
 | `startGame` | decks per player, starting life | — (host supplies the shuffles; deals 7) |
 | `concede` | player | game not over |
 | `undo` | — | a snapshot exists |
+| `attach` | cardId, from, toCardId, toZone | card is in from; target is in toZone, a battlefield or lands zone; not itself |
+| `detach` | cardId, from | card is in from and attached |
 
 **Notices** (logged, broadcast, not state): `peek` (player, n), `searchOpen`, `searchClose`, `point` (target card or zone), showCard (a hand card revealed once; the opponent's device shows it full screen; replaces the lasting `reveal` flag in the UI), and `inspectLibrary`. A `searchClose` is followed by a host-issued `shuffle`.
 

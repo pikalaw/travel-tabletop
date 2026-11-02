@@ -25,6 +25,8 @@ export interface CardInstance {
   faceDown: boolean;
   revealed: boolean;
   counters: Counters;
+  /** id of the card this one is attached to (same battlefield zone; one level only) */
+  attachedTo?: string;
 }
 
 export interface PlayerCounter { key: string; value: number }

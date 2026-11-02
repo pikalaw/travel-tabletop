@@ -19,7 +19,7 @@ export const STATE_COMMANDS = new Set([
   'startGame', 'move', 'tap', 'untapAll', 'flip', 'setFaceDown', 'reveal',
   'addCounter', 'removeCounter', 'createToken', 'removeToken', 'draw', 'mill',
   'shuffle', 'setLibraryTopFaceUp', 'setPlayerCounter', 'addPlayerCounter',
-  'removePlayerCounter', 'passTurn', 'concede', 'endGame',
+  'removePlayerCounter', 'passTurn', 'concede', 'endGame', 'attach', 'detach',
 ]);
 
 /** An empty state with no cards, used before startGame. @returns {GameState} */
@@ -84,6 +84,55 @@ function newCard(id, defId, name, deckId, owner, isToken) {
 
 const fail = (error, detail) => ({ error, detail });
 
+/** Reset what a card loses when it changes zone (the same rules for every kind of move). */
+function changeZone(c, from, to) {
+  if (from === to) return;
+  const leavingField = isBattlefieldZone(from) && !isBattlefieldZone(to);
+  const enteringField = !isBattlefieldZone(from) && isBattlefieldZone(to);
+  if (leavingField || enteringField || !isBattlefieldZone(to)) c.tapped = false;
+  if (leavingField) { c.counters = { plus: 0, minus: 0, labeled: {} }; c.face = 'front'; }
+  c.faceDown = false;
+  c.revealed = false;
+}
+
+/** Cards in `zone` attached to `hostId`, in zone order. */
+function attachmentsOf(state, zone, hostId) {
+  return state.zones[zone].filter((id) => state.cards[id]?.attachedTo === hostId);
+}
+
+/**
+ * Keep attachments consistent after any command: an attachment must sit on the battlefield in
+ * the same zone as its host, hosts are never attached themselves (one level), and each host's
+ * attachments come immediately before it in the zone (they are drawn tucked to its left).
+ * @param {GameState} state
+ */
+export function fixAttachments(state) {
+  const zoneOf = new Map();
+  for (const [z, ids] of Object.entries(state.zones)) for (const id of ids) zoneOf.set(id, z);
+  const cards = Object.values(state.cards);
+  for (const c of cards) {
+    if (!c.attachedTo) continue;
+    const z = zoneOf.get(c.id);
+    let host = state.cards[c.attachedTo];
+    for (let guard = 0; host?.attachedTo && guard < 10; guard++) host = state.cards[host.attachedTo];
+    if (!host || host.id === c.id || host.attachedTo || zoneOf.get(host.id) !== z || !isBattlefieldZone(z)) delete c.attachedTo;
+    else c.attachedTo = host.id;
+  }
+  // A card that is a host cannot itself stay attached (breaks any A<->B loop left above).
+  for (const c of cards) if (c.attachedTo && cards.some((d) => d.attachedTo === c.id)) delete c.attachedTo;
+  for (const [z, ids] of Object.entries(state.zones)) {
+    if (!isBattlefieldZone(z) || !ids.some((id) => state.cards[id].attachedTo)) continue;
+    const groups = new Map();
+    for (const id of ids) {
+      const a = state.cards[id].attachedTo;
+      if (a) { if (!groups.has(a)) groups.set(a, []); groups.get(a).push(id); }
+    }
+    const out = [];
+    for (const id of ids) if (!state.cards[id].attachedTo) out.push(...(groups.get(id) || []), id);
+    state.zones[z] = out;
+  }
+}
+
 /**
  * Apply one command. Never mutates the input state.
  * @param {GameState} input @param {Command} cmd @returns {ApplyResult}
@@ -143,24 +192,55 @@ export function apply(input, cmd) {
       if (!isZone(p.to)) return fail('invalid', `bad zone ${p.to}`);
       const c = card();
       const src = state.zones[p.from];
-      src.splice(src.indexOf(c.id), 1);
+      // A host moving to a battlefield zone takes its attachments along; moving an attached card detaches it.
+      const carry = c.attachedTo || !isBattlefieldZone(p.to) ? [] : attachmentsOf(state, p.from, c.id);
+      delete c.attachedTo;
+      for (const id of [...carry, c.id]) src.splice(src.indexOf(id), 1);
       if (c.isToken && !isBattlefieldZone(p.to) && p.to !== 'stack') {
         delete state.cards[c.id];
         moved.push({ id: c.id, from: p.from, to: null });
         break;
       }
-      if (p.from !== p.to) {
-        const leavingField = isBattlefieldZone(p.from) && !isBattlefieldZone(p.to);
-        const enteringField = !isBattlefieldZone(p.from) && isBattlefieldZone(p.to);
-        if (leavingField || enteringField || !isBattlefieldZone(p.to)) c.tapped = false;
-        if (leavingField) { c.counters = { plus: 0, minus: 0, labeled: {} }; c.face = 'front'; }
-        c.faceDown = false;
-        c.revealed = false;
-      }
+      for (const id of [...carry, c.id]) changeZone(state.cards[id], p.from, p.to);
       const dst = state.zones[p.to];
       const idx = Number.isInteger(p.toIndex) ? Math.max(0, Math.min(p.toIndex, dst.length)) : dst.length;
-      dst.splice(idx, 0, c.id);
-      moved.push({ id: c.id, from: p.from, to: p.to, toIndex: idx });
+      dst.splice(idx, 0, ...carry, c.id);
+      moved.push({ id: c.id, from: p.from, to: p.to, toIndex: idx + carry.length });
+      for (const [i, id] of carry.entries()) moved.push({ id, from: p.from, to: p.to, toIndex: idx + i });
+      break;
+    }
+
+    case 'attach': {
+      const bad = need(); if (bad) return bad;
+      if (!isBattlefieldZone(p.toZone)) return fail('invalid', 'cards can only be attached to a card on the battlefield');
+      if (!state.zones[p.toZone].includes(p.toCardId)) return fail('stale', `${p.toCardId} not in ${p.toZone}`);
+      let host = state.cards[p.toCardId];
+      if (host.attachedTo) host = state.cards[host.attachedTo]; // one level: attach to the card at the bottom
+      const c = card();
+      if (host.id === c.id) return fail('invalid', 'a card cannot be attached to itself');
+      // A card that carries attachments brings them onto the new host too.
+      const own = c.attachedTo ? [] : attachmentsOf(state, p.from, c.id);
+      const group = [...own, c.id];
+      const src = state.zones[p.from];
+      for (const id of group) src.splice(src.indexOf(id), 1);
+      for (const id of group) { changeZone(state.cards[id], p.from, p.toZone); state.cards[id].attachedTo = host.id; }
+      const dst = state.zones[p.toZone];
+      const idx = dst.indexOf(host.id); // just before the host: closest to it
+      dst.splice(idx, 0, ...group);
+      moved.push({ id: c.id, from: p.from, to: p.toZone, toIndex: idx + group.length - 1 });
+      for (const [i, id] of own.entries()) moved.push({ id, from: p.from, to: p.toZone, toIndex: idx + i });
+      break;
+    }
+
+    case 'detach': {
+      const bad = need(); if (bad) return bad;
+      const c = card();
+      if (!c.attachedTo) return fail('invalid', 'card is not attached');
+      const hostId = c.attachedTo;
+      delete c.attachedTo;
+      const z = state.zones[p.from];
+      z.splice(z.indexOf(c.id), 1);
+      z.splice(z.indexOf(hostId) + 1, 0, c.id); // just right of its former host
       break;
     }
 
@@ -324,6 +404,7 @@ export function apply(input, cmd) {
       return fail('invalid', `unhandled ${cmd.type}`);
   }
 
+  fixAttachments(state);
   state.seq = input.seq + 1;
   return { state, moved };
 }
@@ -343,6 +424,16 @@ export function checkInvariants(state) {
   }
   for (const id of Object.keys(state.cards)) {
     if (!seen.has(id)) return `card ${id} is in no zone`;
+  }
+  for (const c of Object.values(state.cards)) {
+    if (!c.attachedTo) continue;
+    const z = seen.get(c.id), host = state.cards[c.attachedTo];
+    if (!host) return `card ${c.id} attached to missing ${c.attachedTo}`;
+    if (seen.get(host.id) !== z) return `card ${c.id} attached across zones`;
+    if (!isBattlefieldZone(z)) return `card ${c.id} attached outside the battlefield`;
+    if (host.attachedTo) return `card ${c.id} attached to an attached card`;
+    const ids = state.zones[z], hi = ids.indexOf(host.id), ci = ids.indexOf(c.id);
+    if (ci > hi || ids.slice(ci, hi).some((id) => state.cards[id].attachedTo !== host.id)) return `attachments of ${host.id} not just before it`;
   }
   return null;
 }

@@ -1,9 +1,9 @@
 // Overlays on the game screen: card viewer sheets, full-screen card, counters, log, tokens,
 // dice, menu.
 
-import { html, useState } from './h.js';
+import { html, useState, useRef } from './h.js';
 import { Row, cardImage, BACK_URL } from './cards.js';
-import { zoneKind, zoneOwner, other } from '../engine/view.js';
+import { zoneKind, zoneOwner, other, canSeeFace } from '../engine/view.js';
 import { artUrl, sizeFor } from '../storage/db.js';
 
 const ZONE_TITLE = { library: 'Library', hand: 'Hand', battlefield: 'Battlefield', lands: 'Lands', graveyard: 'Graveyard', exile: 'Exile', command: 'Command zone', stack: 'Stack' };
@@ -62,14 +62,28 @@ export function CardSheet({ ctx, sheet, onClose, onRandom }) {
 }
 
 /** Full-screen view of one card. */
-export function FullCard({ ctx, cardId, zone }) {
+export function FullCard({ ctx, cardId, zone, group = null, onPick = (id) => {} }) {
+  const swipe = useRef(null);
   const card = ctx.state.cards[cardId];
   if (!card) return null;
   const img = cardImage(ctx, card, zone, card.faceDown && ctx.viewer === card.owner, 'large');
   const c = card.counters;
   const art = ctx.art.get(card.defId);
-  return html`<div class="fullcard">
-    <div class="fullcard-inner" data-card-target=${card.id} data-zone=${zone}>
+  const at = group ? group.indexOf(cardId) : -1;
+  const host = card.attachedTo ? ctx.state.cards[card.attachedTo] : null;
+  const nameOf = (x) => (canSeeFace(ctx.state, x, zone, ctx.viewer) || (x.faceDown && ctx.viewer === x.owner) ? x.name : 'a hidden card');
+  // Swipe sideways on the card to move through its group.
+  const down = (e) => { swipe.current = { x: e.clientX, y: e.clientY }; };
+  const up = (e) => {
+    const s0 = swipe.current; swipe.current = null;
+    if (!group || !s0 || e.target.closest('[data-badge]')) return;
+    const dx = e.clientX - s0.x, dy = e.clientY - s0.y;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    const next = at + (dx < 0 ? 1 : -1);
+    if (next >= 0 && next < group.length) onPick(group[next]);
+  };
+  return html`<div class="fullcard ${group ? 'grouped' : ''}">
+    <div class="fullcard-inner" data-card-target=${card.id} data-zone=${zone} onPointerDown=${down} onPointerUp=${up}>
       ${img.url ? html`<img src=${img.url} alt=${card.name} draggable=${false}/>` : html`<div class="card-face missing big"><span>${card.name}</span></div>`}
       <div class="full-badges">
         ${c.plus ? html`<span class="badge plus big" data-badge="plus" data-card-of=${card.id} data-zone=${zone}>+1/+1 × ${c.plus}</span>` : null}
@@ -80,6 +94,19 @@ export function FullCard({ ctx, cardId, zone }) {
     <div class="fullcard-meta">
       <b>${img.visible ? card.name : 'Hidden card'}</b>
       <span>${zoneTitle(ctx.state, zone)}${card.tapped ? ' · tapped' : ''}${card.faceDown ? ' · face down' : ''}${card.revealed ? ' · revealed' : ''}${card.face === 'back' ? ' · back face' : ''}${card.isToken ? ' · token' : ''}${art?.back ? ' · double-faced' : ''}</span>
+      ${host ? html`<span>Attached to ${nameOf(host)}</span>` : null}
+      ${group && !host ? html`<span>${group.length - 1} attached</span>` : null}
+      ${group ? html`<div class="full-thumbs">
+        ${group.map((id, i) => {
+          const x = ctx.state.cards[id];
+          const t = cardImage(ctx, x, zone, x.faceDown && ctx.viewer === x.owner, 'small');
+          const sum = x.counters.plus + x.counters.minus + Object.values(x.counters.labeled).reduce((a, b) => a + b, 0);
+          return html`<button class="thumb ${id === cardId ? 'on' : ''}" onClick=${() => onPick(id)} aria-label=${i === 0 ? 'Host card' : `Attached card ${i}`}>
+            <img src=${t.url} alt="" draggable=${false}/>${sum ? html`<span class="thumb-ctr">${sum}</span>` : null}
+          </button>`;
+        })}
+      </div>
+      <span class="hint">Swipe the card or tap a thumbnail to see the rest of the group.</span>` : null}
       <span class="hint">Drag counters from the bar onto the card; drag a counter off to remove it.</span>
     </div>
   </div>`;

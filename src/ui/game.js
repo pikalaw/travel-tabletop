@@ -28,6 +28,7 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   const [shown, setShown] = useState(null);        // { actor, cardIds }: the reveal screen
   const [pinFor, setPinFor] = useState(null);      // player asked for their code before unblinding
   const [pointMode, setPointMode] = useState(false);
+  const [attaching, setAttaching] = useState(null); // { cardId, zone }: waiting for the card to attach it to
   const [label, setLabel] = useState('loyalty');
   const [art, setArt] = useState(new Map());
   const [tokenDecks, setTokenDecks] = useState([]);
@@ -141,6 +142,17 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   function slotOf(el) { return el.closest('[data-slot]'); }
 
   function onTap(el) {
+    if (attaching) {
+      const targetId = el.dataset.card;
+      const zone = el.dataset.zone;
+      if (!targetId || el.closest('.sheet')) { toast('Tap a card on the battlefield to attach to, or Cancel.', 'info'); return; }
+      if (targetId === attaching.cardId) { setAttaching(null); return; }
+      const k = zoneKind(zone);
+      if (k !== 'battlefield' && k !== 'lands') { toast('Cards can only be attached to a card on the battlefield.', 'info'); return; }
+      send('attach', { cardId: attaching.cardId, from: findZone(state, attaching.cardId) || attaching.zone, toCardId: targetId, toZone: zone });
+      setAttaching(null);
+      return;
+    }
     if (pointMode) {
       const cardId = el.dataset.card || null;
       const zone = el.dataset.zone || el.dataset.slot || slotOf(el)?.dataset.slot || null;
@@ -168,15 +180,18 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
       const row = el.closest('[data-drop]');
       if (row?.dataset.collapsed) { setOpenSlot(zone); return; }
       const k = zoneKind(zone);
-      if (k === 'battlefield' || k === 'lands') send('tap', { cardId: el.dataset.card, from: zone });
+      // A tucked attachment is a thin strip: a tap on it is meant for the card it is attached to.
+      const c = state.cards[el.dataset.card];
+      const target = c?.attachedTo && !row?.dataset.fanned ? c.attachedTo : el.dataset.card;
+      if (k === 'battlefield' || k === 'lands') send('tap', { cardId: target, from: zone });
       return;
     }
     if (tap === 'pile') return pileTap(el.dataset.slot);
     if (tap === 'slot') {
       const zone = el.dataset.slot;
       if (el.closest('.sheet')) return;
-      if (el.dataset.collapsed) setOpenSlot(zone);
-      else if (openSlot === zone) setOpenSlot(null);
+      if (openSlot === zone) setOpenSlot(null);
+      else if (el.dataset.collapsed || el.dataset.groups) setOpenSlot(zone);
     }
   }
 
@@ -335,6 +350,14 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   const O = other(P);
   const fullZone = full ? (findZone(state, full.cardId) || full.zone) : null;
   const isOffline = session.kind !== 'same-device' && session.status !== 'open';
+  // The full view of a card in a group shows the whole group: the host first, then its attachments.
+  let fullGroup = null;
+  if (full && state.cards[full.cardId] && (zoneKind(fullZone) === 'battlefield' || zoneKind(fullZone) === 'lands')) {
+    const c = state.cards[full.cardId];
+    const host = c.attachedTo || c.id;
+    const atts = state.zones[fullZone].filter((id) => state.cards[id].attachedTo === host).reverse();
+    if (atts.length) fullGroup = [host, ...atts];
+  }
 
   // ----- footer -----
   let footer;
@@ -346,9 +369,19 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
       <button class="btn" onClick=${() => send('setFaceDown', { cardId: card.id, from: fullZone, value: !card.faceDown })}>${card.faceDown ? 'Face up' : 'Face down'}</button>
       ${k === 'hand' ? html`<button class="btn" onClick=${() => revealCard(card, fullZone)}>Reveal</button>` : null}
       ${k === 'battlefield' || k === 'lands' ? html`<button class="btn" onClick=${() => send('tap', { cardId: card.id, from: fullZone })}>${card.tapped ? 'Untap' : 'Tap'}</button>` : null}
+      ${card.attachedTo
+        ? html`<button class="btn" onClick=${() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button>`
+        : k !== 'library' ? html`<button class="btn" onClick=${() => { setAttaching({ cardId: card.id, zone: fullZone }); setFull(null); setSheet(null); }}>Attach</button>` : null}
       <${CounterChips} label=${label}/>
       <span class="spacer"></span>
       <button class="btn primary" onClick=${() => setFull(null)}>Close</button>
+    </div>`;
+  } else if (attaching && state.cards[attaching.cardId]) {
+    const c = state.cards[attaching.cardId];
+    footer = html`<div class="bar">
+      <span class="attach-hint">Attach <b>${canSeeFace(state, c, findZone(state, c.id) || attaching.zone, viewer) ? c.name : 'card'}</b>: tap the card to attach it to</span>
+      <span class="spacer"></span>
+      <button class="btn primary" onClick=${() => setAttaching(null)}>Cancel</button>
     </div>`;
   } else if (lib) {
     const mine = libOwner === actingPlayer;
@@ -408,7 +441,7 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   return html`<div class="game ${isOffline && session.kind === 'guest' ? 'readonly' : ''} ${pointMode ? 'pointing' : ''}" ref=${rootRef}>
     <div class="board-wrap">
       <${Board} ctx=${ctx} P=${P} openSlot=${openSlot}/>
-      ${full ? html`<div class="full-wrap"><${FullCard} ctx=${ctx} cardId=${full.cardId} zone=${fullZone}/></div>` : null}
+      ${full ? html`<div class="full-wrap"><${FullCard} ctx=${ctx} cardId=${full.cardId} zone=${fullZone} group=${fullGroup} onPick=${(id) => setFull({ cardId: id, zone: fullZone })}/></div>` : null}
       ${sheetEl}
       ${state.result ? html`<div class="result-banner">${state.result.winner ? `${state.players[state.result.winner].name} wins` : 'Game over'}${state.result.reason === 'concede' ? ' (concession)' : ''} — undo to continue, or use the menu.</div>` : null}
     </div>

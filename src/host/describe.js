@@ -50,6 +50,11 @@ export function describeCommand(cmd, before, after, moved = []) {
       if (zoneKind(m.to) === 'library') where = `${m.toIndex === 0 ? 'the top' : 'the bottom'} of ${where}`;
       return `${name}: ${cn} → ${where}`;
     }
+    case 'attach': {
+      const hostId = st.cards[p.cardId]?.attachedTo || p.toCardId;
+      return `${name} attached ${cardName(before, after, p.cardId, p.from, p.toZone)} to ${cardName(before, after, hostId, p.toZone, p.toZone)}`;
+    }
+    case 'detach': return `${name} detached ${cardName(before, after, p.cardId, p.from, p.from)}`;
     case 'tap': {
       const c = st.cards[p.cardId];
       return `${name} ${c?.tapped ? 'tapped' : 'untapped'} ${cardName(before, after, p.cardId, p.from, p.from)}`;
