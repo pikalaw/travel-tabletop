@@ -88,7 +88,8 @@ export function attachGestures(root, h) {
     g.x = e.clientX; g.y = e.clientY; g.t = e.timeStamp;
     const dx = g.x - g.x0, dy = g.y - g.y0;
     if (!g.dragging && !g.panning && !g.long && Math.hypot(dx, dy) > DRAG_PX) {
-      if (g.sc && Math.abs(dx) > Math.abs(dy)) { g.panning = true; clearTimeout(g.timer); }
+      // A counter on a card always drags (so it can come off sideways); anything else pans a scroller sideways.
+      if (g.sc && !g.el?.dataset.badge && Math.abs(dx) > Math.abs(dy)) { g.panning = true; clearTimeout(g.timer); }
       else if (!g.el || (h.canDrag && !h.canDrag(g.el))) { clearTimeout(g.timer); g.el = null; g.sc = null; return; }
       else startDrag();
     }

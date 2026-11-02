@@ -213,19 +213,19 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   }
 
   function onDrop(src, d) {
+    // A counter dragged off its card is removed wherever it lands, even outside every slot.
+    if (src.dataset.badge) {
+      const cardId = src.dataset.cardOf;
+      if (d.onCard === cardId || d.cardId === cardId) return;
+      send('removeCounter', { cardId, from: src.dataset.zone, kind: src.dataset.badge, label: src.dataset.label });
+      return;
+    }
     if (d.nowhere) return;
     // A counter from the footer onto a card.
     if (src.dataset.counter) {
       if (!d.cardId) return;
       const kind = src.dataset.counter;
       send('addCounter', { cardId: d.cardId, from: d.zone, kind, label: kind === 'label' ? label : undefined });
-      return;
-    }
-    // A counter dragged off a card.
-    if (src.dataset.badge) {
-      const cardId = src.dataset.cardOf;
-      if (d.onCard === cardId || d.cardId === cardId) return;
-      send('removeCounter', { cardId, from: src.dataset.zone, kind: src.dataset.badge, label: src.dataset.label });
       return;
     }
     // A token from the token picker.

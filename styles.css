@@ -183,6 +183,9 @@ body.dragging .pile[data-layout="library"].drop-hover .drop-hint { display: bloc
   font-size: 10px; font-weight: 700; line-height: 16px; padding: 0 4px; border-radius: 8px;
   background: rgba(0,0,0,.82); border: 1px solid rgba(255,255,255,.25); touch-action: none; white-space: nowrap;
 }
+/* An invisible margin makes a small counter easier to grab with a finger than the card under it. */
+.badge[data-badge] { position: relative; }
+.badge[data-badge]::after { content: ""; position: absolute; inset: -8px -3px; }
 .badge.plus { color: #9be7a8; } .badge.minus { color: #ffa29a; } .badge.label { color: #d7c58f; }
 .badge.big { font-size: 15px; line-height: 26px; padding: 0 10px; border-radius: 13px; }
 
