@@ -23,7 +23,7 @@ function Counters({ ctx }) {
     const list = ctx.state.players[pl].counters;
     const life = list[0];
     const rest = list.slice(1);
-    return html`<div class="ctr-line ${pl}">
+    return html`<div class="ctr-line ${pl} ${pl === A ? 'role-atk' : 'role-def'}">
       <span class="ctr-name">${ctx.state.players[pl].name}</span>
       <span class="ctr-life">♥ ${life.value}</span>
       ${rest.slice(0, 3).map((c) => html`<span class="ctr-small">${c.key} ${c.value}</span>`)}
@@ -32,7 +32,7 @@ function Counters({ ctx }) {
   };
   // The player whose turn it is is listed first, under a "Turn N · name" label.
   return html`<div class="counters-cell" data-tap="counters">
-    <span class="slot-label turn-label ${A}">Turn ${st.turn} · ${st.players[A].name}</span>
+    <span class="slot-label turn-label role-atk">Turn ${st.turn} · ${st.players[A].name}</span>
     ${line(A)}
     ${line(other(A))}
   </div>`;
@@ -63,7 +63,7 @@ export function Board({ ctx, P, openSlots }) {
       <div class="cell c42 me">${row(z.myLands, `${name(P)} · lands`)}</div>
       <div class="cell c43 me">${html`<${Pile} ctx=${ctx} zone=${z.myGrave} label="Graveyard"/>`}</div>
       <div class="cell c51 me"><${Counters} ctx=${ctx}/></div>
-      <div class="cell c52 me">${row(z.myHand, ctx.viewer === P ? `${name(P)}’s hand` : `${name(P)}’s hand (hidden)`, 'hand')}</div>
+      <div class="cell c52 me">${row(z.myHand, html`<span class=${st.activePlayer === P ? 'role-atk' : 'role-def'}>${name(P)}’s hand</span>${ctx.viewer === P ? '' : ' (hidden)'}`, 'hand')}</div>
       <div class="cell c53 shared">${html`<${Pile} ctx=${ctx} zone="stack" label="Stack"/>`}</div>
     </div>`;
 }

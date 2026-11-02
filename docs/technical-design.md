@@ -312,7 +312,7 @@ During a game, a changed hash is put back.
 | 4 | P.exile | P.lands | P.graveyard |
 | 5 | player counters | P.hand | stack |
 
-Row zones are drawn by `Row`, piles by `Pile` (the top card, with a library split into Top and Bottom drop halves). The board's class is `my-turn` or `their-turn`. Its background is a vertical gradient: red `rgba(214,64,52,.38)` at the active player's edge to `.12` at 42%, then blue `rgba(60,110,220,.12)` at 58% to `.38` at the far edge. Cells are translucent, so the gradient shows through.
+Row zones are drawn by `Row`, piles by `Pile` (the top card, with a library split into Top and Bottom drop halves). The board's class is `my-turn` or `their-turn`. Its background is a vertical gradient: red `rgba(214,64,52,.38)` at the active player's edge to `.12` at 42%, then blue `rgba(60,110,220,.12)` at 58% to `.38` at the far edge. Cells are translucent, so the gradient shows through. Names follow the same roles: the turn label, the active player's name in the counters cell and the hand label's name (when the perspective player is active) use `--hot` `#ff7b5f` (classes `role-atk`); the defender's name uses `--cool` `#7aa7ff` (`role-def`).
 
 **Rows** (`cards.js`). Card height = slot height − 14 px; width = height × 63/88 (a tapped card's box is square, and its image is rotated 90°).
 

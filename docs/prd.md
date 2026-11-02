@@ -43,8 +43,8 @@ Each player sees the same 5×3 grid from their own side: rows 1–2 are the oppo
 - **Labels.** Each slot is labelled at its top left with its name and card count, e.g. "Claire · battlefield 7". Battlefield and lands slots carry the owner's name.
 - **Opponent's hand.** Never shown. Its card count appears right-aligned on the opponent's lands row ("Claire: 5 in hand").
 - **Own hand.** Labelled with its owner, "Lawrence's hand", or "Lawrence's hand (hidden)" while blinded, which also shows whose view the board is in.
-- **Whose turn.** The player-counter cell (5,1) is labelled "Turn N · name" in that player's colour, and lists that player first. A clear wash runs from red on the active (attacking) player's side to blue on the defender's, and flips when the turn passes.
-- **Player colours.** Player 1 is gold, player 2 is teal, used for names, the turn label and the unblind buttons.
+- **Whose turn.** The player-counter cell (5,1) is labelled "Turn N · name" and lists that player first. The attacking (active) player's name, in the turn label, the counters cell and their hand's label, is in a hot coral; the defending player's is in a cool blue. These swap when the turn passes. A clear wash runs from red on the active (attacking) player's side to blue on the defender's, and flips when the turn passes.
+- **Player colours.** Player 1 is gold, player 2 is teal, used for the unblind buttons and dialogs, the pointer ring and the player-counter sheet.
 - **Orientation.** Any device, portrait or landscape, one responsive layout. Rotating changes only the layout, never game state.
 - **Sizing.** Rows have unequal heights: the player's battlefield and hand are tallest, the opponent's lands shortest. Columns 1 and 3 are narrow; column 2 takes the remaining width. Extra space on larger screens enlarges the rows.
 - **Phone readability.** On phones the board shows card art only; reading a card means a long-press.
