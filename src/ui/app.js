@@ -222,7 +222,7 @@ function Setup({ go, startGame }) {
       ${mode === 'host' ? html`<button class="btn primary big" onClick=${async () => { if (!pick.p1.length) { setErr('Choose at least one deck.'); return; } await saveSetup(); setErr(''); setStage('host'); }}>Next: pair the guest</button>` : null}
       ${mode === 'join' ? html`<button class="btn primary big" onClick=${async () => { if (!pick.p1.length) { setErr('Choose at least one deck.'); return; } await saveSetup(); setErr(''); setStage('join'); }}>Next: scan the host's code</button>` : null}
     </div>
-    ${mode === 'same' ? html`<p class="muted small">Hands start blinded. Use “Unblind to …” and your code to see your hand; the board switches to that player's side. Each player should type their own code without the other watching.</p>` : null}
+    ${mode === 'same' ? html`<p class="muted small">Hands start blinded. Use “Unblind to …” to see your hand; the board switches to that player's side.</p>` : null}
   </div>`;
 }
 

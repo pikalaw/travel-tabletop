@@ -4,9 +4,11 @@ Oct 30, 2026 · @Lawrence Tsang
 
 ## Scope
 
-This plan orders the work in seven milestones, each with a demoable result and an exit test. The networking spike comes first because its outcome finalizes the transport section of the design. Features are defined in the [PRD](./prd.md) and the build is described in the [technical design](./technical-design.md); this doc only sequences and verifies them.
+This plan orders the work in seven milestones, records where each stands, and says how the app is tested and released. Features are defined in the [PRD](./prd.md) and the build is described in the [technical design](./technical-design.md); this doc only sequences and verifies them.
 
 The board works on one device first: same-device mode is the first playable version, and networking is layered on afterwards.
+
+**Status (Nov 2, 2026).** Milestones 2–7 are built and deployed at https://pikalaw.github.io/travel-tabletop/. Two things are still open: the networking spike on real devices (Milestone 1), and a live Scryfall import, since every import test so far ran against a mocked Scryfall.
 
 ## Phases
 
@@ -16,69 +18,71 @@ Seven milestones in sequence, with four gates. The second gate, a full same-devi
 
 M2 runs alongside M1 because neither depends on the other; every later milestone starts only after the previous one exits.
 
+| Milestone | Status | Exit test |
+| --- | --- | --- |
+| M1 Networking spike | Open: desktop browsers connect; the phone hotspot with an iPad is untested | Messages flow both ways, in both role assignments, with no internet |
+| M2 Layout mock | Done | A card in your own battlefield can be recognised and tapped on a phone in both orientations |
+| M3 Engine and single-device board | Done | Engine unit and property tests pass; a scripted command sequence on the board gives the expected state |
+| M4 Same-device mode | Done | Two people play a full game on one device, and the log replays to the same final state |
+| M5 Decks | Done, except a live Scryfall run | Import real decks, go offline, play a same-device game with them |
+| M6 Networked play | Done on desktop browsers | A full networked game on the Android phone and the iPad over a hotspot, including a forced disconnect and resume |
+| M7 Library tools and polish | Done | The PRD walkthrough passes on devices |
+
 ## Milestone details
 
 Each milestone ends with an exit test; nothing in a later milestone starts until the previous exit test passes, except that M2 can run in parallel with M1.
 
-**M1 — Networking spike** (throwaway code)
+**M1 — Networking spike**
 
-- [ ] Bare page: create a peer connection with no STUN, deflate and base64-encode the offer, show it as a QR code and as text
-- [ ] Scan or paste the offer and answer; echo messages both ways over a data channel
-- [ ] Record the offer size after deflate, and how reliably a QR code scans from a phone screen
-- [ ] Run with the Android phone's hotspot and cellular data off, both role assignments (Android host, iPad host)
+- [x] Peer connection with no STUN; offer deflated and base64url-encoded; shown as a QR code and as text
+- [x] Scan or paste the offer and answer; messages echo both ways over a data channel
+- [x] Offer size after deflate and SDP slimming: about 500 characters on desktop Chromium
+- [ ] How reliably the QR code scans from a phone screen
+- [ ] Run with the Android phone's hotspot and cellular data off, in both role assignments (Android host, iPad host)
 
-* Exit: messages flow both ways in both role assignments with no internet. Otherwise, switch the design's transport to Capacitor and repeat with native sockets.
+If the last item fails, switch the transport to a Capacitor-wrapped native socket behind the same transport interface, and repeat.
 
 **M2 — Layout mock**
 
-- [ ] Static 5×3 grid and footer with placeholder card images, rows of unequal height, and a wide center column
-- [ ] Check on a phone and the iPad, portrait and landscape: card size, tap target size
-
-* [ ] Project skeleton with no bundler: `index.html` with an import map, vendored Preact + htm, `manifest.json`, `sw.js`, `tools/gen-sw-list.js`, and `tsc --checkJs` and Vitest wired into npm scripts
-
-- Exit: a card in your own battlefield can be recognized and tapped reliably on the phone in both orientations.
+- [x] 5×3 grid and footer; rows of unequal height; a wide centre column
+- [x] Checked on a phone in portrait; tablet and landscape checked in desktop emulation only
+- [x] Project skeleton with no bundler: `index.html` with an import map, vendored Preact + htm, `manifest.json`, `sw.js`, `tools/gen-sw-list.js`, and `tsc` and Vitest wired into npm scripts
 
 **M3 — Engine and single-device board**
 
-- [ ] Engine: state types, `apply` for the full command catalog, invariants, `viewFor`
-- [ ] Host: command queue, randomness, snapshot undo, log entries, saving to IndexedDB
-- [ ] UI: all zones, drag anywhere, open and collapsed slots, tap and untap, full-screen view (flip, face-down, reveal), counters, tokens, player counters, untap all, undo
-- [ ] Library basics: draw, mill, shuffle, drop on top or bottom
-- [ ] A built-in fixture deck of generated placeholder cards, so no import is needed yet
+- [x] Engine: state shape, `apply` for the full command catalog, invariant passes, visibility
+- [x] Host: command queue, randomness, snapshot undo, log entries, saving to IndexedDB
+- [x] UI: all zones, drag anywhere, open and collapsed slots, tap and untap, full-screen view (flip, face-down, reveal), counters, tokens, player counters, untap all, undo
+- [x] Library basics: draw, mill, shuffle, drop on top or bottom
+- [x] Built-in sample decks of generated placeholder cards
 
-* Exit: all engine unit and property tests pass, and a scripted 20-command sequence on the board matches the expected state.
+**M4 — Same-device mode**
 
-**M4 — Same-device mode (first playable)**
-
-- [ ] Blind my hand, unblind to a player, perspective switch, `table` actor, session mode in the log
-- [ ] Game lifecycle: new game, deal 7, pass turn, concede, rematch, resume
-
-* Exit: two people play a full game on one device with the fixture decks, and the log replays to the same final state.
+- [x] Blind and unblind with a per-player confirmation, perspective switch, `table` actor, session mode in the log
+- [x] Game lifecycle: new game, deal 7, pass turn (with confirmation), concede, rematch, resume, game links
 
 **M5 — Decks**
 
-- [ ] Decklist parser, Scryfall lookup and image download, image storage deduplicated by hash, token deck
-- [ ] Deck list and deck picker screens; reporting unresolved lines
-- [ ] Deck fingerprint
-
-* Exit: import two real 60-card decks and a Commander deck, go offline, and play a same-device game with them.
+- [x] Decklist parser, Scryfall lookup and image download in three sizes, images deduplicated by hash, token decks
+- [x] Starter pack download (Avatar Beginner Box), duplicate warnings, deck page with full-screen viewer
+- [x] Backup and restore files; persistent-storage request and status line
+- [x] Card-set check at pairing (replaces a deck fingerprint)
+- [ ] One live import against the real Scryfall API
 
 **M6 — Networked play**
 
-- [ ] Production `Transport` from M1 (or Capacitor), pairing by QR and by text, `hello` / `welcome` / `refuse` handshake with version and deck check
-- [ ] Guest client: commands, handling of rejected commands, read-only while disconnected, reconnection
-- [ ] Host: rejection of stale commands, full-state broadcast, a guest reconnecting mid-game
-- [ ] Wake lock
-
-* Exit: a full networked game on the Android phone and the iPad over a hotspot, including one forced disconnect and resume.
+- [x] Production transport, pairing by QR and by text, `hello` / `welcome` / `refuse` handshake with version and card checks
+- [x] Guest client: commands, rejected commands, read-only while disconnected, reconnection
+- [x] Host: stale-command rejection, full-state broadcast, a guest reconnecting mid-game
+- [x] Wake lock
+- [ ] The same on real devices over a hotspot (see M1)
 
 **M7 — Library tools and polish**
 
-- [ ] Peek, reveal top N, search with shuffle on close, top card face-up toggle, alerts to the other player
-- [ ] Randomness tools (coin, die, random pick), pointer, latest-action ticker, opponent hand count
-- [ ] Log export as JSON Lines
-
-* Exit: the PRD walkthrough checklist passes on devices (see Test strategy).
+- [x] Peek, reveal top N, search with shuffle on close, look through the other library, top card face-up toggle, alerts to the other player
+- [x] Dice and random pick, pointer, ticker and recent actions, opponent hand count
+- [x] Log export as JSON Lines
+- [x] Added after the original plan: attachments, combat marks, multiple open slots, touch scrolling handled in code, turn label and turn gradient
 
 ## Test strategy
 
@@ -86,12 +90,27 @@ Most correctness is tested on the pure engine without a browser; real devices ar
 
 | Layer | Tool | What it checks | When it runs |
 | --- | --- | --- | --- |
-| Engine unit | Vitest | Each command's effect and rejection cases; `viewFor` visibility for every zone and flag | Every commit |
-| Engine property | fast-check | Random command sequences: card conservation (each card in exactly one zone), undo restores the prior state exactly, replaying the log reproduces the final state, no face leaks in `viewFor` for the non-owner | Every commit |
-| Host | Vitest | Queue order, stale rejection, randomness filled only by the host, snapshot cap, one save per command | Every commit |
-| Protocol | Vitest with an in-memory transport | Handshake, refusal on version or deck mismatch, reconnect with `gameId`, chunking of large messages | Every commit, from M6 |
-| End-to-end | Playwright, two browser contexts | Host and guest over a real WebRTC connection on one machine, with text pairing; a scripted game; disconnect and resume | Before each milestone exit, from M6 |
-| Device checklist | Manual | Everything in the next list | Each milestone exit on devices |
+| Engine unit | Vitest | Each command's effect and rejection cases; visibility for every zone and flag; attachments; combat marks and sides | Every commit (`npm test`) |
+| Engine property | fast-check | Random sequences of every command, including attach, block and undo: card conservation and all invariants; undo restores the prior state exactly; replaying the log reproduces the final state; no hand faces leak to the non-owner; snapshot cap | Every commit |
+| Protocol | Vitest with an in-memory transport | Guest commands apply with the guest as actor; stale commands are rejected and reported; notices reach the other side; pairing codec round-trip; decklist parser; SHA-256 fallback; list signature; game ids and links | Every commit |
+| Types | `tsc -p jsconfig.json` | JSDoc types against `src/types.d.ts` | Every commit (`npm run typecheck`) |
+| Browser | Playwright (Python), headless Chromium, phone-sized viewports, mouse and emulated touch | The scenarios below | Before each release |
+| Device checklist | Manual | The list below | Each milestone exit on devices |
+
+The unit suites are 43 tests in `tests/engine.test.js`, `tests/net.test.js` and `tests/link.test.js`. The browser scenarios are scripts kept outside the repo so far. Each serves the app over local HTTP, mocks Scryfall where it imports, and prints the values it checks:
+
+- **Smoke:** start a game, unblind with the confirmation, drag cards, create and remove tokens, change life.
+- **Two devices:** two browser contexts paired by text codes, with guest commands, a peek alert, pointing, undo and dice. Reconnecting, resume after reload, persisted snapshots and log export.
+- **Reveal:** on one device and on two.
+- **Decks:** import with mocked Scryfall (collection calls, three images per face, token deck); starter-pack download; duplicate warning; requiring a deck per player; image size choice; plain-HTTP SHA-256 fallback.
+- **Backup:** export, restore, duplicate statuses, a damaged file.
+- **Offline:** the page is controlled by the service worker and a game starts with the network cut.
+- **Touch:** footer and open-row scrolling, fling, swallowed click after a pan, card drag still works.
+- **Attachments:** attach from hand, onto a strip, group viewer, fan out, detach, host moves and leaves play, undo.
+- **Counters:** removal by drag on the board and in the full view (mouse and touch); − and + buttons.
+- **Combat:** marking in combat mode, tags, marks on tapped cards, several open slots, End combat, Pass turn confirmation, side enforcement, the Attack tag only for the active player.
+- **Labels:** turn label and order, hand label, opponent hand count, turn gradient, TAP TO CLOSE.
+- **Game links:** same device, another device, a finished game, a malformed link, a link changed mid-game.
 
 **Device checklist** (Android phone + iPad)
 
@@ -104,14 +123,25 @@ Most correctness is tested on the pure engine without a browser; real devices ar
 - [ ] Installed app launches and plays in airplane mode
 - [ ] Same-device: blind and unblind with perspective switch, and peek blocked while blinded
 
-**PRD walkthrough.** Before M7 exits, walk every PRD section on devices and tick each behavior. Any mismatch is either fixed in code or corrected in the PRD.
+So far the Pixel has been used for same-device play in Chrome (scrolling, counters, combat, labels), with fixes made from what it showed; the checklist above has not been run end to end.
+
+**PRD walkthrough.** Before M7 exits on devices, walk every PRD section on devices and tick each behaviour. Any mismatch is either fixed in code or corrected in the PRD.
+
+## Release
+
+1. `npm test` and `npm run typecheck`.
+2. Run the browser scenarios against a local server.
+3. `node tools/gen-sw-list.js`, which rewrites the file list and version in `sw.js`. Never skip it: a stale list leaves devices on the old app, and a list naming a deleted file breaks the offline install.
+4. Commit and push to `main` of github.com/pikalaw/travel-tabletop; GitHub Pages serves the repository root.
+5. On a device, open the app online, leave any game, and tap Update now (or reopen the app). The home screen footer shows the build.
 
 ## Dev environment
 
-Develop in a desktop browser; move to devices only for networking, touch feel and mobile platform behavior.
+Develop in a desktop browser; move to devices only for networking, touch feel and mobile platform behaviour.
 
 **On desktop**
 
+- `npm install` once (dev tools only; the vendored files are already in `vendor/`), then serve the folder over HTTP, e.g. `python3 -m http.server 8080`.
 - Same-device mode in one window.
 - Networked mode in two windows (host and guest) over a real WebRTC connection on one machine, paired by pasted text.
 - Layouts in Chrome DevTools device mode or Safari Responsive Design Mode, both orientations.
@@ -126,7 +156,7 @@ Develop in a desktop browser; move to devices only for networking, touch feel an
 | Long-press timing, swipe vs. drag, tap targets | Emulated only | Yes |
 | Wake lock, page suspension, PWA install on iOS | — | Yes |
 
-**Serving to phones.** Camera access, service workers and PWA install need HTTPS. `localhost` is exempt on desktop; a phone loading the laptop's IP over plain HTTP is not. Use one of:
+**Serving to phones.** Camera access, service workers and PWA install need HTTPS; `localhost` is exempt on desktop, but a phone loading the laptop's IP over plain HTTP is not. On plain HTTP the app still runs (the SHA-256 fallback covers missing Web Crypto), but it won't install or work offline. Use one of:
 
-- any static file server over HTTPS (for example `npx http-server -S`) with a locally trusted certificate from mkcert, installed as trusted on each device, or
-- deploy builds to an HTTPS static host such as GitHub Pages, install once per device, then test and play offline.
+- the GitHub Pages deployment (the current setup); install once per device, then test and play offline; or
+- any static file server over HTTPS (for example `npx http-server -S`) with a locally trusted certificate from mkcert, installed as trusted on each device. A laptop firewall that blocks incoming connections rules this out, which is why Pages is used.

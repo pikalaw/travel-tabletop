@@ -325,9 +325,20 @@ describe('combat marks', () => {
     expect(send(h, 'attack', { cardId: b1, from: 'p2.battlefield' }, 'p2')).toMatchObject({ ok: false, error: 'invalid' });
     send(h, 'attack', { cardId: a1, from: 'p1.battlefield' });
     expect(send(h, 'block', { cardId: a2, from: 'p1.battlefield', attackerId: a1, attackerZone: 'p1.battlefield' })).toMatchObject({ ok: false, error: 'invalid' });
-    // a creature that changes sides keeps its mark until combat ends; it can still be unmarked
+    // a creature that changes sides (control) is removed from combat, freeing its blockers
+    send(h, 'attack', { cardId: a2, from: 'p1.battlefield' });
+    send(h, 'block', { cardId: b1, from: 'p2.battlefield', attackerId: a1, attackerZone: 'p1.battlefield' }, 'p2');
     send(h, 'move', { cardId: a1, from: 'p1.battlefield', to: 'p2.battlefield' });
-    expect(send(h, 'attack', { cardId: a1, from: 'p2.battlefield', value: false }).ok).toBe(true);
+    expect(h.state.cards[a1].attacking).toBeUndefined();
+    expect(h.state.cards[b1].blocking).toBeUndefined();
+    expect(h.state.cards[a2].attacking).toBe(2);
+    send(h, 'block', { cardId: b1, from: 'p2.battlefield', attackerId: a2, attackerZone: 'p1.battlefield' }, 'p2');
+    send(h, 'move', { cardId: b1, from: 'p2.battlefield', to: 'p1.battlefield' });
+    expect(h.state.cards[b1].blocking).toBeUndefined();
+    // moving within the same side keeps the mark
+    send(h, 'move', { cardId: a2, from: 'p1.battlefield', to: 'p1.lands' });
+    expect(h.state.cards[a2].attacking).toBe(2);
+    expect(checkInvariants(h.state)).toBeNull();
   });
 
   it('only cards in play can attack', () => {

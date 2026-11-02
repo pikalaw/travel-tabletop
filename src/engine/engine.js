@@ -112,10 +112,15 @@ function clearCombat(state) {
  * @param {GameState} state
  */
 export function fixCombat(state) {
-  const onField = new Set();
-  for (const [z, ids] of Object.entries(state.zones)) if (isBattlefieldZone(z)) ids.forEach((id) => onField.add(id));
+  // A creature that leaves the battlefield, or changes sides (control), is removed from combat
+  // (rule 506.4): attackers stay only on the active player's side, blockers only on the other side.
+  const zoneOf = new Map();
+  for (const [z, ids] of Object.entries(state.zones)) if (isBattlefieldZone(z)) ids.forEach((id) => zoneOf.set(id, z));
   for (const c of Object.values(state.cards)) {
-    if (!onField.has(c.id)) { delete c.attacking; delete c.blocking; }
+    const z = zoneOf.get(c.id);
+    const attackerSide = z && zoneOwner(z) === state.activePlayer;
+    if (!z || !attackerSide) delete c.attacking;
+    if (!z || attackerSide) delete c.blocking;
   }
   for (const c of Object.values(state.cards)) {
     if (!c.blocking) continue;
@@ -260,9 +265,9 @@ export function apply(input, cmd) {
       const bad = need(); if (bad) return bad;
       if (!isBattlefieldZone(p.from)) return fail('invalid', 'Only a card on the battlefield can attack.');
       const c = card();
-      // Only the active player attacks; a zone's owner is the player controlling the cards in it.
-      if (zoneOwner(p.from) !== state.activePlayer && !c.attacking) return fail('invalid', `Only ${state.players[state.activePlayer].name}’s creatures can attack this turn.`);
       const on = typeof p.value === 'boolean' ? p.value : !c.attacking;
+      // Only the active player attacks; a zone's owner is the player controlling the cards in it.
+      if (zoneOwner(p.from) !== state.activePlayer && on) return fail('invalid', `Only ${state.players[state.activePlayer].name}’s creatures can attack this turn.`);
       if (on && !c.attacking) {
         // Numbers are given in declaration order and kept, so a blocker's mark never changes under it.
         const used = Object.values(state.cards).map((x) => x.attacking || 0);
@@ -502,6 +507,8 @@ export function checkInvariants(state) {
   }
   for (const c of Object.values(state.cards)) {
     if ((c.attacking || c.blocking) && !isBattlefieldZone(seen.get(c.id))) return `card ${c.id} has combat marks off the battlefield`;
+    if (c.attacking && zoneOwner(seen.get(c.id)) !== state.activePlayer) return `card ${c.id} attacks from the defending side`;
+    if (c.blocking && zoneOwner(seen.get(c.id)) === state.activePlayer) return `card ${c.id} blocks from the attacking side`;
     for (const a of c.blocking || []) if (!state.cards[a]?.attacking) return `card ${c.id} blocks ${a}, which is not attacking`;
   }
   return null;
