@@ -129,7 +129,11 @@ export function attachGestures(root, h) {
       cur.ghost?.remove();
       clear();
       if (drop) h.onDrop(cur.el, drop);
-      else h.onDrop(cur.el, { nowhere: true });
+      else {
+        // Outside every slot; still note the card underneath, so a counter dropped back on its own card stays.
+        const under = /** @type {HTMLElement | null} */ (document.elementFromPoint(e.clientX, e.clientY))?.closest('[data-card-target]');
+        h.onDrop(cur.el, { nowhere: true, cardId: under?.dataset.cardTarget });
+      }
     } else if (!cur.long) {
       clear();
       h.onTap(cur.el, e);

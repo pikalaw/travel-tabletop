@@ -216,7 +216,8 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
     // A counter dragged off its card is removed wherever it lands, even outside every slot.
     if (src.dataset.badge) {
       const cardId = src.dataset.cardOf;
-      if (d.onCard === cardId || d.cardId === cardId) return;
+      // In the full-screen view the card fills most of the screen, so any drag of a counter removes one.
+      if (!src.closest('.full-wrap') && (d.onCard === cardId || d.cardId === cardId)) return;
       send('removeCounter', { cardId, from: src.dataset.zone, kind: src.dataset.badge, label: src.dataset.label });
       return;
     }
@@ -441,7 +442,8 @@ export function Game({ session, onExit, onRematch, pairing, lock }) {
   return html`<div class="game ${isOffline && session.kind === 'guest' ? 'readonly' : ''} ${pointMode ? 'pointing' : ''}" ref=${rootRef}>
     <div class="board-wrap">
       <${Board} ctx=${ctx} P=${P} openSlot=${openSlot}/>
-      ${full ? html`<div class="full-wrap"><${FullCard} ctx=${ctx} cardId=${full.cardId} zone=${fullZone} group=${fullGroup} onPick=${(id) => setFull({ cardId: id, zone: fullZone })}/></div>` : null}
+      ${full ? html`<div class="full-wrap"><${FullCard} ctx=${ctx} cardId=${full.cardId} zone=${fullZone} group=${fullGroup}
+          onCounter=${(type, kind, lbl) => send(type, { cardId: full.cardId, from: fullZone, kind, label: lbl })} onPick=${(id) => setFull({ cardId: id, zone: fullZone })}/></div>` : null}
       ${sheetEl}
       ${state.result ? html`<div class="result-banner">${state.result.winner ? `${state.players[state.result.winner].name} wins` : 'Game over'}${state.result.reason === 'concede' ? ' (concession)' : ''} — undo to continue, or use the menu.</div>` : null}
     </div>

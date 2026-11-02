@@ -62,7 +62,7 @@ export function CardSheet({ ctx, sheet, onClose, onRandom }) {
 }
 
 /** Full-screen view of one card. */
-export function FullCard({ ctx, cardId, zone, group = null, onPick = (id) => {} }) {
+export function FullCard({ ctx, cardId, zone, group = null, onPick = (id) => {}, onCounter = null }) {
   const swipe = useRef(null);
   const card = ctx.state.cards[cardId];
   if (!card) return null;
@@ -86,9 +86,15 @@ export function FullCard({ ctx, cardId, zone, group = null, onPick = (id) => {} 
     <div class="fullcard-inner" data-card-target=${card.id} data-zone=${zone} onPointerDown=${down} onPointerUp=${up}>
       ${img.url ? html`<img src=${img.url} alt=${card.name} draggable=${false}/>` : html`<div class="card-face missing big"><span>${card.name}</span></div>`}
       <div class="full-badges">
-        ${c.plus ? html`<span class="badge plus big" data-badge="plus" data-card-of=${card.id} data-zone=${zone}>+1/+1 × ${c.plus}</span>` : null}
-        ${c.minus ? html`<span class="badge minus big" data-badge="minus" data-card-of=${card.id} data-zone=${zone}>−1/−1 × ${c.minus}</span>` : null}
-        ${Object.entries(c.labeled).map(([k, v]) => html`<span class="badge label big" data-badge="label" data-label=${k} data-card-of=${card.id} data-zone=${zone}>${k} ${v}</span>`)}
+        ${[
+          c.plus ? { kind: 'plus', text: `+1/+1 × ${c.plus}` } : null,
+          c.minus ? { kind: 'minus', text: `−1/−1 × ${c.minus}` } : null,
+          ...Object.entries(c.labeled).map(([k, v]) => ({ kind: 'label', label: k, text: `${k} ${v}` })),
+        ].filter(Boolean).map((b) => html`<span class="ctr-group">
+          ${onCounter ? html`<button class="btn round ctr-step" aria-label="Remove one" onClick=${() => onCounter('removeCounter', b.kind, b.label)}>−</button>` : null}
+          <span class="badge ${b.kind} big" data-badge=${b.kind} data-label=${b.label} data-card-of=${card.id} data-zone=${zone}>${b.text}</span>
+          ${onCounter ? html`<button class="btn round ctr-step" aria-label="Add one" onClick=${() => onCounter('addCounter', b.kind, b.label)}>+</button>` : null}
+        </span>`)}
       </div>
     </div>
     <div class="fullcard-meta">
@@ -107,7 +113,7 @@ export function FullCard({ ctx, cardId, zone, group = null, onPick = (id) => {} 
         })}
       </div>
       <span class="hint">Swipe the card or tap a thumbnail to see the rest of the group.</span>` : null}
-      <span class="hint">Drag counters from the bar onto the card; drag a counter off to remove it.</span>
+      <span class="hint">Drag counters from the bar onto the card. Use − and + on a counter, or drag it away, to change it.</span>
     </div>
   </div>`;
 }

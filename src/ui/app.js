@@ -240,6 +240,10 @@ function Setup({ go, startGame }) {
 function Home({ go, resume, rejoin, update }) {
   const [games, setGames] = useState([]);
   const [guestGame, setGuestGame] = useState(null);
+  const [build, setBuild] = useState('');
+  useEffect(() => { // the installed build is the service worker's cache name, e.g. tabletop-0.1.0-8db24fb974
+    try { caches.keys().then((ks) => setBuild((ks.find((k) => k.startsWith('tabletop-')) || '').split('-').pop() || '')).catch(() => {}); } catch {}
+  }, []);
   const refresh = () => { listGames().then((gs) => setGames(gs.filter((g) => !g.over && g.state?.turn > 0))); getMeta('guestGame').then(setGuestGame); };
   useEffect(() => { refresh(); }, []);
   return html`<div class="page home">
@@ -263,7 +267,7 @@ function Home({ go, resume, rejoin, update }) {
       <button class="btn" onClick=${() => rejoin(guestGame)}>Reconnect</button>
       <button class="btn ghost" onClick=${async () => { await setMeta('guestGame', null); refresh(); }}>Forget</button>
     </li></ul>` : null}
-    <p class="muted small foot">Version ${APP_VERSION}. Card images you import come from Scryfall; sample cards are placeholders.</p>
+    <p class="muted small foot">Version ${APP_VERSION}${build ? ` (build ${build})` : ''}. Card images you import come from Scryfall; sample cards are placeholders.</p>
   </div>`;
 }
 

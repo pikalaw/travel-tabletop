@@ -337,3 +337,6 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 .attach-hint { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
 .attach-hint b { color: var(--warn); }
 @media (orientation: portrait) { .fullcard.grouped .fullcard-inner { height: 66%; } }
+
+.ctr-group { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 20px; background: rgba(0,0,0,.6); }
+.ctr-step { min-width: 34px; min-height: 34px; padding: 0; font-size: 18px; line-height: 1; }
