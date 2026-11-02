@@ -65,8 +65,8 @@ tests/       engine.test.js, net.test.js, link.test.js
 
 `sw.js` is a cache-first service worker over a fixed list of files.
 
-- **Cache list.** `tools/gen-sw-list.js` walks `index.html`, `manifest.json`, `styles.css`, `src/`, `vendor/` and `assets/` (skipping `*.d.ts`, `*.map`, `.DS_Store`), hashes their paths and bytes with SHA-256, and rewrites two lines of `sw.js`: `const VERSION = '<APP_VERSION>-<first 10 hex of the hash>'` and `const FILES = ["./", …every file…]`. Run it before every release. A stale list leaves devices on the old app; a list naming a deleted file makes the install fail entirely.
-- **Install.** Opens the cache `tabletop-<VERSION>` and `addAll(FILES)`. Any single failure fails the install, and the old version stays.
+- **Cache list.** `tools/gen-sw-list.js` walks `index.html`, `manifest.json`, `styles.css`, `src/`, `vendor/` and `assets/` (skipping `*.d.ts`, `*.map`, `.DS_Store`), hashes their paths and bytes with SHA-256, plus `sw.js`'s own code without the two generated lines (so changing the worker changes the build), and rewrites two lines of `sw.js`: `const VERSION = '<APP_VERSION>-<first 10 hex of the hash>'` and `const FILES = ["./", …every file…]`. Run it before every release. A stale list leaves devices on the old app; a list naming a deleted file makes the install fail entirely.
+- **Install.** Opens the cache `tabletop-<VERSION>` and `addAll` of every file as `new Request(f, { cache: 'reload' })`. The `reload` mode bypasses the browser's HTTP cache; without it a new version can store files the browser kept from the previous one (GitHub Pages sends `max-age=600`), so the new build label ships with old code. Any single failure fails the install, and the old version stays.
 - **Activate.** Deletes every other cache whose name starts with `tabletop-`, then `clients.claim()`.
 - **Fetch.** Same-origin GET only (Scryfall goes straight to the network). Answers from the cache, ignoring the query string; navigations fall back to the cached `index.html`; misses go to the network, and offline misses get a 503.
 - **Message.** `'skipWaiting'` makes a waiting worker take over.

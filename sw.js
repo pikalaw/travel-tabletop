@@ -1,7 +1,7 @@
 // Service worker: cache-first for the app shell so the app runs fully offline.
 // VERSION and FILES are rewritten by tools/gen-sw-list.js on every release.
 
-const VERSION = '0.1.0-b0b2781393';
+const VERSION = '0.1.0-b1d9296d8e';
 const FILES = [
   "./",
   "./index.html",
@@ -51,7 +51,9 @@ const FILES = [
 const CACHE = `tabletop-${VERSION}`;
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)));
+  // cache: 'reload' skips the browser's HTTP cache (GitHub Pages allows 10 minutes), so a new
+  // version never stores files left over from the previous one.
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))));
 });
 
 self.addEventListener('activate', (e) => {

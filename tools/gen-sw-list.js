@@ -20,6 +20,10 @@ function walk(p) {
 const files = SHIP.flatMap((p) => walk(join(root, p))).map((f) => relative(root, f).split('\\').join('/'));
 const hash = createHash('sha256');
 for (const f of files) { hash.update(f); hash.update(readFileSync(join(root, f))); }
+// The worker's own code counts too (minus the two lines this script rewrites), so changing it
+// also changes the build.
+const swCode = readFileSync(join(root, 'sw.js'), 'utf8').replace(/const VERSION = '[^']*';/, '').replace(/const FILES = \[[\s\S]*?\];/, '');
+hash.update('sw.js'); hash.update(swCode);
 const appVersion = /APP_VERSION = '([^']+)'/.exec(readFileSync(join(root, 'src/version.js'), 'utf8'))[1];
 const version = `${appVersion}-${hash.digest('hex').slice(0, 10)}`;
 
