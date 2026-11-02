@@ -113,7 +113,7 @@ export function FullCard({ ctx, cardId, zone, group = null, onPick = (id) => {},
         })}
       </div>
       <span class="hint">Swipe the card or tap a thumbnail to see the rest of the group.</span>` : null}
-      <span class="hint">Drag counters from the bar onto the card. Use − and + on a counter, or drag it away, to change it.</span>
+      <span class="hint">Drag counters from the bar onto the card. Use − and + to change one.</span>
     </div>
   </div>`;
 }
