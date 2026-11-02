@@ -7,13 +7,16 @@
 //   data-tap="name"                         anything else that reacts to a tap
 //   data-drop="zone"                        a drop target slot; data-layout="row|pile|library|tray"
 //   data-trash                              a drop target that removes tokens / counters
-// Scrollable open slots use `touch-action: pan-x`, so a horizontal swipe scrolls (the browser
-// takes over and sends pointercancel) while a vertical-ish movement starts a drag.
+// Horizontal scrollers (the footer bar, open slots, trays) are panned here rather than by the
+// browser, so scrolling does not depend on touch-action handling: a mostly horizontal movement
+// that starts inside one scrolls it (and cancels the tap); any other movement on a card drags it.
 
 const DRAG_PX = 8;
 const LONG_MS = 480;
 
 const SOURCE_SEL = '[data-card],[data-counter],[data-badge],[data-token-def],[data-tap]';
+const SCROLL_SEL = '.bar, .row.open';
+const FRICTION = 0.95; // per 16 ms frame, for the glide after a fling
 
 /**
  * @param {HTMLElement} root
@@ -24,6 +27,8 @@ const SOURCE_SEL = '[data-card],[data-counter],[data-badge],[data-token-def],[da
  */
 export function attachGestures(root, h) {
   let g = null; // current gesture
+  let glide = 0; // animation frame of a running fling
+  let swallowClick = false; // the click that follows a pan must not press a button
 
   const clear = () => {
     if (!g) return;
@@ -36,11 +41,17 @@ export function attachGestures(root, h) {
 
   const down = (e) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
-    const el = /** @type {HTMLElement} */ (e.target).closest(SOURCE_SEL);
-    if (!el || !root.contains(el)) return;
+    const t = /** @type {HTMLElement} */ (e.target);
+    let el = t.closest(SOURCE_SEL);
+    if (el && !root.contains(el)) el = null;
+    let sc = /** @type {HTMLElement | null} */ (t.closest(SCROLL_SEL));
+    if (sc && (!root.contains(sc) || sc.scrollWidth <= sc.clientWidth + 1)) sc = null;
+    if (!el && !sc) return;
+    cancelAnimationFrame(glide);
     if (g) clear();
-    g = { el, id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, dragging: false, long: false, ghost: null, hover: null, timer: 0 };
-    if (el.dataset.card) {
+    g = { el, sc, sl0: sc ? sc.scrollLeft : 0, id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
+          dragging: false, panning: false, long: false, ghost: null, hover: null, timer: 0, v: 0, t: e.timeStamp };
+    if (el?.dataset.card) {
       g.timer = setTimeout(() => {
         if (g && !g.dragging) { g.long = true; navigator.vibrate?.(15); h.onLongPress(el); }
       }, LONG_MS);
@@ -73,11 +84,20 @@ export function attachGestures(root, h) {
 
   const move = (e) => {
     if (!g || e.pointerId !== g.id) return;
-    g.x = e.clientX; g.y = e.clientY;
-    const dist = Math.hypot(g.x - g.x0, g.y - g.y0);
-    if (!g.dragging && !g.long && dist > DRAG_PX) {
-      if (h.canDrag && !h.canDrag(g.el)) { clearTimeout(g.timer); return; }
-      startDrag();
+    const px = g.x, pt = g.t;
+    g.x = e.clientX; g.y = e.clientY; g.t = e.timeStamp;
+    const dx = g.x - g.x0, dy = g.y - g.y0;
+    if (!g.dragging && !g.panning && !g.long && Math.hypot(dx, dy) > DRAG_PX) {
+      if (g.sc && Math.abs(dx) > Math.abs(dy)) { g.panning = true; clearTimeout(g.timer); }
+      else if (!g.el || (h.canDrag && !h.canDrag(g.el))) { clearTimeout(g.timer); g.el = null; g.sc = null; return; }
+      else startDrag();
+    }
+    if (g.panning) {
+      e.preventDefault();
+      g.sc.scrollLeft = g.sl0 - dx;
+      const dt = g.t - pt;
+      if (dt > 0) g.v = 0.8 * ((px - g.x) / dt) + 0.2 * g.v; // px per ms, scroll direction
+      return;
     }
     if (!g.dragging) return;
     e.preventDefault();
@@ -96,8 +116,13 @@ export function attachGestures(root, h) {
   const up = (e) => {
     if (!g || e.pointerId !== g.id) return;
     const cur = g;
-    g.el.classList.remove('drag-source');
-    if (cur.dragging) {
+    cur.el?.classList.remove('drag-source');
+    if (cur.panning) {
+      clear();
+      swallowClick = true; setTimeout(() => { swallowClick = false; }, 400);
+      fling(cur.sc, e.timeStamp - cur.t > 80 ? 0 : cur.v);
+    } else if (!cur.el) clear();
+    else if (cur.dragging) {
       const t = targetAt(e.clientX, e.clientY);
       const drop = t ? describeDrop(t, e.clientX, e.clientY, cur.el) : null;
       cur.ghost?.remove();
@@ -110,18 +135,34 @@ export function attachGestures(root, h) {
     } else clear();
   };
 
-  const cancel = (e) => { if (g && e.pointerId === g.id) { g.el.classList.remove('drag-source'); clear(); } };
+  const fling = (sc, v) => {
+    let last = performance.now();
+    const step = (now) => {
+      const dt = Math.min(now - last, 50); last = now;
+      v *= Math.pow(FRICTION, dt / 16);
+      if (Math.abs(v) < 0.02) return;
+      const before = sc.scrollLeft;
+      sc.scrollLeft += v * dt;
+      if (sc.scrollLeft === before) return; // hit an end
+      glide = requestAnimationFrame(step);
+    };
+    glide = requestAnimationFrame(step);
+  };
+  const click = (e) => { if (swallowClick) { swallowClick = false; e.stopPropagation(); e.preventDefault(); } };
+
+  const cancel = (e) => { if (g && e.pointerId === g.id) { g.el?.classList.remove('drag-source'); clear(); } };
   const context = (e) => {
     const el = /** @type {HTMLElement} */ (e.target).closest('[data-card]');
     if (el && root.contains(el)) { e.preventDefault(); clear(); h.onLongPress(el); }
   };
   // While dragging, stop the page from scrolling under the finger.
-  const touchmove = (e) => { if (g?.dragging) e.preventDefault(); };
+  const touchmove = (e) => { if (g?.dragging || g?.panning) e.preventDefault(); };
 
   // Stop the browser's own image drag, which would cancel the pointer gesture.
   const nodrag = (e) => e.preventDefault();
   root.addEventListener('dragstart', nodrag);
   root.addEventListener('pointerdown', down);
+  root.addEventListener('click', click, true);
   window.addEventListener('pointermove', move, { passive: false });
   window.addEventListener('pointerup', up);
   window.addEventListener('pointercancel', cancel);
@@ -131,6 +172,8 @@ export function attachGestures(root, h) {
     clear();
     root.removeEventListener('dragstart', nodrag);
     root.removeEventListener('pointerdown', down);
+    root.removeEventListener('click', click, true);
+    cancelAnimationFrame(glide);
     window.removeEventListener('pointermove', move);
     window.removeEventListener('pointerup', up);
     window.removeEventListener('pointercancel', cancel);

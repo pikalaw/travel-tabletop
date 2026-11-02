@@ -139,16 +139,18 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .slot-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-3); font-size: 13px; pointer-events: none; }
 
 /* Rows */
+.row-box { position: absolute; inset: 0; }
+.row-box > .slot-label { z-index: 2; }
 .row { position: absolute; inset: 0; padding: 4px 4px 4px; display: flex; align-items: stretch; touch-action: none; }
 .row-cards { display: flex; align-items: center; height: 100%; padding-top: 11px; }
-.row.open { overflow-x: auto; overflow-y: hidden; touch-action: pan-x; -webkit-overflow-scrolling: touch; }
+.row.open { overflow-x: auto; overflow-y: hidden; touch-action: none; }
 .row.open .row-cards { padding-right: 24px; }
 .row.collapsed::after {
   content: "tap to open"; position: absolute; right: 6px; top: 3px; font-size: 9px; color: var(--ink-3);
   text-transform: uppercase; letter-spacing: .3px; pointer-events: none;
 }
-.row.open::before {
-  content: ""; position: absolute; inset: 0; border: 1px solid rgba(201,166,90,.6); border-radius: 8px; pointer-events: none;
+.row-box.open::after {
+  content: ""; position: absolute; z-index: 2; inset: 0; border: 1px solid rgba(201,166,90,.6); border-radius: 8px; pointer-events: none;
 }
 
 /* Piles */
@@ -214,7 +216,7 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 .viewer-tag { color: var(--ink-3); } .viewer-tag.p1 { color: var(--p1); } .viewer-tag.p2 { color: var(--p2); }
 .status { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--btn); border: 0; }
 .status.ok { color: var(--good); } .status.bad { color: #ffd2b8; background: #4a2a1d; cursor: pointer; }
-.bar { display: flex; align-items: center; gap: 6px; padding: 5px 8px 6px; overflow-x: auto; white-space: nowrap; touch-action: pan-x; scrollbar-width: none; }
+.bar { display: flex; align-items: center; gap: 6px; padding: 5px 8px 6px; overflow-x: auto; white-space: nowrap; touch-action: none; scrollbar-width: none; }
 .bar::-webkit-scrollbar { display: none; }
 .bar .btn { min-height: 38px; font-size: 13px; padding: 4px 10px; }
 .chips { display: inline-flex; gap: 4px; }

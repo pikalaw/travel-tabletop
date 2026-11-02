@@ -79,10 +79,11 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
   const collapsed = overflow && !open;
   let overlap = 0;
   if (collapsed) overlap = (total - (w - 8)) / (ids.length - 1);
-  return html`
+  // The label and the open-slot outline sit outside the scroller so they stay put while it scrolls.
+  return html`<div class="row-box ${open && overflow ? 'open' : ''}">
+    ${label ? html`<span class="slot-label">${label}${ids.length ? html` <b>${ids.length}</b>` : ''}</span>` : null}
     <div ref=${ref} class="row ${collapsed ? 'collapsed' : ''} ${open && overflow ? 'open' : ''} ${extraClass}"
          data-drop=${zone} data-layout=${layout} data-offset=${offset} data-collapsed=${collapsed ? '1' : null} data-tap=${'slot'} data-slot=${zone}>
-      ${label ? html`<span class="slot-label">${label}${ids.length ? html` <b>${ids.length}</b>` : ''}</span>` : null}
       ${ids.length === 0 && emptyText ? html`<span class="slot-empty">${emptyText}</span>` : null}
       <div class="row-cards" style=${`gap:${collapsed ? 0 : gap}px`}>
         ${h > 0 && ids.map((id, i) => {
@@ -92,7 +93,7 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
           return html`<${Card} key=${id} ctx=${ctx} card=${card} zone=${zone} h=${cardH} style=${style} override=${override}/>`;
         })}
       </div>
-    </div>`;
+    </div></div>`;
 }
 
 /** A pile: shows the top card (index 0) and a count. */
