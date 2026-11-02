@@ -2,7 +2,7 @@
 
 import { html } from './h.js';
 import { Row, Pile } from './cards.js';
-import { other } from '../engine/view.js';
+import { other, handCount } from '../engine/view.js';
 
 /** Map of grid cells to zones for a perspective. */
 export function cellsFor(P) {
@@ -16,8 +16,9 @@ export function cellsFor(P) {
   };
 }
 
-function Counters({ ctx, P }) {
-  const O = other(P);
+function Counters({ ctx }) {
+  const st = ctx.state;
+  const A = st.activePlayer;
   const line = (pl) => {
     const list = ctx.state.players[pl].counters;
     const life = list[0];
@@ -29,9 +30,11 @@ function Counters({ ctx, P }) {
       ${rest.length > 3 ? html`<span class="ctr-small">+${rest.length - 3}</span>` : null}
     </div>`;
   };
+  // The player whose turn it is is listed first, under a "Turn N · name" label.
   return html`<div class="counters-cell" data-tap="counters">
-    ${line(O)}
-    ${line(P)}
+    <span class="slot-label turn-label ${A}">Turn ${st.turn} · ${st.players[A].name}</span>
+    ${line(A)}
+    ${line(other(A))}
   </div>`;
 }
 
@@ -48,7 +51,7 @@ export function Board({ ctx, P, openSlots }) {
   return html`
     <div class="board persp-${P} ${st.activePlayer === P ? 'my-turn' : 'their-turn'}">
       <div class="cell c11 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppExile} label="Exile"/>`}</div>
-      <div class="cell c12 opp">${row(z.oppLands, `${name(O)} · lands`)}</div>
+      <div class="cell c12 opp">${row(z.oppLands, `${name(O)} · lands`)}<span class="opp-hand">${name(O)}: ${handCount(st, O)} in hand</span></div>
       <div class="cell c13 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppGrave} label="Graveyard"/>`}</div>
       <div class="cell c21 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppCmd} label="Command"/>`}</div>
       <div class="cell c22 opp">${row(z.oppField, `${name(O)} · battlefield`)}</div>
@@ -59,8 +62,8 @@ export function Board({ ctx, P, openSlots }) {
       <div class="cell c41 me">${html`<${Pile} ctx=${ctx} zone=${z.myExile} label="Exile"/>`}</div>
       <div class="cell c42 me">${row(z.myLands, `${name(P)} · lands`)}</div>
       <div class="cell c43 me">${html`<${Pile} ctx=${ctx} zone=${z.myGrave} label="Graveyard"/>`}</div>
-      <div class="cell c51 me"><${Counters} ctx=${ctx} P=${P}/></div>
-      <div class="cell c52 me">${row(z.myHand, ctx.viewer === P ? 'Hand' : 'Hand (hidden)', 'hand')}</div>
+      <div class="cell c51 me"><${Counters} ctx=${ctx}/></div>
+      <div class="cell c52 me">${row(z.myHand, ctx.viewer === P ? `${name(P)}’s hand` : `${name(P)}’s hand (hidden)`, 'hand')}</div>
       <div class="cell c53 shared">${html`<${Pile} ctx=${ctx} zone="stack" label="Stack"/>`}</div>
     </div>`;
 }

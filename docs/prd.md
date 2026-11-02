@@ -37,12 +37,12 @@ Each player sees the same 5×3 grid from their own side: rows 1–2 are the oppo
 > *Diagram omitted in this export: board layout · 5×3 grid plus footer, one player's view.*
 
 - **Shared zone.** The stack (5,3) is one shared zone shown identically on both devices.
-- **Not shown.** The opponent's hand. Its card count appears in the footer.
+- **Not shown.** The opponent's hand. Its card count appears right-aligned on the opponent's lands row ("Claire: 5 in hand"). The player's own hand is labelled with its owner ("Lawrence's hand", or "(hidden)" while blinded), which also shows whose view the board is in. A faint wash runs from red on the active (attacking) player's side to blue on the defender's.
 - **Orientation.** Any device, portrait or landscape, one responsive layout. Rotating changes only the layout, never game state.
 - **Sizing.** Rows have unequal heights: the player's battlefield and hand are tallest, the opponent's lands shortest, the footer thin. Columns 1 and 3 are narrow; column 2 takes the remaining width. Extra space on larger screens enlarges the rows.
 - **Phone readability.** On phones the board shows card art only; reading a card means a long-press.
 
-**Footer.** Its contents depend on context. Always present: undo, untap all, counter icons (+1/+1, −1/−1, labeled), token icon, randomness tools, pointer, opponent's hand count, and the latest-action ticker. Context buttons appear as described in the sections below.
+**Footer.** Its contents depend on context. Always present: undo, untap all, counter icons (+1/+1, −1/−1, labeled), token icon, randomness tools, pointer, and the latest-action ticker (with the connection status in two-device games). Context buttons appear as described in the sections below.
 
 ## Zones and interactions
 
@@ -110,7 +110,7 @@ A card can be attached to another card on the battlefield or lands, such as an A
 
 ## Combat marks
 
-Players can mark attackers and blockers so both can see who blocks what. The marks are a record only; the app works out no damage and checks no legality.
+Players can mark attackers and blockers so both can see who blocks what. The marks are a record only; the app works out no damage. It enforces one thing: only the active player's creatures can be marked attacking, and only the other player's can block. Which side a creature is on is the battlefield it sits in, so a creature whose control changed is moved to the other side first.
 
 - **Combat mode.** Tap **Combat** in the footer. Tapping a creature on the active player's side marks it attacking (tap again to unmark); attackers are numbered ⚔1, ⚔2… in the order declared. Tapping a creature on the other side picks it as a blocker; then tapping an attacker pairs them, and the blocker shows 🛡 with that attacker's number. Several blockers can block one attacker, and one blocker can block several (🛡1 2). Repeating a pair removes it. Taps in combat mode never tap or untap creatures. **Done** returns to normal play and keeps the marks.
 - **Full-screen view.** A creature on the active player's side has **Attack** / **Stop attacking**; one on the other side has **Block**, which opens combat mode with it picked as the blocker.
@@ -125,7 +125,7 @@ Card counters, tokens, player counters and randomness are all manual tools; the 
 
 **Tokens.** The footer token icon opens the token deck, a deck of token images. Dragging one onto a battlefield creates a copy. Dragging a token back to the footer removes it. A token that leaves the battlefield disappears.
 
-**Player counters.** Cell (5,1) holds two key:value lists, one per player.
+**Player counters.** Cell (5,1) holds two key:value lists, one per player, under a "Turn N · name" label; the player whose turn it is is listed first.
 
 - `life` is a fixed entry for both players, with + and − buttons.
 - Players can add arbitrary entries such as poison, energy or commander damage.

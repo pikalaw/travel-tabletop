@@ -92,6 +92,7 @@ export function Game({ session, onExit, onRematch, pairing }) {
     const offReject = session.onReject((r) => {
       if (r.reason === 'stale') toast('That card had already moved — your action was undone.', 'warn');
       else if (r.reason === 'offline') toast(r.detail, 'warn');
+      else if (r.reason === 'invalid' && (r.type === 'attack' || r.type === 'block' || /attack|block/i.test(r.detail || ''))) toast(r.detail, 'info');
       else if (r.detail) toast(r.detail, 'warn');
     });
     return () => { offState(); offNotice(); offReject(); };
@@ -278,6 +279,7 @@ export function Game({ session, onExit, onRematch, pairing }) {
       if (kind === 'attack') {
         const k = zoneKind(d.zone);
         if (k !== 'battlefield' && k !== 'lands') { toast('Only a card on the battlefield can attack.', 'info'); return; }
+        if (zoneOwner(d.zone) !== state.activePlayer) { toast(`Only ${state.players[state.activePlayer].name}’s creatures can attack this turn.`, 'info'); return; }
         const c = state.cards[d.cardId];
         send('attack', { cardId: c?.attachedTo || d.cardId, from: d.zone, value: true });
         return;
@@ -519,9 +521,6 @@ export function Game({ session, onExit, onRematch, pairing }) {
     <footer class="footer">
       <div class="ticker">
         <button class="ticker-text ${last?.alert ? 'alert' : ''}" data-tap="ticker">${last ? last.text : `Turn ${state.turn} · ${state.players[state.activePlayer].name}`}</button>
-        <span class="turn-tag ${state.activePlayer}">T${state.turn} · ${state.players[state.activePlayer].name}</span>
-        <span class="opp-hand">${state.players[O].name}: ${handCount(state, O)} in hand</span>
-        ${same ? html`<span class="viewer-tag ${viewer}">${viewer === 'nobody' ? 'Hands blinded' : `${state.players[viewer].name} viewing`}</span>` : null}
         ${status}
       </div>
       ${footer}

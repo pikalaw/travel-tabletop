@@ -258,8 +258,10 @@ export function apply(input, cmd) {
 
     case 'attack': {
       const bad = need(); if (bad) return bad;
-      if (!isBattlefieldZone(p.from)) return fail('invalid', 'only a card on the battlefield can attack');
+      if (!isBattlefieldZone(p.from)) return fail('invalid', 'Only a card on the battlefield can attack.');
       const c = card();
+      // Only the active player attacks; a zone's owner is the player controlling the cards in it.
+      if (zoneOwner(p.from) !== state.activePlayer && !c.attacking) return fail('invalid', `Only ${state.players[state.activePlayer].name}’s creatures can attack this turn.`);
       const on = typeof p.value === 'boolean' ? p.value : !c.attacking;
       if (on && !c.attacking) {
         // Numbers are given in declaration order and kept, so a blocker's mark never changes under it.
@@ -271,15 +273,17 @@ export function apply(input, cmd) {
 
     case 'block': {
       const bad = need(); if (bad) return bad;
-      if (!isBattlefieldZone(p.from)) return fail('invalid', 'only a card on the battlefield can block');
+      if (!isBattlefieldZone(p.from)) return fail('invalid', 'Only a card on the battlefield can block.');
       if (!isBattlefieldZone(p.attackerZone) || !state.zones[p.attackerZone].includes(p.attackerId)) return fail('stale', 'attacker moved');
       const a = state.cards[p.attackerId];
-      if (!a.attacking) return fail('invalid', 'that card is not attacking');
-      if (a.id === p.cardId) return fail('invalid', 'a card cannot block itself');
+      if (!a.attacking) return fail('invalid', 'That card is not attacking.');
+      if (a.id === p.cardId) return fail('invalid', 'A card cannot block itself.');
       const c = card();
       const list = c.blocking || [];
       const has = list.includes(a.id);
       const on = typeof p.value === 'boolean' ? p.value : !has;
+      // Only the defending player blocks (removing a block is always allowed, to clean up).
+      if (on && !has && zoneOwner(p.from) === state.activePlayer) return fail('invalid', `Only ${state.players[other(state.activePlayer)].name}’s creatures can block this turn.`);
       if (on && !has) c.blocking = [...list, a.id];
       if (!on && has) c.blocking = list.filter((id) => id !== a.id);
       if (c.blocking && !c.blocking.length) delete c.blocking;

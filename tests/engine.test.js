@@ -320,6 +320,16 @@ describe('combat marks', () => {
     expect(h.state.cards[a1].attacking).toBeUndefined();
   });
 
+  it('only the active player attacks and only the other player blocks', () => {
+    const { h, a1, a2, b1 } = setup(); // p1 is active
+    expect(send(h, 'attack', { cardId: b1, from: 'p2.battlefield' }, 'p2')).toMatchObject({ ok: false, error: 'invalid' });
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield' });
+    expect(send(h, 'block', { cardId: a2, from: 'p1.battlefield', attackerId: a1, attackerZone: 'p1.battlefield' })).toMatchObject({ ok: false, error: 'invalid' });
+    // a creature that changes sides keeps its mark until combat ends; it can still be unmarked
+    send(h, 'move', { cardId: a1, from: 'p1.battlefield', to: 'p2.battlefield' });
+    expect(send(h, 'attack', { cardId: a1, from: 'p2.battlefield', value: false }).ok).toBe(true);
+  });
+
   it('only cards in play can attack', () => {
     const h = started();
     const id = h.state.zones['p1.hand'][0];
