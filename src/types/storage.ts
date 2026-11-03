@@ -1,7 +1,7 @@
 // Records stored in IndexedDB (`mtg-tabletop`, version 1) and the backup file format.
 
 import type { Actor, GameMode, GameState, PlayerId, ZoneId } from './state';
-import type { AnyCommand, Notice } from './commands';
+import type { AnyCommand, CardSpec, Notice } from './commands';
 
 export interface ImageSizes {
   small: string;
@@ -47,7 +47,8 @@ export interface ImageRecord {
 export interface GameSetup {
   life?: number;
   p1?: { name: string; deckIds: string[] };
-  p2?: { name: string; deckIds: string[] };
+  /** One device: the second player's decks. Hosting: the guest's name and cards, once joined. */
+  p2?: { name: string; deckIds?: string[]; spec?: { cards: CardSpec[]; commanders?: CardSpec[] } };
 }
 
 export interface GameRecord {

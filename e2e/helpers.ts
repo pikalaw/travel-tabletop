@@ -166,6 +166,7 @@ export async function pickDecks(page: Page, perForm: string[][]) {
   const forms = page.locator('.player-form');
   for (const [k, names] of perForm.entries()) {
     const checks = forms.nth(k).locator('.deck-check');
+    await expect(checks.first()).toBeVisible(); // the checklist appears once the decks have loaded
     for (let i = 0; i < (await checks.count()); i++) {
       const c = checks.nth(i);
       const text = await c.innerText();

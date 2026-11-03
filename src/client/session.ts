@@ -129,6 +129,9 @@ export class LocalSession extends Emitter implements Session {
     });
   }
 
+  /** Drop the link to the guest (leaving the game). */
+  close(): void { this.transport?.close(); this.transport = null; }
+
   /** Full state to the guest (after welcome or reconnect). */
   sendFullState(): void {
     this.forward({ type: 'state', version: this.host.version, state: this.host.state, text: this.host.lastText, alert: false } satisfies StateMessage);
@@ -186,6 +189,16 @@ export class GuestSession extends Emitter implements Session {
       }
     });
   }
+
+  /** Take the host's state from a fresh welcome (after reconnecting). */
+  resync(state: GameState, version: number): void {
+    this.state = state;
+    this.version = version;
+    this.changed({ version });
+  }
+
+  /** Drop the link to the host (leaving the game). */
+  close(): void { this.transport?.close(); this.transport = null; }
 
   send(type: string, payload: unknown): SendResult {
     if (this.status !== 'open' || !this.transport) {

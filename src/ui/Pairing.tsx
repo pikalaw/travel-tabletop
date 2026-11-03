@@ -1,0 +1,190 @@
+// Pairing widgets: show a code (QR + text) and read a code (camera or paste).
+
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { copyBox } from './Dialogs';
+import { qrSvg, startScanner } from '../transport/qr';
+import { createOffer, acceptAnswer, answerOffer, unlockLocalNetwork } from '../transport/webrtc';
+import type { Transport } from '../transport/transport';
+export function ShowCode({ code, caption }: { code: string; caption: string }) {
+  const [copied, setCopied] = useState(false);
+  const svg = qrSvg(code);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      copyBox({
+        title: 'Copy this code',
+        body: 'Select the text and copy it, then send it to the other device.',
+        value: code,
+      });
+    }
+  };
+  return (
+    <div class="show-code">
+      <div
+        class="qr"
+        dangerouslySetInnerHTML={{
+          __html: svg,
+        }}
+      />
+      <p class="muted">{caption}</p>
+      <div class="code-text">
+        <textarea readOnly rows={3} onFocus={(e) => e.currentTarget.select()} value={code} />
+        <button class="btn" onClick={copy}>
+          {copied ? 'Copied' : 'Copy text code'}
+        </button>
+      </div>
+    </div>
+  );
+}
+export function ReadCode({ onCode, prompt }: { onCode: (code: string) => void | Promise<void>; prompt: string }) {
+  const video = useRef<HTMLVideoElement>(null);
+  const [mode, setMode] = useState<'camera' | 'paste'>('camera');
+  const [err, setErr] = useState('');
+  const [text, setText] = useState('');
+  useEffect(() => {
+    if (mode !== 'camera' || !video.current) return;
+    let stop = () => {};
+    let alive = true;
+    startScanner(
+      video.current,
+      (c) => alive && onCode(c),
+      (e) => {
+        setErr(e.message);
+        setMode('paste');
+      },
+    ).then((s) => {
+      stop = s;
+      if (!alive) s();
+    });
+    return () => {
+      alive = false;
+      stop();
+    };
+  }, [mode]);
+  return (
+    <div class="read-code">
+      <p>{prompt}</p>
+      <div class="seg">
+        <button class={`btn ${mode === 'camera' ? 'on' : 'ghost'}`} onClick={() => setMode('camera')}>
+          Scan with camera
+        </button>
+        <button class={`btn ${mode === 'paste' ? 'on' : 'ghost'}`} onClick={() => setMode('paste')}>
+          Paste text code
+        </button>
+      </div>
+      {err ? <p class="error">{err}</p> : null}
+      {mode === 'camera' ? (
+        <div class="scanner">
+          <video ref={video} playsinline muted />
+          <div class="scan-frame" />
+        </div>
+      ) : (
+        <form
+          class="paste"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (text.trim()) onCode(text.trim());
+          }}
+        >
+          <textarea rows={4} placeholder="MTG1…" value={text} onInput={(e) => setText(e.currentTarget.value)} />
+          <button class="btn primary" type="submit">
+            Use this code
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// ---------- Pairing flows (shared by first pairing and re-pairing) ----------
+
+const errText = (e: unknown) => String((e as Error | null)?.message || e);
+
+/** Host: create an offer code, then read the guest's answer. */
+export function HostPairFlow({ onTransport }: { onTransport: (t: Transport) => void | Promise<void> }) {
+  const [step, setStep] = useState<'start' | 'working' | 'offer' | 'scan' | 'connecting'>('start');
+  const [code, setCode] = useState('');
+  const [err, setErr] = useState('');
+  const offer = useRef<Awaited<ReturnType<typeof createOffer>> | null>(null);
+  const begin = async (camera: boolean) => {
+    setErr('');
+    setStep('working');
+    if (camera) await unlockLocalNetwork();
+    try {
+      offer.current = await createOffer();
+      setCode(offer.current.code);
+      setStep('offer');
+    } catch (e) { setErr(errText(e)); setStep('start'); }
+  };
+  const onAnswer = async (ans: string) => {
+    setStep('connecting'); setErr('');
+    try { await onTransport(await acceptAnswer(offer.current!.pc, offer.current!.dc, ans)); }
+    catch (e) { setErr(errText(e)); setStep('scan'); }
+  };
+  return (
+    <div class="pair">
+      {err ? <p class="error">{err}</p> : null}
+      {step === 'start' ? (
+        <div class="pair-step">
+          <p>Both devices must be on the same Wi-Fi or phone hotspot. No internet is needed.</p>
+          <p class="muted small">The app asks for the camera first: you need it to scan the guest's code, and it also lets the two devices find each other directly on the local network.</p>
+          <button class="btn primary" onClick={() => void begin(true)}>Allow camera and create code</button>
+          <button class="btn ghost" onClick={() => void begin(false)}>Create code without camera (text pairing)</button>
+        </div>
+      ) : null}
+      {step === 'working' ? <p>Creating pairing code…</p> : null}
+      {step === 'offer' ? (
+        <div class="pair-step">
+          <h3>1. On the guest device, choose Join and scan this code</h3>
+          <ShowCode code={code} caption="Or copy the text code and paste it on the guest." />
+          <button class="btn primary" onClick={() => setStep('scan')}>2. Next: scan the guest's code</button>
+        </div>
+      ) : null}
+      {step === 'scan' ? (
+        <div class="pair-step">
+          <h3>2. Scan the code now showing on the guest device</h3>
+          <ReadCode onCode={onAnswer} prompt="Point the camera at the guest's screen, or paste its text code." />
+          <button class="btn ghost" onClick={() => setStep('offer')}>Back to my code</button>
+        </div>
+      ) : null}
+      {step === 'connecting' ? <p>Connecting…</p> : null}
+    </div>
+  );
+}
+
+/** Guest: read the host's offer code, then show the answer code. */
+export function GuestPairFlow({ onTransport }: { onTransport: (t: Transport) => void | Promise<void> }) {
+  const [step, setStep] = useState<'scan' | 'working' | 'answer'>('scan');
+  const [code, setCode] = useState('');
+  const [err, setErr] = useState('');
+  const onOffer = async (offerCode: string) => {
+    setErr(''); setStep('working');
+    try {
+      const a = await answerOffer(offerCode);
+      setCode(a.code);
+      setStep('answer');
+      await onTransport(await a.transport);
+    } catch (e) { setErr(errText(e)); setStep('scan'); }
+  };
+  return (
+    <div class="pair">
+      {err ? <p class="error">{err}</p> : null}
+      {step === 'scan' ? (
+        <div class="pair-step">
+          <h3>1. Scan the code on the host device</h3>
+          <ReadCode onCode={onOffer} prompt="Both devices must be on the same Wi-Fi or phone hotspot." />
+        </div>
+      ) : null}
+      {step === 'working' ? <p>Reading code…</p> : null}
+      {step === 'answer' ? (
+        <div class="pair-step">
+          <h3>2. Show this code to the host device</h3>
+          <ShowCode code={code} caption="The host scans it (or pastes the text). This screen continues once connected." />
+        </div>
+      ) : null}
+    </div>
+  );
+}
