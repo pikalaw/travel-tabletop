@@ -1,6 +1,6 @@
 // The game screen: board, footer, overlays, and every gesture handler.
 
-import { html, useState, useEffect, useRef, useMemo, toast } from './h.js';
+import { html, useState, useEffect, useRef, useMemo, toast, confirmBox, promptBox } from './h.js';
 import { Board } from './board.js';
 import { cardImage } from './cards.js';
 import { saveFile } from './files.js';
@@ -180,8 +180,8 @@ export function Game({ session, onExit, onRematch, pairing }) {
     }
     if (el.dataset.counter === 'attack') { toast('Drag ⚔ Attack onto a creature to mark it attacking; drag the mark off to remove it.', 'info'); return; }
     if (el.dataset.counter === 'label') {
-      const v = window.prompt('Counter name for the labeled counter (e.g. loyalty, lore, charge, time):', label);
-      if (v && v.trim()) setLabel(v.trim().slice(0, 16));
+      promptBox({ title: 'Labeled counter', body: 'Name for the labeled counter tag, e.g. loyalty, lore, charge, time.', value: label, ok: 'Use' })
+        .then((v) => { if (v && v.trim()) setLabel(v.trim().slice(0, 16)); });
       return;
     }
     const tap = el.dataset.tap;
@@ -236,8 +236,8 @@ export function Game({ session, onExit, onRematch, pairing }) {
   }
   function passTurn() {
     const from = state.players[state.activePlayer].name, to = state.players[other(state.activePlayer)].name;
-    if (!window.confirm(`End ${from}’s turn and pass it to ${to}?`)) return;
-    send('passTurn', { to: other(state.activePlayer) });
+    confirmBox({ title: `End ${from}’s turn?`, body: `The turn passes to ${to}, whose cards untap.`, ok: `Pass to ${to}` })
+      .then((yes) => { if (yes) send('passTurn', { to: other(state.activePlayer) }); });
   }
   const hasCombatMarks = Object.values(state.cards).some((c) => c.attacking || c.blocking);
   function endCombat() {
@@ -246,8 +246,10 @@ export function Game({ session, onExit, onRematch, pairing }) {
     const nA = cards.filter((c) => c.attacking).length;
     const nB = cards.reduce((n, c) => n + (c.blocking || []).length, 0);
     const what = [nA ? `${nA} attacker${nA > 1 ? 's' : ''}` : '', nB ? `${nB} block${nB > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ');
-    if (what && !window.confirm(`End combat and clear ${what}?`)) return;
-    send('endCombat', {}); setBlocker(null); setCombat(false);
+    const finish = () => { send('endCombat', {}); setBlocker(null); setCombat(false); };
+    if (!what) { finish(); return; }
+    confirmBox({ title: 'End combat?', body: `This clears ${what}.`, ok: 'Clear marks', cancel: 'Keep fighting' })
+      .then((yes) => { if (yes) finish(); });
   }
 
   function pileTap(zone) {
@@ -406,16 +408,21 @@ export function Game({ session, onExit, onRematch, pairing }) {
   }
 
   // ----- menu -----
+  async function concede(pl) {
+    if (await confirmBox({ title: `${state.players[pl].name} concedes?`, body: 'The game ends. Undo can bring it back.', ok: 'Concede', danger: true })) {
+      send('concede', { player: pl }); setSheet(null);
+    }
+  }
   const menuItems = [
     same && viewer !== 'nobody' ? { label: 'Blind my hand', onClick: () => { blind(); setSheet(null); } } : null,
     { label: 'Pass the turn', onClick: () => { setSheet(null); passTurn(); } },
     !same || state.result ? { label: 'Export action log (JSON Lines)', onClick: exportLog } : null,
     session.kind === 'host' && pairing ? { label: 'Re-pair the guest device', onClick: () => setSheet({ kind: 'pair' }) } : null,
     session.kind === 'guest' && pairing ? { label: 'Reconnect to the host', onClick: () => setSheet({ kind: 'pair' }) } : null,
-    !state.result && same ? { label: `${state.players.p1.name} concedes`, danger: true, onClick: () => { if (confirm('Concede the game?')) { send('concede', { player: 'p1' }); setSheet(null); } } } : null,
-    !state.result && same ? { label: `${state.players.p2.name} concedes`, danger: true, onClick: () => { if (confirm('Concede the game?')) { send('concede', { player: 'p2' }); setSheet(null); } } } : null,
-    !state.result && !same ? { label: 'Concede', danger: true, onClick: () => { if (confirm('Concede the game?')) { send('concede', { player: session.me }); setSheet(null); } } } : null,
-    onRematch && session.kind !== 'guest' ? { label: 'Rematch with the same decks', onClick: () => { if (confirm('Start a new game with the same decks?')) { setSheet(null); onRematch(); } } } : null,
+    !state.result && same ? { label: `${state.players.p1.name} concedes`, danger: true, onClick: () => concede('p1') } : null,
+    !state.result && same ? { label: `${state.players.p2.name} concedes`, danger: true, onClick: () => concede('p2') } : null,
+    !state.result && !same ? { label: 'Concede', danger: true, onClick: () => concede(session.me) } : null,
+    onRematch && session.kind !== 'guest' ? { label: 'Rematch with the same decks', onClick: async () => { if (await confirmBox({ title: 'Rematch?', body: 'Starts a new game with the same decks.', ok: 'Start rematch' })) { setSheet(null); onRematch(); } } } : null,
     { label: 'Leave to home screen', onClick: onExit },
   ];
 

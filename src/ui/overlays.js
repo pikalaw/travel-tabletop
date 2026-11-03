@@ -1,7 +1,7 @@
 // Overlays on the game screen: card viewer sheets, full-screen card, counters, log, tokens,
 // dice, menu.
 
-import { html, useState, useRef } from './h.js';
+import { html, useState, useRef, promptBox } from './h.js';
 import { Row, cardImage, BACK_URL } from './cards.js';
 import { zoneKind, zoneOwner, other, canSeeFace, findZone } from '../engine/view.js';
 import { artUrl, sizeFor } from '../storage/db.js';
@@ -158,7 +158,7 @@ export function CountersSheet({ ctx, P, send, onClose }) {
     ${st.players[pl].counters.map((c) => html`<div class="ctr-row">
       <span class="ctr-key">${c.key === 'life' ? 'Life' : c.key}</span>
       <button class="btn round" onClick=${() => set(pl, c.key, c.value - 1)}>−</button>
-      <button class="ctr-val" onClick=${() => { const v = window.prompt(`${st.players[pl].name}: ${c.key}`, String(c.value)); if (v != null && v.trim() !== '' && Number.isFinite(Number(v))) set(pl, c.key, Number(v)); }}>${c.value}</button>
+      <button class="ctr-val" onClick=${async () => { const v = await promptBox({ title: `${st.players[pl].name}: ${c.key}`, value: String(c.value), numeric: true, ok: 'Set' }); if (v != null && v.trim() !== '' && Number.isFinite(Number(v))) set(pl, c.key, Number(v)); }}>${c.value}</button>
       <button class="btn round" onClick=${() => set(pl, c.key, c.value + 1)}>+</button>
       ${c.key === 'life'
         ? html`<span class="ctr-x"></span>`

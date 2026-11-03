@@ -1,6 +1,6 @@
 // Pairing widgets: show a code (QR + text) and read a code (camera or paste).
 
-import { html, useEffect, useRef, useState } from './h.js';
+import { html, useEffect, useRef, useState, copyBox } from './h.js';
 import { qrSvg } from '../transport/qr.js';
 import { startScanner } from '../transport/qr.js';
 
@@ -9,7 +9,7 @@ export function ShowCode({ code, caption }) {
   const svg = qrSvg(code);
   const copy = async () => {
     try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500); }
-    catch { window.prompt('Copy this code:', code); }
+    catch { copyBox({ title: 'Copy this code', body: 'Select the text and copy it, then send it to the other device.', value: code }); }
   };
   return html`<div class="show-code">
     <div class="qr" dangerouslySetInnerHTML=${{ __html: svg }}></div>

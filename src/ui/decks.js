@@ -1,6 +1,6 @@
 // Deck screens: list, view, import, rename, delete.
 
-import { html, useState, useEffect } from './h.js';
+import { html, useState, useEffect, confirmBox, promptBox } from './h.js';
 import { listDecks, deleteDeck, putDeck, loadArt, artUrl, sizeFor } from '../storage/db.js';
 import { importDeck, listSignature } from '../storage/scryfall.js';
 import { STARTER_PACKS } from '../storage/starters.js';
@@ -96,7 +96,7 @@ export function DeckScreen({ go, id }) {
   const counts = new Map();
   for (const c of deck.cards) counts.set(c, (counts.get(c) || 0) + 1);
   const rename = async () => {
-    const n = window.prompt('Deck name', deck.name);
+    const n = await promptBox({ title: 'Rename deck', value: deck.name, ok: 'Rename' });
     if (n && n.trim()) { const d = { ...deck, name: n.trim() }; await putDeck(d); setDeck(d); }
   };
   const remove = async () => {
@@ -104,10 +104,10 @@ export function DeckScreen({ go, id }) {
     const users = deck.kind === 'token' && deck.forDecks?.length
       ? (await listDecks()).filter((d) => deck.forDecks.includes(d.id))
       : [];
-    const msg = users.length
-      ? `These decks use tokens from “${deck.name}”:\n\n${users.map((d) => `• ${d.name}`).join('\n')}\n\nDelete it anyway? Their tokens will no longer appear in the Tokens picker.`
-      : `Delete “${deck.name}”? Card images stay stored for other decks.`;
-    if (!confirm(msg)) return;
+    const body = users.length
+      ? `These decks use its tokens:\n${users.map((d) => `• ${d.name}`).join('\n')}\n\nTheir tokens will no longer appear in the Tokens picker.`
+      : 'Card images stay stored for other decks.';
+    if (!(await confirmBox({ title: `Delete “${deck.name}”?`, body, ok: 'Delete', danger: true }))) return;
     await deleteDeck(deck.id);
     go('decks');
   };
@@ -178,7 +178,7 @@ export function ImportScreen({ go }) {
       (d.name.toLowerCase() === finalName.toLowerCase() || (d.signature && d.signature === sig)));
     if (twins.length) {
       const why = twins.map((d) => `• ${d.name}${d.signature === sig ? ' (same cards)' : ' (same name)'}`).join('\n');
-      if (!confirm(`You already have:\n\n${why}\n\nImport another copy?`)) return;
+      if (!(await confirmBox({ title: 'Import another copy?', body: `You already have:\n${why}`, ok: 'Import anyway' }))) return;
     }
     setBusy(true); setError(''); setResult(null);
     try {

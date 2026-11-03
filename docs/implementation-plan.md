@@ -108,6 +108,7 @@ The unit suites are 43 tests in `tests/engine.test.js`, `tests/net.test.js` and 
 - **Touch:** footer and open-row scrolling, fling, swallowed click after a pan, card drag still works.
 - **Attachments:** attach from hand, onto a strip, group viewer, fan out, detach, host moves and leaves play, undo.
 - **Counters:** removal by drag on the board and in the full view (mouse and touch); − and + buttons.
+- **Dialogs:** every in-app dialog (pass turn, end combat, concede, labeled counter, counter value, delete game, rename and delete deck, duplicate import) with OK, Cancel, a backdrop tap, Enter and Escape; no browser dialog opens.
 - **Full view and matchup:** combat cards in the thumbnail row (attacker and blocker views), marks and counters below the card in both orientations, matchup highlight and clearing it, dropping a card on the opponent's hand count.
 - **Combat:** marking in combat mode, tags, marks on tapped cards, several open slots, End combat, Pass turn confirmation, side enforcement, the Attack tag only for the active player.
 - **Labels:** turn label and order, hand label, opponent hand count, turn gradient, TAP TO CLOSE.

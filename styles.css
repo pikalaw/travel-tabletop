@@ -336,6 +336,15 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 .confirm-box .btn { background: rgba(0,0,0,.18); border-color: rgba(0,0,0,.35); color: #12160f; }
 .confirm-box .btn.yes { background: #12160f; color: #fff; border-color: transparent; font-weight: 600; }
+/* The app's own dialogs (in place of the browser's confirm/prompt boxes). */
+.confirm-box.plain { background: #1c2a23; color: var(--ink); border: 1px solid rgba(255,255,255,.12); }
+.confirm-box.plain h3 { font-size: 18px; }
+.confirm-box.plain .dialog-body { color: var(--ink-2); white-space: pre-line; }
+.confirm-box.plain .btn { background: #26372e; border-color: rgba(255,255,255,.14); color: var(--ink); }
+.confirm-box.plain .btn.yes { background: #c9a65a; color: #17130a; }
+.confirm-box.plain.danger .btn.yes { background: #c0453a; color: #fff; }
+.dialog-input { width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit; font-size: 16px; color: var(--ink); background: #0f1814; border: 1px solid rgba(255,255,255,.2); border-radius: 8px; }
+.dialog-input.copy { font-family: ui-monospace, monospace; font-size: 13px; resize: none; word-break: break-all; }
 
 .deck-pick.tall { max-height: 52vh; }
 .file-btn { position: relative; overflow: hidden; }

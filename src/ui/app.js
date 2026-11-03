@@ -1,6 +1,6 @@
 // App shell: routing between home, decks, game setup, pairing and the game screen.
 
-import { html, render, useState, useEffect, useRef, useToasts, toast } from './h.js';
+import { html, render, useState, useEffect, useRef, useToasts, toast, confirmBox, Dialogs } from './h.js';
 import { Game } from './game.js';
 import { DecksScreen, DeckScreen, ImportScreen, BackupScreen, RestoreScreen } from './decks.js';
 import { ShowCode, ReadCode } from './pairing.js';
@@ -252,7 +252,7 @@ function Home({ go, resume, rejoin, update, notice }) {
       <ul class="game-list">${games.map((g) => html`<li>
         <span>${g.state.players.p1.name} vs ${g.state.players.p2.name} · ${g.mode === 'networked' ? 'two devices' : 'one device'} · turn ${g.state.turn} · ${new Date(g.updatedAt).toLocaleString()}</span>
         <button class="btn" onClick=${() => resume(g.id)}>Resume</button>
-        <button class="btn ghost" onClick=${async () => { if (confirm('Delete this saved game and its log?')) { await deleteGame(g.id); refresh(); } }}>Delete</button>
+        <button class="btn ghost" onClick=${async () => { if (await confirmBox({ title: 'Delete this game?', body: 'The saved game and its action log are removed from this device.', ok: 'Delete', danger: true })) { await deleteGame(g.id); refresh(); } }}>Delete</button>
       </li>`)}</ul>` : null}
     ${guestGame ? html`<h2>Joined game</h2><ul class="game-list"><li>
       <span>Guest in ${guestGame.hostName}'s game</span>
@@ -447,7 +447,8 @@ function App() {
     default: screen = null;
   }
   return html`${screen}
-    <div class="toasts" aria-live="polite">${toasts.map((t) => html`<div class="toast ${t.kind}">${t.text}</div>`)}</div>`;
+    <div class="toasts" aria-live="polite">${toasts.map((t) => html`<div class="toast ${t.kind}">${t.text}</div>`)}</div>
+    <${Dialogs}/>`;
 }
 
 render(html`<${App}/>`, document.getElementById('app'));
