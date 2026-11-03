@@ -30,7 +30,7 @@ The layering is v1's. Commands flow toward the host, which applies them in order
 | `ui/` | `App.tsx`, `Game.tsx`, `Board.tsx`, `Cards.tsx`, `Overlays.tsx`, `Decks.tsx`, `Pairing.tsx`, `Dialogs.tsx`, `gestures.ts`, `link.ts`, `files.ts`, `toast.ts`, `hooks.ts` | Screens and components, gestures, game links, file saving, toasts and dialogs |
 | `types/` | `state.ts`, `commands.ts`, `protocol.ts`, `storage.ts` | Shared types (see Types) |
 
-**Dependency rules,** enforced by a lint rule (`import/no-restricted-paths`): `ui → client → host → engine`, and `ui`, `host`, `client` → `storage`. `engine/` imports only `engine/` and `types/`, and nothing in it may touch the DOM, IndexedDB, `crypto`, timers or `Date`. Every module may import `types/`.
+**Dependency rules,** enforced by a lint rule (`import-x/no-restricted-paths`, with `no-restricted-globals` keeping browser APIs out of `engine/`): `ui → client → host → engine`, and `ui`, `host`, `client` → `storage`. `engine/` imports only `engine/` and `types/`, and nothing in it may touch the DOM, IndexedDB, `crypto`, timers or `Date`. Every module may import `types/`.
 
 ## Tech stack
 
@@ -457,7 +457,7 @@ The app isn't in production, so v2 replaces v1 outright: nothing on a device car
 | Risk or decision | Status | Resolution path |
 | --- | --- | --- |
 | vite-plugin-pwa 2.0 (released Oct 3, 2026) is newer than this design's reference material | Open | Check its `injectManifest` options and the message its register helper sends to a waiting worker against its own docs when wiring it up; the design depends only on the behaviour described in Offline |
-| ESLint tooling support for TypeScript 7 | Unverified | Check `typescript-eslint`'s supported TypeScript range when setting up lint; if 7 isn't supported yet, lint type-aware rules with the newest supported version and keep `tsc` 7 for the type check |
+| ESLint tooling support for TypeScript 7 | Resolved (step 0.3) | `typescript-eslint` 8.72 supports TypeScript below 6.1, and TypeScript 7's package has no JavaScript compiler API. So the `typescript` package is 6.0.3, used only by ESLint (syntax rules, no type-aware rules), and TypeScript 7 is installed as `typescript-7`, which `npm run typecheck` runs |
 | Behaviour drift during the port | Mitigated | Port module by module, engine first; the unchanged unit and property suites plus the v1 compatibility fixtures must pass before the UI is touched |
 | Preact 11 | Deferred | Upgrade after v2 ships, as its own change |
 
