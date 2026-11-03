@@ -81,7 +81,7 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 **Gestures**
 
 1. **Tap** acts as in the table. **Long-press** (about half a second) opens the full-screen view of a card whose face you can see. **Drag** moves a card, a counter or a tag.
-2. A row whose cards don't fit is **collapsed**: the cards overlap and "TAP TO OPEN" shows at its top right. A tap anywhere on it opens it; a tap on a card in a collapsed row only opens the row.
+2. A row whose cards don't fit is **collapsed**: the cards overlap and "TAP TO OPEN" shows at its top right. The same label shows on a battlefield or lands row holding a card with attachments tucked behind it, since a tap fans the group out. A tap anywhere on it opens it; a tap on a card in a collapsed row only opens the row.
 3. An **open** row lays the cards side by side and scrolls sideways; "TAP TO CLOSE" shows in the same place. A mostly sideways swipe scrolls (with a fling); any other movement on a card drags it. Tapping the empty part of the slot closes it.
 4. A row whose cards fit is always laid out side by side.
 5. Several slots can be open at once; each stays open until tapped again, and **Close slots** closes them all.

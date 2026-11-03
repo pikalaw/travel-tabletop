@@ -147,7 +147,7 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .mark.att-count { color: #17130a; background: #c9a65a; font-size: 10px; }
 .row.open { overflow-x: auto; overflow-y: hidden; touch-action: none; }
 .row.open .row-cards { padding-right: 24px; }
-.row.collapsed::after {
+.row.can-open::after { /* collapsed, or holding tucked attachments that a tap fans out */
   content: "tap to open"; position: absolute; right: 6px; top: 3px; font-size: 9px; color: var(--ink-3);
   text-transform: uppercase; letter-spacing: .3px; pointer-events: none;
 }
@@ -214,7 +214,7 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 /* While dragging, the other player's hand count is a drop target for their hand. */
 body.dragging .opp-hand { pointer-events: auto; padding: 4px 8px; margin: -4px -2px; border: 1px dashed rgba(255,255,255,.35); border-radius: 6px; background: rgba(0,0,0,.35); }
 body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset: 0; }
-.c12 .row.collapsed::after, .c12 .row-box.open::before { top: auto; bottom: 3px; }
+.c12 .row.can-open::after, .c12 .row-box.open::before { top: auto; bottom: 3px; }
 /* Turn side: a faint red wash from the attacking (active) player's side to blue on the defender's. */
 .board.my-turn { background: linear-gradient(to top, rgba(214, 64, 52, .38), rgba(214, 64, 52, .12) 42%, rgba(60, 110, 220, .12) 58%, rgba(60, 110, 220, .38)); }
 .board.their-turn { background: linear-gradient(to bottom, rgba(214, 64, 52, .38), rgba(214, 64, 52, .12) 42%, rgba(60, 110, 220, .12) 58%, rgba(60, 110, 220, .38)); }

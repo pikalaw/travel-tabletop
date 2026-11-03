@@ -107,7 +107,7 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
   // The label and the open-slot outline sit outside the scroller so they stay put while it scrolls.
   return html`<div class="row-box ${scrolls || fanned ? 'open' : ''}">
     ${label ? html`<span class="slot-label">${label}${ids.length ? html` <b>${ids.length}</b>` : ''}</span>` : null}
-    <div ref=${ref} class="row ${collapsed ? 'collapsed' : ''} ${scrolls ? 'open' : ''} ${extraClass}"
+    <div ref=${ref} class="row ${collapsed ? 'collapsed' : ''} ${collapsed || (hasGroups && !open) ? 'can-open' : ''} ${scrolls ? 'open' : ''} ${extraClass}"
          data-drop=${zone} data-layout=${layout} data-offset=${offset} data-collapsed=${collapsed ? '1' : null}
          data-groups=${hasGroups ? '1' : null} data-fanned=${fanned ? '1' : null} data-tap=${'slot'} data-slot=${zone}>
       ${ids.length === 0 && emptyText ? html`<span class="slot-empty">${emptyText}</span>` : null}

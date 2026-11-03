@@ -319,7 +319,7 @@ Row zones are drawn by `Row`, piles by `Pile` (the top card, with a library spli
 - **Units.** Groups (a host and its attachments) are units. Inside a group, each later card overlaps the previous by 75% of its width (PEEK 0.25). Between units the gap is 4 px.
 - **Collapsed.** If the natural width exceeds the slot width − 8 px and there is more than one unit, the row collapses, the overlap spread evenly between units, unless the slot is open.
 - **Open.** The row scrolls sideways. If it holds groups, they fan out: 3 px inside a group, 14 px between groups.
-- **Overlays.** The label and the open-slot outline sit outside the scroller so they don't scroll. Data attributes on the row (`data-collapsed`, `data-groups`, `data-fanned`) drive the tap logic.
+- **Overlays.** The label and the open-slot outline sit outside the scroller so they don't scroll. Data attributes on the row (`data-collapsed`, `data-groups`, `data-fanned`) drive the tap logic. The row gets `can-open` (which shows "tap to open") when it is collapsed, or holds groups and isn't open; the open box shows "tap to close".
 
 **Cards.** Each card element carries `data-card`, `data-zone`, `data-card-target` and `data-attached-to`. Marks sit at the visible top-left corner, outside the rotated image, offset down by (height − width) / 2 when tapped:
 
