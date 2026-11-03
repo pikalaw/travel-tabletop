@@ -4,28 +4,24 @@ A rules-free Magic: The Gathering playmat that runs as an offline web app (PWA) 
 tablets and desktop browsers. Two players share one device, or play on two devices connected
 over a local Wi-Fi network or phone hotspot. No internet is needed during play.
 
-Plain JavaScript ES modules, no bundler, no build step. Preact + htm for the UI.
+Strict TypeScript, built with Vite; Preact for the UI.
+
+> **Being rewritten.** Version 2 (TypeScript + Vite) is in progress on `main`; see
+> `docs/implementation-plan.md`. Until it goes live, the site serves nothing. The plain-JavaScript
+> version 1 is kept at the git tag `v1`.
 
 ## Run it
 
-Any static file server works. Camera access, the service worker and installing as an app all
-need HTTPS, or `localhost` on the same machine.
-
 ```sh
-python3 -m http.server 8080        # then open http://localhost:8080
+npm install
+npm run dev          # development server with hot reload
+npm run build        # type check, then build into dist/
+npm run preview      # serve dist/ at http://localhost:4173/travel-tabletop/, as GitHub Pages will
 ```
 
-### On phones and tablets
-
-A phone loading your laptop's IP over plain HTTP gets no camera or offline mode. Use one of these:
-
-- **Static HTTPS host (simplest).** Push this folder to GitHub Pages (or Netlify, Cloudflare
-  Pages), open the URL on each device once, then choose Add to Home Screen. From then on it runs
-  offline.
-- **Local HTTPS.** `mkcert -install && mkcert 192.168.1.20`, serve with any static server over
-  HTTPS, and install mkcert's root certificate on each device.
-
-Requirements: iOS / iPadOS 16.4 or later (for import maps), or a current Chrome on Android.
+Camera access, the service worker and installing as an app need HTTPS, or `localhost` on the same
+machine. On phones and tablets, use the GitHub Pages site: open it once, then Add to Home Screen.
+From then on it runs offline. Requirements: a current Safari on iOS / iPadOS, or Chrome on Android.
 
 ## Play
 
@@ -57,31 +53,41 @@ Requirements: iOS / iPadOS 16.4 or later (for import maps), or a current Chrome 
      damage and so on.
 4. **Log.** Every action is recorded on the host. Menu → Export action log downloads a JSON
    Lines file: a manifest line, then one entry per command, notice, undo and snapshot. The file
-   replays to the exact game (see `src/host/replay.js`).
+   replays to the exact game (see `src/host/replay.ts`).
 
 ## Develop
 
 ```sh
-npm install          # dev tools only: vitest, fast-check, typescript, plus library sources
-npm test             # engine, host, protocol, codec and parser tests (property-based included)
-npm run typecheck    # tsc --checkJs over the engine, host and codec
-npm run sw-list      # REQUIRED before every release: writes the file list + version into sw.js
+npm run typecheck    # TypeScript 7 (tsc --noEmit)
+npm run lint         # ESLint, including the module-boundary rules
+npm test             # Vitest unit and property tests
+npm run e2e          # Playwright browser scenarios against a fresh build under vite preview
 ```
 
-Libraries are vendored as ES modules in `vendor/` and mapped by the import map in
-`index.html`. To update one, copy its ES-module build from `node_modules` into `vendor/`.
+TypeScript 7 does the type check. ESLint's TypeScript parser doesn't support TypeScript 7 yet, so
+the `typescript` package is 6.0 (for ESLint) and TypeScript 7 is installed as `typescript-7`.
 
-Layout:
+The browser scenarios can also run against any other server: `E2E_BASE_URL=http://localhost:8771/
+npx playwright test`. To check version 1, check out the tag in a worktree
+(`git worktree add ../v1 v1`) and serve that folder with `python3 -m http.server 8771`.
+
+Layout (see `docs/technical-design-v2.md`):
 
 | Path | What it is |
 | --- | --- |
+| `src/types/` | Shared types: state, commands, protocol, storage |
 | `src/engine/` | Pure game engine `apply(state, command)` and visibility rules |
 | `src/host/` | Command queue, randomness, undo snapshots, action log, replay |
 | `src/client/` | Sessions (same-device, host, guest) and the pairing handshake |
 | `src/transport/` | WebRTC data channel, pairing codes, QR render and scan |
-| `src/storage/` | IndexedDB, Scryfall import, built-in sample cards |
-| `src/ui/` | Preact + htm screens, board, gestures, overlays |
-| `tests/` | Vitest suites |
+| `src/storage/` | IndexedDB, Scryfall import, built-in sample cards, backups |
+| `src/ui/` | Preact screens, board, gestures, overlays |
+| `tests/` | Vitest suites; `tests/fixtures/v1/` holds a game and a backup recorded from version 1 |
+| `e2e/` | Playwright browser scenarios |
+
+Dependency rules, enforced by ESLint: `ui → client → host → engine`; `ui`, `host` and `client` may
+use `storage`; `client` uses `transport`; everything may use `types`. The engine touches no browser
+API, timer or clock.
 
 ## Notes
 

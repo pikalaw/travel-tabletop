@@ -1,9 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Browser scenarios. They target whatever E2E_BASE_URL serves; by default a static server
-// on the repository root (v1). From the v2 scaffold on, the web server becomes `vite preview`.
+// Browser scenarios. By default they build the app and run against `vite preview`, served
+// under the same /travel-tabletop/ path as GitHub Pages. Set E2E_BASE_URL to aim them at
+// any other server instead, e.g. v1 (tag `v1`) checked out and served as static files.
 const port = Number(process.env.E2E_PORT || 8768);
-const baseURL = process.env.E2E_BASE_URL || `http://localhost:${port}/`;
+const external = process.env.E2E_BASE_URL;
+const baseURL = external || `http://localhost:${port}/travel-tabletop/`;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -27,11 +29,14 @@ export default defineConfig({
       launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] },
     },
   }],
-  webServer: process.env.E2E_BASE_URL ? undefined : {
-    command: `python3 -m http.server ${port}`,
-    url: baseURL,
-    reuseExistingServer: true,
-    stdout: 'ignore',
-    stderr: 'ignore',
-  },
+  ...(external ? {} : {
+    webServer: {
+      command: `npx vite build && npx vite preview --port ${port} --strictPort`,
+      url: baseURL,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: 'ignore',
+      stderr: 'pipe',
+    },
+  }),
 });

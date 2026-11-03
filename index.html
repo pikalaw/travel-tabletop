@@ -9,27 +9,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Tabletop">
   <title>Travel Tabletop</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="assets/icon-192.png">
-  <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="styles.css">
-  <script type="importmap">
-  {
-    "imports": {
-      "preact": "./vendor/preact/preact.js",
-      "preact/hooks": "./vendor/preact/hooks.js",
-      "htm": "./vendor/htm.js",
-      "idb": "./vendor/idb/index.js",
-      "uqr": "./vendor/uqr.js",
-      "jsqr": "./vendor/jsqr.js",
-      "fflate": "./vendor/fflate.js"
-    }
-  }
-  </script>
+  <link rel="icon" href="/icon-192.png">
+  <link rel="apple-touch-icon" href="/icon-192.png">
 </head>
 <body>
   <div id="app"></div>
-  <noscript>This app needs JavaScript.</noscript>
-  <script type="module" src="src/ui/app.js"></script>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
