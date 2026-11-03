@@ -1,0 +1,8 @@
+{
+  // Tests index arrays and records freely (a failed lookup fails the test anyway), so they
+  // relax noUncheckedIndexedAccess; everything else matches the app's settings.
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "noUncheckedIndexedAccess": false },
+  "include": ["."],
+  "exclude": []
+}
