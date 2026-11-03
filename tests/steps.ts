@@ -26,6 +26,7 @@ export const cmdArb = fc.oneof(
   fc.record({ type: fc.constant('attach'), pick: fc.nat(), target: fc.nat() }),
   fc.record({ type: fc.constant('attach'), pick: fc.nat(), target: fc.nat() }),
   fc.record({ type: fc.constant('detach'), pick: fc.nat() }),
+  fc.record({ type: fc.constant('detachAll'), pick: fc.nat() }),
   fc.record({ type: fc.constant('attack'), target: fc.nat() }),
   fc.record({ type: fc.constant('attack'), target: fc.nat() }),
   fc.record({ type: fc.constant('block'), target: fc.nat(), pick: fc.nat() }),
@@ -66,6 +67,11 @@ export function concretize(state: GameState, step: any): TestCommand {
       return { type: 'block', actor: 'p2', payload: { cardId: c, from: z, attackerId: a, attackerZone: az } };
     }
     case 'endCombat': return { type: 'endCombat', actor: 'p1', payload: {} };
+    case 'detachAll': {
+      const hosts = [...new Set(Object.values(state.cards).map((c) => c.attachedTo).filter((h): h is string => !!h))].sort();
+      const h = hosts.length ? hosts[step.pick % hosts.length] : id;
+      return { type: 'detachAll', actor: 'p1', payload: { cardId: h, from: ZONES.find((z) => state.zones[z].includes(h)) || from } };
+    }
     case 'detach': {
       const att = Object.values(state.cards).filter((c) => c.attachedTo).map((c) => c.id).sort();
       const a = att.length ? att[step.pick % att.length] : id;

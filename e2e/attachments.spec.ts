@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { longPress, startOneDevice, playFromHand, idsIn, barButton, watchErrors } from './helpers';
+import { longPress, startOneDevice, playFromHand, idsIn, barButton, answerDialog, watchErrors } from './helpers';
 
 test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follow the host, undo', async ({ page }) => {
   const errs = watchErrors(page);
@@ -32,7 +32,7 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
   await expect(page.locator('.full-thumbs .thumb')).toHaveCount(3);
   await expect(page.locator('.fullcard-meta')).toContainText('2 attached');
   await page.locator('.full-thumbs .thumb').nth(1).click();
-  await expect(page.locator('.bar').first().getByRole('button', { name: 'Detach' })).toHaveCount(1);
+  await expect(page.locator('.bar').first().getByRole('button', { name: 'Detach', exact: true })).toHaveCount(1);
   await expect(page.locator('.fullcard-meta')).toContainText('Attached to');
   // swipe right goes back to the host
   const inner = (await page.locator('.fullcard-inner').boundingBox())!;
@@ -104,4 +104,36 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
   await barButton(page, 'Undo');
   await expect(p2bf.locator('.card.tucked')).toHaveCount(1);
   errs.expectNone();
+});
+
+test('Detach all asks first, then frees the whole group in one step; Undo brings it back', async ({ page }) => {
+  await startOneDevice(page);
+  const bf = page.locator('[data-drop="p1.battlefield"]');
+  await playFromHand(page, 'p1.battlefield', 1);
+  const [host] = await idsIn(page, 'p1.battlefield');
+  for (let i = 0; i < 2; i++) {
+    await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first());
+    await barButton(page, 'Attach');
+    const h = (await page.locator(`[data-card="${host}"]`).boundingBox())!;
+    await page.mouse.click(h.x + h.width * 0.7, h.y + h.height * 0.6);
+    await page.waitForTimeout(250);
+  }
+  await expect(bf.locator('.att-count')).toHaveText(['+2']);
+  // from an attached card's view too: open the strip
+  const strip = (await bf.locator('.card.tucked').first().boundingBox())!;
+  await page.mouse.move(strip.x + 6, strip.y + strip.height / 2); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up();
+  await expect(page.locator('.fullcard-meta')).toContainText('Attached to');
+  await barButton(page, 'Detach all');
+  await expect(page.locator('.confirm-box.plain')).toContainText('This detaches all 2 cards attached to');
+  await answerDialog(page, false);
+  await expect(bf.locator('.card.tucked')).toHaveCount(2);
+  await barButton(page, 'Detach all');
+  await answerDialog(page, true);
+  await expect(bf.locator('.card.tucked')).toHaveCount(0);
+  await expect(bf.locator('.att-count')).toHaveCount(0);
+  await expect(page.locator('.ticker-text')).toContainText(/detached 2 cards from/);
+  await expect(page.locator('.bar').first().getByRole('button', { name: 'Detach all' })).toHaveCount(0);
+  await barButton(page, 'Close');
+  await barButton(page, 'Undo');
+  await expect(bf.locator('.att-count')).toHaveText(['+2']);
 });

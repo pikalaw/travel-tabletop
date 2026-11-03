@@ -75,7 +75,7 @@ e2e/                       Playwright scenarios (see Testing)
 
 - `base: '/travel-tabletop/'`, the GitHub Pages project path; every asset URL and the service worker scope derive from it.
 - `plugins: [preact(), VitePWA({ … })]`, configured as in the next section.
-- `define`: `__APP_VERSION__` from `package.json` and `__BUILD_ID__` from the first 7 characters of `GITHUB_SHA` (or `dev` locally). `version.ts` exports them as `APP_VERSION` and `BUILD_ID`; `PROTOCOL_VERSION` stays a literal `1`.
+- `define`: `__APP_VERSION__` from `package.json` and `__BUILD_ID__` from the first 7 characters of `GITHUB_SHA` (or `dev` locally). `version.ts` exports them as `APP_VERSION` and `BUILD_ID`; `PROTOCOL_VERSION` is a literal, bumped when host and guest messages change (2: `detachAll`).
 - `build.target: 'es2022'`, `build.sourcemap: true` (source maps are served, so errors on a device point at real lines).
 
 **Scripts** (`package.json`): `dev` (Vite dev server), `build` (`tsc --noEmit && vite build`), `preview` (serves `dist/` the way Pages will), `typecheck`, `lint`, `test` (Vitest), `e2e` (Playwright against `preview`).
@@ -209,6 +209,7 @@ interface CommandEnvelope { type: string; actor: Actor; clientSeq?: number; payl
 | `concede` | player | result = { winner: other, reason: 'concede' } |
 | `endGame` | winner? | result = { winner, reason: 'ended' } |
 | `attach` / `detach` | see Attachments |  |
+| `detachAll` | cardId (a host), from | Detaches every card attached to it, the same as detaching each in turn, nearest the host last; invalid if nothing is attached. Added in protocol 2 |
 | `attack` / `block` / `endCombat` | see Combat marks |  |
 
 `undo` is handled by the host, not the engine (see Host). Randomness: `randomNeeded(state, cmd)` returns how many numbers the host must supply (all deck cards for `startGame`, the zone size for `shuffle`, else 0); the engine reads them from `cmd.random`, clamped to \[0, 1).

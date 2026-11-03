@@ -468,6 +468,19 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
     const card = fullCard;
     const k = zoneKind(fullZone);
     const field = k === 'battlefield' || k === 'lands';
+    // The group this card belongs to: its host, and how many cards are attached to it.
+    const hostId = card.attachedTo || card.id;
+    const groupSize = field ? state.zones[fullZone].filter((id) => state.cards[id]?.attachedTo === hostId).length : 0;
+    const detachAll = () => {
+      const host = state.cards[hostId];
+      if (!host) return;
+      const hostName = canSeeFace(state, host, fullZone, viewer) ? host.name : 'this card';
+      void confirmBox({
+        title: 'Detach all?',
+        body: `This detaches ${groupSize === 1 ? 'the 1 card' : `all ${groupSize} cards`} attached to ${hostName}. Undo brings them back.`,
+        ok: 'Detach all',
+      }).then((yes) => { if (yes) send('detachAll', { cardId: hostId, from: fullZone }); });
+    };
     footer = (
       <div class="bar">
         <button class="btn" onClick={() => send('flip', { cardId: card.id, from: fullZone })}>Flip</button>
@@ -481,6 +494,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
         {card.attachedTo
           ? <button class="btn" onClick={() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button>
           : k !== 'library' ? <button class="btn" onClick={() => { dispatch({ type: 'mode', mode: { kind: 'attach', cardId: card.id, zone: fullZone } }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Attach</button> : null}
+        {groupSize > 0 ? <button class="btn" onClick={detachAll}>Detach all</button> : null}
         <CounterChips label={label} attack={showAttack} />
         <span class="spacer" />
         <button class="btn primary" onClick={closeFull}>Close</button>

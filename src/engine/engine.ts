@@ -319,6 +319,22 @@ function run(input: GameState, cmd: Command): ApplyResult {
       break;
     }
 
+    case 'detachAll': {
+      // The same as detaching each attached card in turn, nearest the host last: they end up
+      // just right of the host, the nearest first.
+      const n = need(p.cardId, p.from); if (!located(n)) return n;
+      const z = state.zones[n.from];
+      const own = attachmentsOf(state, n.from, n.id);
+      if (!own.length) return fail('invalid', 'nothing is attached to that card');
+      for (const id of own) {
+        delete state.cards[id]!.attachedTo;
+        z.splice(z.indexOf(id), 1);
+        z.splice(z.indexOf(n.id) + 1, 0, id);
+      }
+      for (const [i, id] of [...own].reverse().entries()) moved.push({ id, from: n.from, to: n.from, toIndex: z.indexOf(n.id) + 1 + i });
+      break;
+    }
+
     case 'tap': {
       const n = need(p.cardId, p.from); if (!located(n)) return n;
       n.card.tapped = bool(p.value, n.card.tapped);

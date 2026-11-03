@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import { apply, emptyState, checkInvariants } from '../src/engine/engine';
 import { canSeeFace, visibleTo, allZones } from '../src/engine/view';
-import type { Actor } from '../src/types/state';
+import type { Actor, GameState } from '../src/types/state';
 import type { Command } from '../src/types/commands';
 import { Table, seeded, started } from './support';
 import { cmdArb, concretize } from './steps';
@@ -203,6 +203,24 @@ describe('attachments', () => {
     expect(h.dispatch({ type: 'detach', actor: 'p1', payload: { cardId: d, from: 'p1.battlefield' } }).ok).toBe(true);
     expect(h.state.zones['p1.battlefield']).toEqual([a, b, d, c]);
     expect(h.dispatch({ type: 'detach', actor: 'p1', payload: { cardId: d, from: 'p1.battlefield' } })).toMatchObject({ ok: false });
+  });
+
+  it('detach all frees every attached card in one step, nearest first to the right of the host', () => {
+    const { h, a, b, c, d } = setup();
+    att(h, d, 'p1.hand', b, 'p1.battlefield');
+    att(h, a, 'p1.battlefield', b, 'p1.battlefield');
+    expect(h.state.zones['p1.battlefield']).toEqual([d, a, b, c]);
+    const before = h.state;
+    expect(h.dispatch({ type: 'detachAll', actor: 'p1', payload: { cardId: b, from: 'p1.battlefield' } }).ok).toBe(true);
+    expect(h.state.zones['p1.battlefield']).toEqual([b, a, d, c]);
+    expect([a, d].map((id) => h.state.cards[id].attachedTo)).toEqual([undefined, undefined]);
+    expect(checkInvariants(h.state)).toBeNull();
+    // the same as detaching each in turn
+    let s = before;
+    for (const id of [d, a]) s = (apply(s, { type: 'detach', actor: 'p1', payload: { cardId: id, from: 'p1.battlefield' } }) as { state: GameState }).state;
+    expect(s.zones['p1.battlefield']).toEqual(h.state.zones['p1.battlefield']);
+    expect(h.dispatch({ type: 'detachAll', actor: 'p1', payload: { cardId: b, from: 'p1.battlefield' } })).toMatchObject({ ok: false, error: 'invalid' });
+    expect(h.dispatch({ type: 'detachAll', actor: 'p1', payload: { cardId: b, from: 'p1.hand' } })).toMatchObject({ ok: false, error: 'stale' });
   });
 
   it('a card dropped into the middle of a group lands before the group', () => {

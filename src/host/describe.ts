@@ -75,6 +75,7 @@ export function describeCommand(cmd: Command, before: GameState, after: GameStat
     }
     case 'endCombat': return `${name} ended combat`;
     case 'detach': return `${name} detached ${cn(cmd.payload.cardId, cmd.payload.from, cmd.payload.from)}`;
+    case 'detachAll': return `${name} detached ${moved.length} card${moved.length === 1 ? '' : 's'} from ${cn(cmd.payload.cardId, cmd.payload.from, cmd.payload.from)}`;
     case 'tap': {
       const p = cmd.payload;
       return `${name} ${st.cards[p.cardId]?.tapped ? 'tapped' : 'untapped'} ${cn(p.cardId, p.from, p.from)}`;

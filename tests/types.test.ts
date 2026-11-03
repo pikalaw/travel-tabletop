@@ -12,8 +12,8 @@ describe('shared types', () => {
     const known = new Set<string>([...STATE_COMMAND_TYPES, ...NOTICE_KINDS, 'undo']);
     const seen = new Set<string>(entries.flatMap((e) => [e.command?.type, e.notice?.kind]).filter((t) => t !== undefined));
     expect([...seen].filter((t) => !known.has(t))).toEqual([]);
-    // the fixture uses all 26 state commands
-    expect(STATE_COMMAND_TYPES.filter((t) => !seen.has(t))).toEqual([]);
+    // the fixture uses all 26 of v1's state commands; detachAll came later
+    expect(STATE_COMMAND_TYPES.filter((t) => !seen.has(t))).toEqual(['detachAll']);
   });
 
   it('match the fields the v1 log carries', () => {
