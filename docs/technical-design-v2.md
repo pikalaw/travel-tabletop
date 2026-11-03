@@ -49,7 +49,7 @@ Versions are the npm releases current on Nov 2, 2026; pin exact versions in `pac
 | Peer connection | Native `RTCPeerConnection`, no STUN or TURN | Unchanged |
 | Lint | ESLint with `typescript-eslint` and an import-boundary rule | Enforces the dependency rules above |
 | Unit and property tests | Vitest 5, fast-check | Unchanged suites, ported to TS |
-| Browser tests | `@playwright/test` 1.64 | Moved into the repo (`e2e/`), run headless in CI |
+| Browser tests | `@playwright/test` 1.63 (pinned to the version installed in the development workspace, whose bundled Chromium it uses; CI installs that browser itself) | Moved into the repo (`e2e/`), run headless in CI |
 
 No other runtime dependencies. Anything added later must ship an ES-module or CommonJS build Vite can bundle, and must work offline once cached.
 
@@ -105,7 +105,7 @@ The service worker is built by `vite-plugin-pwa` with `strategies: 'injectManife
 
 GitHub Pages serves the built `dist/` folder, deployed by a workflow instead of from the repository root.
 
-- **One-time setting:** in the repository's Settings → Pages, set the source to **GitHub Actions** when the first v2 build is ready. From then on the workflow publishes every push to `main`.
+- **One-time setting:** in the repository's Settings → Pages, set the source to **GitHub Actions** before v1's code leaves `main`. While the rewrite is in progress the workflow publishes the files at tag `v1`, so the site keeps serving v1; once v2 is ready it builds and publishes `main` on every push instead.
 - **`.github/workflows/deploy.yml`**, on every push to `main`: check out; set up Node (the version in `.nvmrc`); `npm ci`; `npm run typecheck`, `npm run lint`, `npm test`; `npm run build`; install Playwright's Chromium and run `npm run e2e` against `vite preview`; then upload `dist/` with `actions/upload-pages-artifact` and publish it with `actions/deploy-pages`. Any failing step stops the deploy, so a red build never reaches a device.
 - **v1 code** is replaced in place on `main`; its last commit is tagged `v1` (`2d61e84`), so `git checkout v1` brings it back, and its design stays in the v1 doc.
 - The site URL stays https://pikalaw.github.io/travel-tabletop/, so installed apps, bookmarks and game links keep working.
@@ -455,7 +455,7 @@ The app isn't in production, so v2 simply replaces v1's code on `main`, and the 
 
 1. Record the v1 regression fixtures (see Testing).
 2. Replace the code on `main`, keeping every check green.
-3. Set the Pages source to **GitHub Actions**; the next push deploys v2.
+3. Switch the deploy workflow from publishing the `v1` tag to building `main`; the next push deploys v2.
 4. On each device, open the app online and tap **Update now**; check the build number, and that saved decks and a saved game are still there.
 5. Run the device checklist in the implementation plan.
 
