@@ -1,10 +1,12 @@
 name: Check and deploy
 
-# Step 0.3: checks only. Step 4.2 adds the browser tests and the Pages deploy job.
+# Every push and pull request runs every check. A push to main that passes them all is
+# published to GitHub Pages (Settings → Pages → Source must be "GitHub Actions").
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,8 +25,34 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      - run: npx vite build
+      - run: npx playwright install --with-deps chromium
+      # The browser scenarios build the app and run against `vite preview`.
+      - run: npm run e2e
+        env:
+          CI: 'true'
       - uses: actions/upload-artifact@v7
+        if: failure()
         with:
-          name: dist
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
+      # The build to publish: GITHUB_SHA names it on the home screen.
+      - run: npx vite build
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
+        with:
           path: dist/
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
