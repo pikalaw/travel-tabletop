@@ -97,7 +97,7 @@ The service worker is built by `vite-plugin-pwa` with `strategies: 'injectManife
 5. On `message`, call `self.skipWaiting()` for `{ type: 'SKIP_WAITING' }` (sent by the plugin's register helper) **and** for the string `'skipWaiting'` (sent by a v1 page). Without the second form, a device with v1 installed could never take the update; it would need an uninstall, which deletes its saved decks.
 6. `clientsClaim()` on activate.
 
-**Page side** (`main.tsx`). `registerSW({ onNeedRefresh, onOfflineReady })` from `virtual:pwa-register`. `onNeedRefresh` sets an app-wide "update ready" flag; calling the function `registerSW` returned activates the waiting worker and reloads. The flag shows **Update now** on the home screen, and also a small **Update** button in the game footer's menu, which v1 lacked (a reload resumes the game through its link; a guest reconnects). `onOfflineReady` shows a toast once: "Ready to play offline".
+**Page side** (`main.tsx`). `registerSW({ onNeedRefresh, onOfflineReady })` from `virtual:pwa-register`. `onNeedRefresh` sets an app-wide "update ready" flag; calling the function `registerSW` returned activates the waiting worker and reloads. The flag shows **Update now** on the home screen only, as in v1; the game screen never offers it, so the game menu stays as it is. `onOfflineReady` shows a toast once, the first time the whole app is stored on the device: "Ready to play offline". `meta.offlineNoticeShown` records that it was shown, so it never repeats (a later update doesn't show it again).
 
 **Build shown:** the home screen footer reads `Version <APP_VERSION> (build <BUILD_ID>)`, the commit the deploy was built from.
 
@@ -304,7 +304,7 @@ One IndexedDB database `mtg-tabletop`, version 1. v2 opens the same database at 
 | `games` | `id` | { id, state, mode, role, setup, updatedAt, over } |
 | `snapshots` | \[gameId, key\] | { gameId, key, state }; index `gameId` |
 | `logs` | \[gameId, seq\] | LogEntry; index `gameId` |
-| `meta` | `key` | `fixtures` (sample-deck version), `lastSetup` { names, pick, life }, `guestGame` |
+| `meta` | `key` | `fixtures` (sample-deck version), `lastSetup` { names, pick, life }, `guestGame`, `offlineNoticeShown` (new in v2; an extra key, so v1 records still read) |
 
 - **Card ids.** `defId = sha256("name|frontHash|backHash")`, first 20 hex characters (back hash empty when there is none). Identical imports produce identical ids on every device, which is what the handshake compares.
 - **Images.** `front` and `back` are the normal-size hashes; `sizes.front` and `sizes.back` hold the small and large hashes. Single-faced cards have `back: null` and are drawn with the bundled `back.svg`. Missing sizes fall back to normal.
@@ -467,7 +467,6 @@ The app isn't in production, so v2 simply replaces v1's code on `main`, and the 
 | --- | --- | --- |
 | vite-plugin-pwa 2.0 (released Oct 3, 2026) is newer than this design's reference material | Open | Check its `injectManifest` options and the message its register helper sends to a waiting worker against its own docs when wiring it up; the design depends only on the behaviour described in Offline |
 | ESLint tooling support for TypeScript 7 | Unverified | Check `typescript-eslint`'s supported TypeScript range when setting up lint; if 7 isn't supported yet, lint type-aware rules with the newest supported version and keep `tsc` 7 for the type check |
-| Two visible additions: an **Update** item in the game menu, and a one-time "Ready to play offline" toast | Needs a PRD decision | They aren't in the PRD. Keep them and add them to the PRD, or drop them and keep v1's behaviour (Update now on the home screen only) |
 | Behaviour drift during the port | Mitigated | Port module by module, engine first; the unchanged unit and property suites plus the v1 compatibility fixtures must pass before the UI is touched |
 | Preact 11 | Deferred | Upgrade after v2 ships, as its own change |
 

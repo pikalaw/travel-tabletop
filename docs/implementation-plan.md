@@ -99,7 +99,7 @@ The rewrite follows the [Technical Design v2](./technical-design-v2.md); the [Te
 | R4 Offline and deploy | `src/sw.ts`, the PWA plugin, the update prompt, the deploy workflow; switch the Pages source to GitHub Actions | The offline and update specs pass; the site serves v2 |
 | R5 Devices | Update the installed app on the Android phone and the iPad, then run the device checklist | Each device took the update with its decks and saved games intact; checklist ticked |
 
-**Before R4:** decide whether v2 adds the in-game **Update** item and the "Ready to play offline" toast (listed in the v2 design's open decisions); if yes, the PRD gets those two lines.
+**Decided (Nov 2):** updates stay on the home screen only, with no game-menu item; v2 adds the one-time "Ready to play offline" message, now in the PRD.
 
 ## Test strategy
 

@@ -31,7 +31,7 @@ The app installs from a web link onto phones and tablets and works fully offline
 - **Pairing.** The host shows a QR code; the guest scans it and shows one back for the host to scan. Copying and pasting a text code works instead of scanning. The app asks for the camera first, because it needs it to scan and because it lets the two devices find each other on the local network.
 - **Compatibility check.** Both devices must run the same app version. Each device must also hold the card images the other side's decks use: the host checks the guest's decks, and the guest checks the cards in the host's game. Otherwise pairing stops with an error naming the missing cards.
 - **Screen stays on** during a game.
-- **Offline and updates.** After the first visit the whole app is stored on the device. A new version downloads in the background the next time the app opens online. The home screen then shows "A new version is ready" with **Update now**; the update never applies during a game. The home screen footer shows the version and installed build.
+- **Offline and updates.** After the first visit the whole app is stored on the device; the first time that finishes, a one-time message says "Ready to play offline" (from v2). A new version downloads in the background the next time the app opens online. The home screen then shows "A new version is ready" with **Update now**; the update never applies during a game. The home screen footer shows the version and installed build.
 
 ## Board layout
 
