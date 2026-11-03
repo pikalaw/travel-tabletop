@@ -82,7 +82,7 @@ If the last item fails, switch the transport to a Capacitor-wrapped native socke
 - [x] Peek, reveal top N, search with shuffle on close, look through the other library, top card face-up toggle, alerts to the other player
 - [x] Dice and random pick, pointer, ticker and recent actions, opponent hand count
 - [x] Log export as JSON Lines
-- [x] Added after the original plan: attachments, combat marks, multiple open slots, touch scrolling handled in code, turn label and turn gradient
+- [x] Added after the original plan: attachments, combat marks, multiple open slots, touch scrolling handled in code, turn label and turn gradient, names coloured by combat role, combat cards in the full view, matchup highlight
 
 ## Test strategy
 
@@ -108,6 +108,7 @@ The unit suites are 43 tests in `tests/engine.test.js`, `tests/net.test.js` and 
 - **Touch:** footer and open-row scrolling, fling, swallowed click after a pan, card drag still works.
 - **Attachments:** attach from hand, onto a strip, group viewer, fan out, detach, host moves and leaves play, undo.
 - **Counters:** removal by drag on the board and in the full view (mouse and touch); − and + buttons.
+- **Full view and matchup:** combat cards in the thumbnail row (attacker and blocker views), marks and counters below the card in both orientations, matchup highlight and clearing it, dropping a card on the opponent's hand count.
 - **Combat:** marking in combat mode, tags, marks on tapped cards, several open slots, End combat, Pass turn confirmation, side enforcement, the Attack tag only for the active player.
 - **Labels:** turn label and order, hand label, opponent hand count, turn gradient, TAP TO CLOSE.
 - **Game links:** same device, another device, a finished game, a malformed link, a link changed mid-game.

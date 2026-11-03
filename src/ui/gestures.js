@@ -5,7 +5,7 @@
 //   data-badge="plus|minus|label"           a counter on a card (drag off to remove)
 //   data-token-def="defId"                  a token in the token picker (drag onto a zone)
 //   data-tap="name"                         anything else that reacts to a tap
-//   data-drop="zone"                        a drop target slot; data-layout="row|pile|library|tray"
+//   data-drop="zone"                        a drop target slot; data-layout="row|pile|library|tray|append"
 //   data-trash                              a drop target that removes tokens / counters
 // Horizontal scrollers (the footer bar, open slots, trays) are panned here rather than by the
 // browser, so scrolling does not depend on touch-action handling: a mostly horizontal movement
@@ -200,6 +200,7 @@ function describeDrop(t, x, y, srcEl) {
     return { zone, index: y < r.top + r.height / 2 ? 0 : undefined, position: y < r.top + r.height / 2 ? 'top' : 'bottom', onCard };
   }
   if (layout === 'pile') return { zone, index: 0, onCard };
+  if (layout === 'append') return { zone, index: undefined, onCard }; // e.g. the other player's hand count: add at the end
   // Row or tray: index = number of cards whose centre is left of the pointer (excluding the dragged card).
   // A dragged host carries its attachments, so they do not count either.
   const cards = [...t.querySelectorAll(':scope [data-card]')].filter((el) => el !== srcEl && el.closest('[data-drop]') === t &&

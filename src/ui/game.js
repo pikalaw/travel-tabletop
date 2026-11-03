@@ -27,7 +27,8 @@ export function Game({ session, onExit, onRematch, pairing }) {
   const [lib, setLib] = useState(null);            // library zone whose actions are in the footer
   const [libN, setLibN] = useState(1);
   const [sheet, setSheet] = useState(null);
-  const [full, setFull] = useState(null);          // { cardId }
+  const [full, setFull] = useState(null);          // { cardId, zone, anchor }: anchor is the card first opened; its row stays fixed
+  const [match, setMatch] = useState(null);        // card id whose combat matchup is highlighted on the board
   const [shown, setShown] = useState(null);        // { actor, cardIds }: the reveal screen
   const [confirmFor, setConfirmFor] = useState(null); // player asked "are you sure you are …?" before unblinding
   const [pointMode, setPointMode] = useState(false);
@@ -152,6 +153,8 @@ export function Game({ session, onExit, onRematch, pairing }) {
   function onTap(el) {
     // A tap on a counter or combat mark on the board means its card (dragging is what moves the mark).
     if (el.dataset.badge && !el.closest('.full-wrap')) el = el.closest('[data-card]') || el;
+    // The matchup highlight stays while you tap its cards; a tap anywhere else clears it.
+    if (match && !el.dataset.card) setMatch(null);
     if (attaching) {
       const targetId = el.dataset.card;
       const zone = el.dataset.zone;
@@ -253,7 +256,13 @@ export function Game({ session, onExit, onRematch, pairing }) {
     const inPrivateTray = !!el.closest('.sheet') && sheet && ['peek', 'search', 'inspect', 'reveal'].includes(sheet.kind);
     const visible = inPrivateTray || canSeeFace(state, card, zone, viewer) || (card.faceDown && viewer === card.owner);
     if (!visible) { toast('You can’t see that card’s face.', 'info'); return; }
-    setFull({ cardId, zone });
+    setFull({ cardId, zone, anchor: cardId });
+  }
+
+  /** Close the full view; a card in combat leaves its matchup highlighted on the board. */
+  function closeFull() {
+    if (full && matchupIds(state, full.anchor).size) setMatch(full.anchor);
+    setFull(null);
   }
 
   function onDrop(src, d) {
@@ -402,18 +411,21 @@ export function Game({ session, onExit, onRematch, pairing }) {
     { label: 'Leave to home screen', onClick: onExit },
   ];
 
-  const ctx = { state, viewer, art, pointed: null, selected: combat ? blocker?.cardId : null };
+  const ctx = { state, viewer, art, pointed: null, selected: combat ? blocker?.cardId : null, match: match ? matchupIds(state, match) : null };
   const O = other(P);
   const fullZone = full ? (findZone(state, full.cardId) || full.zone) : null;
   const isOffline = session.kind !== 'same-device' && session.status !== 'open';
-  // The full view of a card in a group shows the whole group: the host first, then its attachments.
-  let fullGroup = null;
-  if (full && state.cards[full.cardId] && (zoneKind(fullZone) === 'battlefield' || zoneKind(fullZone) === 'lands')) {
-    const c = state.cards[full.cardId];
-    const host = c.attachedTo || c.id;
-    const atts = state.zones[fullZone].filter((id) => state.cards[id].attachedTo === host).reverse();
-    if (atts.length) fullGroup = [host, ...atts];
+  // The full view's row: the anchor's group (host first, then its attachments), then the host's
+  // combat cards (an attacker's blockers, or the attackers a blocker blocks). It stays fixed while
+  // you move through it.
+  let fullRow = null;
+  if (full && state.cards[full.cardId]) {
+    const has = (r) => r && [...r.group, ...r.partners].includes(full.cardId);
+    fullRow = fullRowOf(state, full.anchor);
+    if (!has(fullRow)) fullRow = fullRowOf(state, full.cardId); // the shown card left the anchor's row
+    if (fullRow.group.length + fullRow.partners.length < 2) fullRow = null;
   }
+  const matchSet = ctx.match;
 
   // ----- footer -----
   let footer;
@@ -434,7 +446,7 @@ export function Game({ session, onExit, onRematch, pairing }) {
         : k !== 'library' ? html`<button class="btn" onClick=${() => { setAttaching({ cardId: card.id, zone: fullZone }); setFull(null); setSheet(null); }}>Attach</button>` : null}
       <${CounterChips} label=${label} attack=${actor === 'table' || actingPlayer === state.activePlayer}/>
       <span class="spacer"></span>
-      <button class="btn primary" onClick=${() => setFull(null)}>Close</button>
+      <button class="btn primary" onClick=${closeFull}>Close</button>
     </div>`;
   } else if (combat) {
     const b = blocker && state.cards[blocker.cardId];
@@ -475,6 +487,7 @@ export function Game({ session, onExit, onRematch, pairing }) {
       <button class="btn" onClick=${passTurn}>Pass turn</button>
       <button class="btn" onClick=${() => { setCombat(true); setBlocker(null); setPointMode(false); }}>Combat</button>
       ${hasCombatMarks ? html`<button class="btn warn" onClick=${endCombat}>End combat</button>` : null}
+      ${matchSet?.size ? html`<button class="btn on" onClick=${() => setMatch(null)}>Clear highlight</button>` : null}
       <${CounterChips} label=${label} attack=${actor === 'table' || actingPlayer === state.activePlayer}/>
       <button class="btn token-btn" data-trash onClick=${() => setSheet({ kind: 'tokens' })} title="Tokens (drop a token here to remove it)">Tokens</button>
       <button class="btn" onClick=${() => setSheet({ kind: 'dice' })}>Dice</button>
@@ -513,8 +526,9 @@ export function Game({ session, onExit, onRematch, pairing }) {
   return html`<div class="game ${isOffline && session.kind === 'guest' ? 'readonly' : ''} ${pointMode ? 'pointing' : ''}" ref=${rootRef}>
     <div class="board-wrap">
       <${Board} ctx=${ctx} P=${P} openSlots=${openSlots}/>
-      ${full ? html`<div class="full-wrap"><${FullCard} ctx=${ctx} cardId=${full.cardId} zone=${fullZone} group=${fullGroup}
-          onCounter=${(type, kind, lbl) => send(type, { cardId: full.cardId, from: fullZone, kind, label: lbl })} onPick=${(id) => setFull({ cardId: id, zone: fullZone })}/></div>` : null}
+      ${full ? html`<div class="full-wrap"><${FullCard} ctx=${ctx} cardId=${full.cardId} zone=${fullZone} row=${fullRow}
+          onCounter=${(type, kind, lbl) => send(type, { cardId: full.cardId, from: fullZone, kind, label: lbl })}
+          onPick=${(id) => setFull({ cardId: id, zone: findZone(state, id) || fullZone, anchor: full.anchor })}/></div>` : null}
       ${sheetEl}
       ${state.result ? html`<div class="result-banner">${state.result.winner ? `${state.players[state.result.winner].name} wins` : 'Game over'}${state.result.reason === 'concede' ? ' (concession)' : ''} — undo to continue, or use the menu.</div>` : null}
     </div>
@@ -572,4 +586,46 @@ function CounterChips({ label, attack = true }) {
     <span class="chip label" data-counter="label" title="Drag onto a card; tap to rename">${label}</span>
     ${attack ? html`<span class="chip attack" data-counter="attack" title="Drag onto a creature to mark it attacking">⚔ Attack</span>` : null}
   </span>`;
+}
+
+/** The host card of a group: the card itself, or the card it is attached to. */
+function hostOf(state, id) { const c = state.cards[id]; return c?.attachedTo && state.cards[c.attachedTo] ? c.attachedTo : id; }
+
+/** Attachments of a battlefield host, closest first (the order the full view shows them). */
+function attachmentsIn(state, hostId) {
+  const z = findZone(state, hostId);
+  return z ? state.zones[z].filter((x) => state.cards[x].attachedTo === hostId).reverse() : [];
+}
+
+/**
+ * The full view's row for a card: its group, then its host's combat cards.
+ * @returns {{ group: string[], partners: string[], role: 'attacker' | 'blocker' | null } | null}
+ */
+export function fullRowOf(state, id) {
+  if (!state.cards[id]) return null;
+  const z = findZone(state, id);
+  const k = z ? zoneKind(z) : null;
+  if (k !== 'battlefield' && k !== 'lands') return { group: [id], partners: [], role: null };
+  const h = hostOf(state, id);
+  const host = state.cards[h];
+  const group = [h, ...attachmentsIn(state, h)];
+  if (host.attacking) {
+    const blockers = Object.values(state.cards).filter((c) => (c.blocking || []).includes(h)).map((c) => c.id);
+    return { group, partners: blockers, role: 'attacker' };
+  }
+  const attackers = (host.blocking || []).filter((a) => state.cards[a]?.attacking);
+  return { group, partners: attackers, role: attackers.length ? 'blocker' : null };
+}
+
+/** Every card in the combat matchup(s) a card belongs to: attackers, their blockers, and all their attachments. */
+export function matchupIds(state, id) {
+  const out = new Set();
+  if (!state.cards[id]) return out;
+  const h = state.cards[hostOf(state, id)];
+  const attackers = h.attacking ? [h.id] : (h.blocking || []).filter((a) => state.cards[a]?.attacking);
+  if (!attackers.length) return out;
+  const members = new Set(attackers);
+  for (const c of Object.values(state.cards)) if ((c.blocking || []).some((a) => attackers.includes(a))) members.add(c.id);
+  for (const m of members) { out.add(m); for (const a of attachmentsIn(state, m)) out.add(a); }
+  return out;
 }

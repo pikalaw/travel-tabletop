@@ -41,7 +41,7 @@ Each player sees the same 5×3 grid from their own side: rows 1–2 are the oppo
 
 - **Shared zone.** The stack (5,3) is one shared zone shown identically on both devices.
 - **Labels.** Each slot is labelled at its top left with its name and card count, e.g. "Claire · battlefield 7". Battlefield and lands slots carry the owner's name.
-- **Opponent's hand.** Never shown. Its card count appears right-aligned on the opponent's lands row ("Claire: 5 in hand").
+- **Opponent's hand.** Never shown. Its card count appears right-aligned on the opponent's lands row ("Claire: 5 in hand"). While a card is being dragged, that count becomes a drop target: dropping a card on it puts the card at the end of the opponent's hand (for example, a creature bounced to its owner's hand).
 - **Own hand.** Labelled with its owner, "Lawrence's hand", or "Lawrence's hand (hidden)" while blinded, which also shows whose view the board is in.
 - **Whose turn.** The player-counter cell (5,1) is labelled "Turn N · name" and lists that player first. Wherever a player's name appears on the board (the turn label, the counters cell, the hand count and every row label such as "Claire · lands" or "Lawrence's hand"), the attacking (active) player's name is in a hot coral; the defending player's is in a cool blue. These swap when the turn passes. A clear wash runs from red on the active (attacking) player's side to blue on the defender's, and flips when the turn passes.
 - **Player colours.** Player 1 is gold, player 2 is teal, used for the unblind buttons and dialogs, the pointer ring and the player-counter sheet.
@@ -56,7 +56,7 @@ Each player sees the same 5×3 grid from their own side: rows 1–2 are the oppo
 
 | Context | Buttons, in order |
 | --- | --- |
-| Normal | Undo · Untap all · Pass turn · Combat · End combat (only while marks exist) · +1/+1, −1/−1 and a labeled counter tag · ⚔ Attack tag (only for the player whose turn it is, or while hands are blinded) · Tokens · Dice · Point · Close slot(s) (while slots are open) · Blind my hand, or Unblind to each player (one device) · ☰ menu |
+| Normal | Undo · Untap all · Pass turn · Combat · End combat (only while marks exist) · Clear highlight (only while a matchup is highlighted) · +1/+1, −1/−1 and a labeled counter tag · ⚔ Attack tag (only for the player whose turn it is, or while hands are blinded) · Tokens · Dice · Point · Close slot(s) (while slots are open) · Blind my hand, or Unblind to each player (one device) · ☰ menu |
 | Full-screen card | Flip · Face down / Face up · Reveal (hand cards) · Tap / Untap (battlefield and lands) · Attack / Stop attacking (active player's side) or Block (other side) · Attach or Detach (not in a library) · the counter tags · Close |
 | Library | both libraries' counts · a 1–99 stepper N · Draw N (own library only) · Mill N · Look at top N · Reveal top N · Search (own) or Look through (other's) · Shuffle · Top face up · Done |
 | Combat mode | a hint, or the chosen blocker's name · End combat · Done |
@@ -93,7 +93,7 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 **Full-screen card view** (long-press)
 
 - Shows the card large on an opaque screen, so the board never shows behind it. Its name, zone and state (tapped, face down, revealed, back face, token, double-faced) are listed beside it.
-- Counters show under the card as tags with − and + buttons. Dragging a counter tag from the footer onto the card adds one; dragging a counter away removes one.
+- Combat marks and counters show in a strip below the card image, never over it, so the card's text stays readable. Counters have − and + buttons. Dragging a counter tag from the footer onto the card adds one; dragging a counter or mark away removes one.
 - **Flip** shows the other face to both players. **Face down** hides the face from everyone but the owner. Both work on any card; the app does not check whether it makes sense.
 - **Reveal** shows a hand card to the opponent once. With two devices, the card pops up full screen on the opponent's device. With one device, the hand is blinded first, then an opaque screen shows only that card; tapping it closes it. A reveal is a logged event, not a lasting state: revealing again shows it again.
 - Combat and attachment buttons are described in their sections.
@@ -133,7 +133,7 @@ A card can be attached to another card on the battlefield or lands, such as an A
 
 - **Attach.** In the full-screen view, tap **Attach**, then tap the card to attach it to. The card can come from any zone except a library, and can go onto either player's card. It moves into that card's zone but keeps its owner. Attaching to a card that is itself attached goes onto the card at the bottom of the group (one level only). A card that carries attachments brings them along. Tapping the card itself cancels.
 - **How it looks.** Attached cards tuck behind their card, each peeking out to its left by a quarter of a card. The card shows a gold "+N" mark at its top left. A tap on a tucked strip acts on the card it is attached to.
-- **Inspect.** Long-press the card, or a strip, to open the group in the full-screen view: a thumbnail row shows the card and each attachment (closest first), and a sideways swipe or a thumbnail tap moves between them. Actions in the footer apply to the card shown. Tapping the slot fans every group out, each card shown in full with wider gaps between groups.
+- **Inspect.** Long-press the card, or a strip, to open the group in the full-screen view: a thumbnail row shows the card and each attachment (closest first), plus its combat cards when it is in combat (see Combat marks), and a sideways swipe or a thumbnail tap moves between them. Actions in the footer apply to the card shown. Tapping the slot fans every group out, each card shown in full with wider gaps between groups.
 - **Moving and tapping.** Dragging the card moves its attachments with it, to any battlefield or lands. Tapping it taps only that card. Dragging an attached card away, or **Detach** in its full-screen view, detaches it; Detach puts it just right of its former card.
 - **Leaving play.** When the card leaves the battlefield, its attachments detach and stay where they are; the players move them as the rules say.
 - **Not covered:** cards exiled "under" another card, and merged cards (mutate).
@@ -144,7 +144,8 @@ Players can mark attackers and blockers so both can see who blocks what. The mar
 
 - **Combat mode.** Tap **Combat** in the footer. Tapping a creature on the active player's side marks it attacking (tap again to unmark); attackers are numbered ⚔1, ⚔2… in the order declared, and the numbers restart once all marks are cleared. Tapping a creature on the other side picks it as a blocker (a blue outline); then tapping an attacker pairs them, and the blocker shows 🛡 with that attacker's number. Several blockers can block one attacker, and one blocker can block several (🛡1 🛡2). Repeating a pair removes it. Taps in combat mode never tap or untap creatures. **Done** returns to normal play and keeps the marks.
 - **Tags.** The marks behave like counter tags. The footer's ⚔ Attack tag can be dragged onto a creature to mark it attacking. Dragging a ⚔ or 🛡 mark off a card removes it (a 🛡 removes that one pairing). Marks sit at the card's visible top-left corner, also when it is tapped, and the full-screen view shows them as tags ("⚔1 attacking", "🛡 blocks ⚔1").
-- **Full-screen view.** A creature on the active player's side has **Attack** / **Stop attacking**; one on the other side has **Block**, which opens combat mode with it picked as the blocker.
+- **Full-screen view.** A creature on the active player's side has **Attack** / **Stop attacking**; one on the other side has **Block**, which opens combat mode with it picked as the blocker. The thumbnail row under the card shows its group (the creature and its attachments) and, after a thin divider, its combat cards: an attacker's blockers, or the attackers a blocker blocks. Each combat thumbnail carries its ⚔ or 🛡 mark and a gold "+N" when it has attachments. The caption reads, for example, "1 attached · blocked by 2", "unblocked" or "blocking ⚔1". Opening the view on any card shows that card; tapping a thumbnail or swiping moves through the row, which stays as it was when the view opened.
+- **Matchup highlight.** Closing the full-screen view of a card in combat highlights its matchup on the board: the attacker, its blockers and all their attachments are outlined, and the other cards on both battlefields dim (hands and other zones stay bright, so instants can still be played). Tapping those cards keeps the highlight; any other tap, **Clear highlight** in the footer, or the end of combat clears it. Everything on the board stays visible and usable, because cards outside a matchup (anthems, removal, death triggers) often matter.
 - **Clearing.** **End combat** (in combat mode, and in the footer whenever marks exist) clears every mark. Passing the turn clears them too. A creature that leaves the battlefield, or moves to the other player's side (a change of control, which removes it from combat), loses its marks. An attacker that stops attacking frees its blockers.
 - A refused mark explains itself, e.g. "Only Claire's creatures can attack this turn."
 - No lines are drawn between cards; the numbered marks stay readable in collapsed or scrolled slots and after a perspective switch.
@@ -153,7 +154,7 @@ Players can mark attackers and blockers so both can see who blocks what. The mar
 
 Card counters, tokens, player counters and randomness are all manual tools; the app never interprets them.
 
-**Card counters.** Three footer tags: +1/+1, −1/−1, and a labeled counter (default "loyalty"; tap it to rename, e.g. lore, charge, time, shield). Drag one onto a card to add it. Counters show as small tags at the bottom of the card; drag one off the card to remove one. +1/+1 and −1/−1 are kept separately and never cancel each other. In the full-screen view each counter also has − and + buttons, and any drag of a counter removes one.
+**Card counters.** Three footer tags: +1/+1, −1/−1, and a labeled counter (default "loyalty"; tap it to rename, e.g. lore, charge, time, shield). Drag one onto a card to add it. Counters show as small tags at the bottom of the card; drag one off the card to remove one. +1/+1 and −1/−1 are kept separately and never cancel each other. In the full-screen view the counters sit below the card, each with − and + buttons, and any drag of a counter removes one.
 
 **Tokens.** The footer **Tokens** button opens the token picker, listing every token deck: those made for the decks in this game first ("for this game"), then the rest. Tap a token to add it to your battlefield, or drag it onto any battlefield or slot. Dragging a token onto the Tokens button removes it. A token that leaves the battlefield disappears. Only tokens can be removed this way.
 

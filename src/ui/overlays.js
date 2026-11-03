@@ -3,7 +3,7 @@
 
 import { html, useState, useRef } from './h.js';
 import { Row, cardImage, BACK_URL } from './cards.js';
-import { zoneKind, zoneOwner, other, canSeeFace } from '../engine/view.js';
+import { zoneKind, zoneOwner, other, canSeeFace, findZone } from '../engine/view.js';
 import { artUrl, sizeFor } from '../storage/db.js';
 
 const ZONE_TITLE = { library: 'Library', hand: 'Hand', battlefield: 'Battlefield', lands: 'Lands', graveyard: 'Graveyard', exile: 'Exile', command: 'Command zone', stack: 'Stack' };
@@ -61,63 +61,88 @@ export function CardSheet({ ctx, sheet, onClose, onRandom }) {
   </${Sheet}>`;
 }
 
-/** Full-screen view of one card. */
-export function FullCard({ ctx, cardId, zone, group = null, onPick = (id) => {}, onCounter = null }) {
+/**
+ * Full-screen view of one card. The row under it shows the card's group (host, then attachments)
+ * and, past a divider, the host's combat cards: an attacker's blockers, or a blocker's attackers.
+ * Marks and counters sit below the image so they never cover the card's text.
+ */
+export function FullCard({ ctx, cardId, zone, row = null, onPick = (id) => {}, onCounter = null }) {
   const swipe = useRef(null);
-  const card = ctx.state.cards[cardId];
+  const st = ctx.state;
+  const card = st.cards[cardId];
   if (!card) return null;
   const img = cardImage(ctx, card, zone, card.faceDown && ctx.viewer === card.owner, 'large');
   const c = card.counters;
   const art = ctx.art.get(card.defId);
-  const at = group ? group.indexOf(cardId) : -1;
-  const host = card.attachedTo ? ctx.state.cards[card.attachedTo] : null;
-  const nameOf = (x) => (canSeeFace(ctx.state, x, zone, ctx.viewer) || (x.faceDown && ctx.viewer === x.owner) ? x.name : 'a hidden card');
-  // Swipe sideways on the card to move through its group.
+  const seq = row ? [...row.group, ...row.partners] : [];
+  const at = seq.indexOf(cardId);
+  const host = card.attachedTo ? st.cards[card.attachedTo] : null;
+  const zoneOfId = (id) => findZone(st, id) || zone;
+  const seen = (x) => canSeeFace(st, x, zoneOfId(x.id), ctx.viewer) || (x.faceDown && ctx.viewer === x.owner);
+  const nameOf = (x) => (seen(x) ? x.name : 'a hidden card');
+  // Swipe sideways on the card to move through the row.
   const down = (e) => { swipe.current = { x: e.clientX, y: e.clientY }; };
   const up = (e) => {
     const s0 = swipe.current; swipe.current = null;
-    if (!group || !s0 || e.target.closest('[data-badge]')) return;
+    if (!row || !s0 || e.target.closest('[data-badge]')) return;
     const dx = e.clientX - s0.x, dy = e.clientY - s0.y;
     if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
     const next = at + (dx < 0 ? 1 : -1);
-    if (next >= 0 && next < group.length) onPick(group[next]);
+    if (next >= 0 && next < seq.length) onPick(seq[next]);
   };
-  return html`<div class="fullcard ${group ? 'grouped' : ''}">
-    <div class="fullcard-inner" data-card-target=${card.id} data-zone=${zone} onPointerDown=${down} onPointerUp=${up}>
-      ${img.url ? html`<img src=${img.url} alt=${card.name} draggable=${false}/>` : html`<div class="card-face missing big"><span>${card.name}</span></div>`}
-      <div class="full-badges">
-        ${card.attacking ? html`<span class="badge atk big" data-badge="attack" data-card-of=${card.id} data-zone=${zone}>⚔${card.attacking} attacking</span>` : null}
-        ${(card.blocking || []).map((a) => {
-          const att = ctx.state.cards[a];
-          return att?.attacking ? html`<span class="badge blk big" data-badge="block" data-attacker=${a} data-card-of=${card.id} data-zone=${zone}>🛡 blocks ⚔${att.attacking}</span>` : null;
-        })}
-        ${[
-          c.plus ? { kind: 'plus', text: `+1/+1 × ${c.plus}` } : null,
-          c.minus ? { kind: 'minus', text: `−1/−1 × ${c.minus}` } : null,
-          ...Object.entries(c.labeled).map(([k, v]) => ({ kind: 'label', label: k, text: `${k} ${v}` })),
-        ].filter(Boolean).map((b) => html`<span class="ctr-group">
-          ${onCounter ? html`<button class="btn round ctr-step" aria-label="Remove one" onClick=${() => onCounter('removeCounter', b.kind, b.label)}>−</button>` : null}
-          <span class="badge ${b.kind} big" data-badge=${b.kind} data-label=${b.label} data-card-of=${card.id} data-zone=${zone}>${b.text}</span>
-          ${onCounter ? html`<button class="btn round ctr-step" aria-label="Add one" onClick=${() => onCounter('addCounter', b.kind, b.label)}>+</button>` : null}
-        </span>`)}
+  const badges = [
+    card.attacking ? html`<span class="badge atk big" data-badge="attack" data-card-of=${card.id} data-zone=${zone}>⚔${card.attacking} attacking</span>` : null,
+    ...(card.blocking || []).map((a) => {
+      const att = st.cards[a];
+      return att?.attacking ? html`<span class="badge blk big" data-badge="block" data-attacker=${a} data-card-of=${card.id} data-zone=${zone}>🛡 blocks ⚔${att.attacking}</span>` : null;
+    }),
+    ...[
+      c.plus ? { kind: 'plus', text: `+1/+1 × ${c.plus}` } : null,
+      c.minus ? { kind: 'minus', text: `−1/−1 × ${c.minus}` } : null,
+      ...Object.entries(c.labeled).map(([k, v]) => ({ kind: 'label', label: k, text: `${k} ${v}` })),
+    ].filter(Boolean).map((b) => html`<span class="ctr-group">
+      ${onCounter ? html`<button class="btn round ctr-step" aria-label="Remove one" onClick=${() => onCounter('removeCounter', b.kind, b.label)}>−</button>` : null}
+      <span class="badge ${b.kind} big" data-badge=${b.kind} data-label=${b.label} data-card-of=${card.id} data-zone=${zone}>${b.text}</span>
+      ${onCounter ? html`<button class="btn round ctr-step" aria-label="Add one" onClick=${() => onCounter('addCounter', b.kind, b.label)}>+</button>` : null}
+    </span>`),
+  ].filter(Boolean);
+  // Caption for the row: how many are attached, and the combat side.
+  const parts = [];
+  if (row && row.group.length > 1) parts.push(`${row.group.length - 1} attached`);
+  if (row?.role === 'attacker') parts.push(row.partners.length ? `blocked by ${row.partners.length}` : 'unblocked');
+  if (row?.role === 'blocker') parts.push(`blocking ${row.partners.map((a) => `⚔${st.cards[a].attacking}`).join(' · ')}`);
+  const thumb = (id, i, partner) => {
+    const x = st.cards[id];
+    const t = cardImage(ctx, x, zoneOfId(id), x.faceDown && ctx.viewer === x.owner, 'small');
+    const sum = x.counters.plus + x.counters.minus + Object.values(x.counters.labeled).reduce((a, b) => a + b, 0);
+    const nAtt = partner ? Object.values(st.cards).filter((y) => y.attachedTo === id).length : 0;
+    const mark = x.attacking ? `⚔${x.attacking}` : (x.blocking || []).length ? '🛡' : '';
+    const label = partner ? (row.role === 'attacker' ? `Blocker: ${nameOf(x)}` : `Attacker: ${nameOf(x)}`) : i === 0 ? 'Host card' : `Attached card ${i}`;
+    return html`<button class="thumb ${id === cardId ? 'on' : ''}" onClick=${() => onPick(id)} aria-label=${label}>
+      ${t.url ? html`<img src=${t.url} alt="" draggable=${false}/>` : html`<span class="thumb-missing">${nameOf(x)}</span>`}
+      ${sum ? html`<span class="thumb-ctr">${sum}</span>` : null}
+      ${mark ? html`<span class="thumb-mark ${x.attacking ? 'atk' : 'blk'}">${mark}</span>` : null}
+      ${nAtt ? html`<span class="thumb-att">+${nAtt}</span>` : null}
+    </button>`;
+  };
+  return html`<div class="fullcard ${row ? 'grouped' : ''}">
+    <div class="fullcard-main">
+      <div class="fullcard-inner" data-card-target=${card.id} data-zone=${zone} onPointerDown=${down} onPointerUp=${up}>
+        ${img.url ? html`<img src=${img.url} alt=${card.name} draggable=${false}/>` : html`<div class="card-face missing big"><span>${card.name}</span></div>`}
       </div>
+      ${badges.length ? html`<div class="full-badges">${badges}</div>` : null}
     </div>
     <div class="fullcard-meta">
       <b>${img.visible ? card.name : 'Hidden card'}</b>
-      <span>${zoneTitle(ctx.state, zone)}${card.tapped ? ' · tapped' : ''}${card.faceDown ? ' · face down' : ''}${card.revealed ? ' · revealed' : ''}${card.face === 'back' ? ' · back face' : ''}${card.isToken ? ' · token' : ''}${art?.back ? ' · double-faced' : ''}</span>
+      <span>${zoneTitle(st, zone)}${card.tapped ? ' · tapped' : ''}${card.faceDown ? ' · face down' : ''}${card.revealed ? ' · revealed' : ''}${card.face === 'back' ? ' · back face' : ''}${card.isToken ? ' · token' : ''}${art?.back ? ' · double-faced' : ''}</span>
       ${host ? html`<span>Attached to ${nameOf(host)}</span>` : null}
-      ${group && !host ? html`<span>${group.length - 1} attached</span>` : null}
-      ${group ? html`<div class="full-thumbs">
-        ${group.map((id, i) => {
-          const x = ctx.state.cards[id];
-          const t = cardImage(ctx, x, zone, x.faceDown && ctx.viewer === x.owner, 'small');
-          const sum = x.counters.plus + x.counters.minus + Object.values(x.counters.labeled).reduce((a, b) => a + b, 0);
-          return html`<button class="thumb ${id === cardId ? 'on' : ''}" onClick=${() => onPick(id)} aria-label=${i === 0 ? 'Host card' : `Attached card ${i}`}>
-            <img src=${t.url} alt="" draggable=${false}/>${sum ? html`<span class="thumb-ctr">${sum}</span>` : null}
-          </button>`;
-        })}
+      ${row && parts.length ? html`<span>${parts.join(' · ')}</span>` : null}
+      ${row ? html`<div class="full-thumbs">
+        ${row.group.map((id, i) => thumb(id, i, false))}
+        ${row.partners.length ? html`<span class="thumb-divider" aria-hidden="true"></span>` : null}
+        ${row.partners.map((id, i) => thumb(id, i, true))}
       </div>
-      <span class="hint">Swipe the card or tap a thumbnail to see the rest of the group.</span>` : null}
+      <span class="hint">Swipe the card or tap a thumbnail to move through the row.</span>` : null}
       <span class="hint">Drag counters from the bar onto the card. Use − and + to change one.</span>
     </div>
   </div>`;

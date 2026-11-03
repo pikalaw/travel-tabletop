@@ -57,7 +57,7 @@ export function Card({ ctx, card, zone, h, override, style = '', interactive = t
   // Top-left stays visible when the next card overlaps this one in a crowded row.
   if (attachedN) markers.unshift(html`<span class="mark att-count" title="${attachedN} attached">+${attachedN}</span>`);
   return html`
-    <div class="card ${tapped ? 'tapped' : ''} ${tucked ? 'tucked' : ''} ${ctx.pointed === card.id ? 'pointed' : ''} ${ctx.selected === card.id ? 'selected' : ''}" data-card=${card.id} data-zone=${zone}
+    <div class="card ${tapped ? 'tapped' : ''} ${tucked ? 'tucked' : ''} ${ctx.pointed === card.id ? 'pointed' : ''} ${ctx.selected === card.id ? 'selected' : ''} ${ctx.match?.has(card.id) ? 'in-match' : ''}" data-card=${card.id} data-zone=${zone}
          data-card-target=${card.id} data-attached-to=${card.attachedTo || null} style=${`width:${boxW}px;height:${h}px;${style}`}>
       <div class="card-inner" style=${`width:${w}px;height:${h}px`}>
         ${img.url

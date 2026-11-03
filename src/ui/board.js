@@ -51,9 +51,9 @@ export function Board({ ctx, P, openSlots }) {
   const topFace = (zone) => !!st.players[zone.split('.')[0]].libraryTopFaceUp;
   const row = (zone, label, cls = '') => html`<${Row} ctx=${ctx} zone=${zone} ids=${st.zones[zone]} open=${openSlots.includes(zone)} label=${label} extraClass=${cls}/>`;
   return html`
-    <div class="board persp-${P} ${st.activePlayer === P ? 'my-turn' : 'their-turn'}">
+    <div class="board persp-${P} ${st.activePlayer === P ? 'my-turn' : 'their-turn'} ${ctx.match?.size ? 'matching' : ''}">
       <div class="cell c11 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppExile} label="Exile"/>`}</div>
-      <div class="cell c12 opp">${row(z.oppLands, html`${who(O)} · lands`)}<span class="opp-hand">${who(O)}: ${handCount(st, O)} in hand</span></div>
+      <div class="cell c12 opp">${row(z.oppLands, html`${who(O)} · lands`)}<span class="opp-hand" data-drop=${`${O}.hand`} data-layout="append" title=${`Drop a card here to put it in ${name(O)}’s hand`}>${who(O)}: ${handCount(st, O)} in hand</span></div>
       <div class="cell c13 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppGrave} label="Graveyard"/>`}</div>
       <div class="cell c21 opp">${html`<${Pile} ctx=${ctx} zone=${z.oppCmd} label="Command"/>`}</div>
       <div class="cell c22 opp">${row(z.oppField, html`${who(O)} · battlefield`)}</div>
