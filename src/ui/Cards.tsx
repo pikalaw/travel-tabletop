@@ -89,9 +89,11 @@ export interface CardProps {
   interactive?: boolean;
   tucked?: boolean;
   attachedN?: number;
+  /** In a fanned group: the width of the gap to the previous card of the group, bridged by a gold bar. */
+  linkLeft?: number;
 }
 
-export function Card({ ctx, card, zone, h, override = false, style = '', interactive = true, tucked = false, attachedN = 0 }: CardProps) {
+export function Card({ ctx, card, zone, h, override = false, style = '', interactive = true, tucked = false, attachedN = 0, linkLeft = 0 }: CardProps) {
   const img = cardImage(ctx, card, zone, override, h);
   const w = Math.round(h * RATIO);
   const tapped = card.tapped && (zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands');
@@ -150,6 +152,7 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
       data-attached-to={card.attachedTo || null}
       style={`width:${boxW}px;height:${h}px;${style}`}
     >
+      {linkLeft ? <span class="link-bar" aria-hidden="true" style={`left:${-linkLeft - 8}px;width:${linkLeft + 16}px`} /> : null}
       <div class="card-inner" style={`width:${w}px;height:${h}px`}>
         {img.url ? (
           <img
@@ -206,7 +209,7 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
   const hasGroups = field && cards.some((c) => c.attachedTo);
   const sameGroup = (i: number) => i > 0 && groupOf(cards[i]!) === groupOf(cards[i - 1]!);
   const gap = 4,
-    innerGap = 3,
+    innerGap = 10,
     groupGap = 14;
   const fanned = open && hasGroups;
   const units = cards.filter((c, i) => !sameGroup(i)).length;
@@ -269,6 +272,7 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
                   override={override}
                   tucked={tucked}
                   attachedN={fanned ? 0 : attachedN.get(card.id) || 0}
+                  linkLeft={fanned && sameGroup(i) ? innerGap : 0}
                 />
               );
             })}

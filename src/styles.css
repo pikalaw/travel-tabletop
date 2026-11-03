@@ -144,6 +144,9 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .row { position: absolute; inset: 0; padding: 4px 4px 4px; display: flex; align-items: stretch; touch-action: none; }
 .row-cards { display: flex; align-items: center; height: 100%; padding-top: 11px; }
 .card.tucked { filter: brightness(.92); }
+/* A fanned group: a gold bar joins each attached card to the next card of its group. */
+.link-bar { position: absolute; top: 50%; height: 8px; margin-top: -4px; border-radius: 4px; background: #c9a65a;
+  box-shadow: 0 0 0 1.5px rgba(0,0,0,.55); pointer-events: none; z-index: 1; }
 .mark.att-count { color: #17130a; background: #c9a65a; font-size: 10px; }
 .row.open { overflow-x: auto; overflow-y: hidden; touch-action: none; }
 .row.open .row-cards { padding-right: 24px; }
@@ -200,6 +203,8 @@ body.dragging .pile[data-layout="library"].drop-hover .drop-hint { display: bloc
 /* Drag and drop */
 .drag-ghost { position: fixed; z-index: 1000; pointer-events: none; opacity: .9; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.6); transform: scale(1.06); }
 .drag-source { opacity: .35; }
+.drag-ghost.group { border-radius: 0; box-shadow: none; opacity: 1; }
+.drag-ghost.group > * { box-shadow: 0 10px 30px rgba(0,0,0,.6); opacity: .9; }
 body.dragging [data-drop].drop-hover, body.dragging [data-trash].drop-hover { outline: 2px solid #c9a65a; outline-offset: -2px; background: rgba(201,166,90,.10); }
 body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); border-radius: 6px; }
 .game.pointing .cell, .game.pointing .card { cursor: crosshair; }

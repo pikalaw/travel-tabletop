@@ -51,7 +51,9 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
   await page.mouse.click(fb.x + fb.width - 10, fb.y + fb.height - 8);
   await expect(bf).toHaveAttribute('data-fanned', /.+/);
   await expect(bf.locator('.card.tucked')).toHaveCount(0);
+  await expect(bf.locator('.link-bar')).toHaveCount(2); // a gold bar joins each attached card to the next
   await barButton(page, 'Close slot');
+  await expect(bf.locator('.link-bar')).toHaveCount(0);
   await expect(bf).not.toHaveAttribute('data-fanned', /.*/);
 
   // detach from the viewer
@@ -68,7 +70,12 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
     const from = (await page.locator(`[data-card="${host}"]`).boundingBox())!;
     const a = { x: from.x + 40, y: from.y + from.height / 2 };
     await page.mouse.move(a.x, a.y); await page.mouse.down();
-    for (let i = 1; i <= 12; i++) { await page.mouse.move(a.x + (t.x + t.width / 2 - a.x) * i / 12, a.y + (t.y + t.height / 2 - a.y) * i / 12); await page.waitForTimeout(10); }
+    for (let i = 1; i <= 12; i++) {
+      await page.mouse.move(a.x + (t.x + t.width / 2 - a.x) * i / 12, a.y + (t.y + t.height / 2 - a.y) * i / 12);
+      await page.waitForTimeout(10);
+      // the whole group follows the finger: the card and its attachment
+      if (i === 6) await expect(page.locator('.drag-ghost.group > *')).toHaveCount(2);
+    }
     await page.mouse.up(); await page.waitForTimeout(250);
   };
   await dragFrom('[data-drop="p2.battlefield"]');

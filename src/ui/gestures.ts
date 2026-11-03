@@ -12,6 +12,8 @@
 // that starts inside one scrolls it (and cancels the tap); any other movement on a card drags it.
 
 const DRAG_PX = 8;
+/** How much of each attached card shows to the left of its card in a dragged group (as on the board). */
+const GROUP_PEEK = 0.25;
 const LONG_MS = 480;
 
 const SOURCE_SEL = '[data-card],[data-counter],[data-badge],[data-token-def],[data-tap]';
@@ -44,6 +46,10 @@ interface Gesture {
   timer: ReturnType<typeof setTimeout> | undefined;
   v: number; t: number;
   gw: number; gh: number;
+  /** Pointer position within the ghost. */
+  ox: number; oy: number;
+  /** Attached cards dragged along with their card. */
+  group: HTMLElement[];
 }
 
 export function attachGestures(root: HTMLElement, h: GestureHandlers): () => void {
@@ -71,7 +77,7 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): () => voi
     cancelAnimationFrame(glide);
     if (g) clear();
     g = { el, sc, sl0: sc ? sc.scrollLeft : 0, id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
-          dragging: false, panning: false, long: false, ghost: null, hover: null, timer: undefined, v: 0, t: e.timeStamp, gw: 0, gh: 0 };
+          dragging: false, panning: false, long: false, ghost: null, hover: null, timer: undefined, v: 0, t: e.timeStamp, gw: 0, gh: 0, ox: 0, oy: 0, group: [] };
     if (el?.dataset.card) {
       g.timer = setTimeout(() => {
         if (g && !g.dragging) { g.long = true; navigator.vibrate?.(15); h.onLongPress(el!); }
@@ -82,17 +88,40 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): () => voi
   const startDrag = (g: Gesture & { el: HTMLElement }) => {
     g.dragging = true;
     clearTimeout(g.timer);
-    const src = g.el.querySelector<HTMLElement>('img, .card-face') || g.el;
+    const face = (el: HTMLElement) => el.querySelector<HTMLElement>('img, .card-face') || el;
+    const src = face(g.el);
     const r = src.getBoundingClientRect();
-    const ghost = src.cloneNode(true) as HTMLElement;
-    ghost.classList.add('drag-ghost');
     const w = Math.max(r.width, 40), hgt = Math.max(r.height, 40);
-    Object.assign(ghost.style, { width: `${w}px`, height: `${hgt}px`, left: `${g.x - w / 2}px`, top: `${g.y - hgt / 2}px` });
-    g.gw = w; g.gh = hgt;
+    // A card with attachments drags as its group: the attached cards peek out to its left, as on the board.
+    const id = g.el.dataset.card;
+    const row = g.el.closest<HTMLElement>('[data-drop]');
+    g.group = id && row ? [...row.querySelectorAll<HTMLElement>(`[data-attached-to="${CSS.escape(id)}"]`)] : [];
+    let ghost: HTMLElement;
+    if (g.group.length) {
+      const peek = Math.round(w * GROUP_PEEK);
+      ghost = document.createElement('div');
+      ghost.className = 'drag-ghost group';
+      const parts = [...g.group, g.el].map((el, i) => {
+        const part = face(el).cloneNode(true) as HTMLElement;
+        Object.assign(part.style, { position: 'absolute', left: `${i * peek}px`, top: '0', width: `${w}px`, height: `${hgt}px` });
+        return part;
+      });
+      ghost.append(...parts);
+      g.gw = w + peek * g.group.length;
+      g.ox = peek * g.group.length + w / 2;
+    } else {
+      ghost = src.cloneNode(true) as HTMLElement;
+      ghost.classList.add('drag-ghost');
+      g.gw = w;
+      g.ox = w / 2;
+    }
+    g.gh = hgt;
+    g.oy = hgt / 2;
+    Object.assign(ghost.style, { width: `${g.gw}px`, height: `${hgt}px`, left: `${g.x - g.ox}px`, top: `${g.y - g.oy}px` });
     document.body.appendChild(ghost);
     document.body.classList.add('dragging');
     g.ghost = ghost;
-    g.el.classList.add('drag-source');
+    for (const el of [g.el, ...g.group]) el.classList.add('drag-source');
   };
 
   // Counters land on cards; everything else lands on slots.
@@ -123,8 +152,8 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): () => voi
     }
     if (!g.dragging) return;
     e.preventDefault();
-    g.ghost!.style.left = `${g.x - g.gw / 2}px`;
-    g.ghost!.style.top = `${g.y - g.gh / 2}px`;
+    g.ghost!.style.left = `${g.x - g.ox}px`;
+    g.ghost!.style.top = `${g.y - g.oy}px`;
     const t = targetAt(g.x, g.y);
     if (t !== g.hover) { g.hover?.classList.remove('drop-hover', 'drop-top', 'drop-bottom'); g.hover = t; t?.classList.add('drop-hover'); }
     if (t?.dataset.layout === 'library') {
@@ -138,7 +167,7 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): () => voi
   const up = (e: PointerEvent) => {
     if (!g || e.pointerId !== g.id) return;
     const cur = g;
-    cur.el?.classList.remove('drag-source');
+    for (const el of [cur.el, ...cur.group]) el?.classList.remove('drag-source');
     if (cur.panning) {
       clear();
       swallowClick = true; setTimeout(() => { swallowClick = false; }, 400);
@@ -176,7 +205,7 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): () => voi
   };
   const click = (e: MouseEvent) => { if (swallowClick) { swallowClick = false; e.stopPropagation(); e.preventDefault(); } };
 
-  const cancel = (e: PointerEvent) => { if (g && e.pointerId === g.id) { g.el?.classList.remove('drag-source'); clear(); } };
+  const cancel = (e: PointerEvent) => { if (g && e.pointerId === g.id) { for (const el of [g.el, ...g.group]) el?.classList.remove('drag-source'); clear(); } };
   const context = (e: MouseEvent) => {
     const el = (e.target as HTMLElement).closest<HTMLElement>('[data-card]');
     if (el && root.contains(el)) { e.preventDefault(); clear(); h.onLongPress(el); }
