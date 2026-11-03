@@ -209,7 +209,7 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 
 **Built-in decks.** Two sample decks of placeholder cards (Ember, red, and Grove, green, 40 cards each) and a Basic tokens deck ship with the app, so it is playable before any import.
 
-**Starter decks.** The Decks screen offers one-tap download of the ten Avatar: The Last Airbender Beginner Box decks (20 cards each), from lists built into the app. Images download from Scryfall, so this needs internet once. Only the decks not yet on the device are downloaded.
+**Starter decks.** The Decks screen offers one-tap download of the ten Avatar: The Last Airbender Beginner Box decks (20 cards each), from lists built into the app. Images download from Scryfall, so this needs internet once. Only the decks not yet on the device are downloaded. It also offers the 66 Avatar: The Last Airbender Jumpstart half-decks (46 themes of 20 cards; 20 themes have two versions): **Choose decks** lists them by colour to tick and download, or all can be downloaded at once. A player picks two half-decks at setup to make one deck.
 
 **Import** (needs internet; done before travel)
 
@@ -219,7 +219,7 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 
 **Image sizes.** Each card face is stored in three sizes so it stays sharp without wasting memory. The board picks the size that fits each card on screen; on phones that is usually small, on tablets normal. The full-screen view uses large. Card data beyond the name and images is ignored; the app stays rules-free.
 
-**Tokens with every deck.** Importing a deck also downloads the tokens its cards create and saves them as a token deck named after it ("\<deck> · tokens"). The ten Beginner Box decks share one token deck. In a game, the Tokens picker lists the token decks for the decks in play first, then all others.
+**Tokens with every deck.** Importing a deck also downloads the tokens its cards create and saves them as a token deck named after it ("\<deck> · tokens"). The ten Beginner Box decks share one token deck, and the Jumpstart half-decks share another. In a game, the Tokens picker lists the token decks for the decks in play first, then all others.
 
 **Safety checks.** Importing a list whose name or cards match an existing deck of the same kind asks before adding another copy. Deleting any deck asks first; deleting a token deck also names the decks that use its tokens. Card images stay stored when a deck is deleted.
 

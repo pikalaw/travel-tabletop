@@ -58,6 +58,31 @@ test('the starter pack downloads all ten decks; players can share a deck; every 
   await expect(page.locator('.c52 [data-card]')).toHaveCount(7);
 });
 
+test('Jumpstart: pick two half-decks, download them, and play them as one deck', async ({ page }) => {
+  test.setTimeout(120_000);
+  await mockScryfall(page);
+  await page.goto('index.html');
+  await page.getByRole('button', { name: 'Decks' }).click();
+  const js = page.locator('.notice.starter', { hasText: 'Avatar: The Last Airbender Jumpstart' });
+  await js.getByRole('button', { name: 'Choose decks' }).click();
+  await expect(js.locator('.starter-group-name')).toHaveText(['White', 'Blue', 'Black', 'Red', 'Green', 'Multicolor']);
+  await expect(js.locator('.deck-check')).toHaveCount(66);
+  await expect(js.getByRole('button', { name: 'Download 0 selected' })).toBeDisabled();
+  await js.locator('.deck-check', { hasText: /^Zuko$/ }).click();
+  await js.locator('.deck-check', { hasText: 'Firebending (1)' }).click();
+  await js.getByRole('button', { name: 'Download 2 selected' }).click();
+  await expect(page.locator('.deck-row', { hasText: 'Avatar JS:' })).toHaveCount(2, { timeout: 60_000 });
+  await expect(js.locator('.deck-check.here')).toHaveCount(2);
+  await expect(js.getByRole('button', { name: 'Download the remaining 64' })).toBeVisible();
+  await page.getByText('← Home').click();
+  await page.getByRole('button', { name: 'New game' }).click();
+  await pickDecks(page, [['Avatar JS: Zuko', 'Avatar JS: Firebending (1)'], ['Sample: Grove']]);
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await page.waitForSelector('.board');
+  await unblind(page, 'Player 1');
+  await expect(page.locator('.c33 .slot-label b')).toHaveText('33'); // 40 cards, 7 in hand
+});
+
 test('starting needs a deck for every player', async ({ page }) => {
   await page.goto('index.html');
   await page.getByRole('button', { name: 'New game' }).click();

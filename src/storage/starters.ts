@@ -7,6 +7,8 @@
 // Lines carry the set code (TLA) to prefer the Avatar printing; the importer falls back to a
 // name-only match when a card is not in that set.
 
+import { JUMPSTART } from './jumpstart';
+
 const raw: Record<string, string> = {
   'Aang Tutorial': `8 Plains
 Aardvark Sloth
@@ -156,13 +158,28 @@ function withSet(text: string, set: string): string {
   }).join('\n');
 }
 
+export interface StarterDeck {
+  starterId: string;
+  name: string;
+  text: string;
+  /** For packs you pick from: the heading the deck is listed under (a colour). */
+  group?: string;
+  /** The short name shown in the pick list. */
+  short?: string;
+}
+
 export interface StarterPack {
   id: string;
   name: string;
   blurb: string;
   tokens: { id: string; name: string };
-  decks: { starterId: string; name: string; text: string }[];
+  decks: StarterDeck[];
+  /** Too many decks to download all at once by default: the player picks which. */
+  pick?: boolean;
 }
+
+/** "Hei Bai 1" → "Hei Bai (1)". */
+const listName = (theme: string) => theme.replace(/ (\d)$/, ' ($1)');
 
 export const STARTER_PACKS: StarterPack[] = [
   {
@@ -174,6 +191,20 @@ export const STARTER_PACKS: StarterPack[] = [
       starterId: `tla-bb-${name.toLowerCase().replace(/[^a-z]+/g, '-')}`,
       name: `Avatar BB: ${name}`,
       text: withSet(text, 'TLA'),
+    })),
+  },
+  {
+    id: 'tla-jumpstart',
+    name: 'Avatar: The Last Airbender Jumpstart',
+    blurb: '46 themed half-decks of 20 cards (66 lists: some themes have two versions), plus the tokens they create. Pick two half-decks for each player to make a deck, e.g. Zuko and Firebending.',
+    tokens: { id: 'tla-js-tokens', name: 'Avatar JS: Tokens' },
+    pick: true,
+    decks: JUMPSTART.map(([color, theme, cards, basics]) => ({
+      starterId: `tla-js-${theme.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      name: `Avatar JS: ${listName(theme)}`,
+      short: listName(theme),
+      group: color,
+      text: [...cards.split(';').map((c) => `1 ${c}`), ...basics.split(';').map((b) => `${b} (TLA)`)].join('\n'),
     })),
   },
 ];

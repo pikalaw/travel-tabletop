@@ -64,8 +64,23 @@ describe('sample cards', () => {
     const defs = await getDefs(records.defs.map((d) => d.id));
     expect(defs.map((d) => d.id).sort()).toEqual(records.defs.map((d) => d.id).sort());
   });
+  it('Jumpstart: 66 lists of 20 cards over 46 themes, ids unique, basics from the Avatar set', () => {
+    const js = STARTER_PACKS.find((p) => p.id === 'tla-jumpstart')!;
+    expect(js.pick).toBe(true);
+    expect(js.decks).toHaveLength(66);
+    expect(new Set(js.decks.map((d) => d.starterId)).size).toBe(66);
+    expect(new Set(js.decks.map((d) => d.short!.replace(/ \(\d\)$/, ''))).size).toBe(46);
+    for (const d of js.decks) {
+      const { entries, errors } = parseDecklist(d.text);
+      expect(errors, d.name).toEqual([]);
+      expect(entries.reduce((n, e) => n + e.count, 0), d.name).toBe(20);
+      for (const e of entries) if (['Plains', 'Island', 'Swamp', 'Mountain', 'Forest'].includes(e.name)) expect(e.set, d.name).toBe('tla');
+    }
+    expect(js.decks.find((d) => d.short === 'Hei Bai (2)')?.group).toBe('White');
+  });
+
   it('starter packs: ten 20-card lists with set codes', () => {
-    const [pack] = STARTER_PACKS;
+    const pack = STARTER_PACKS.find((p) => p.id === 'tla-beginner-box');
     expect(pack!.decks).toHaveLength(10);
     for (const d of pack!.decks) {
       const n = parseDecklist(d.text).entries.reduce((s, e) => s + e.count, 0);

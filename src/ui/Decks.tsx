@@ -5,7 +5,7 @@ import { confirmBox, promptBox } from './Dialogs';
 import { listDecks, deleteDeck, putDeck } from '../storage/db';
 import { loadArt, artUrl, sizeFor, type Art } from '../storage/art';
 import { importDeck, listSignature, type ImportResult } from '../storage/scryfall';
-import { STARTER_PACKS, type StarterPack as Pack } from '../storage/starters';
+import { STARTER_PACKS, type StarterPack as Pack, type StarterDeck } from '../storage/starters';
 import { exportBackup, readBackup, restoreBackup, companionTokenDecks, requestPersistence, storageStatus, type ReadBackup } from '../storage/backup';
 import { saveFile } from './files';
 import type { Deck } from '../types/storage';
@@ -33,12 +33,14 @@ function StorageLine({ tick }: { tick: unknown }) {
 }
 function StarterPack({ pack, decks, refresh }: { pack: Pack; decks: Deck[]; refresh: () => void }) {
   const have = new Set(decks.map((d) => d.starterId).filter(Boolean));
-  const todo = pack.decks.filter((d) => !have.has(d.starterId));
+  const remaining = pack.decks.filter((d) => !have.has(d.starterId));
+  const [picked, setPicked] = useState(new Set<string>());
+  const [choosing, setChoosing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const [missing, setMissing] = useState<string[]>([]);
   const [error, setError] = useState('');
-  const run = async () => {
+  const run = async (todo: StarterDeck[]) => {
     setBusy(true);
     setError('');
     setMissing([]);
@@ -73,20 +75,63 @@ function StarterPack({ pack, decks, refresh }: { pack: Pack; decks: Deck[]; refr
       setBusy(false);
       setProgress('');
       setMissing(miss);
+      setPicked(new Set());
     }
   };
+  const toggle = (id: string) => setPicked((s) => {
+    const n = new Set(s);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+  const groups = [...new Set(pack.decks.map((d) => d.group || ''))];
   return (
     <div class="notice starter">
       <div>
         <b>{pack.name}</b>
       </div>
       <div class="muted small">{pack.blurb}</div>
-      {todo.length ? (
-        <button class="btn primary" disabled={busy} onClick={run}>
-          {busy ? 'Downloading…' : have.size ? `Download the remaining ${todo.length}` : `Download all ${todo.length} decks`}
-        </button>
-      ) : (
+      {!remaining.length ? (
         <div class="muted small">All {pack.decks.length} decks are on this device.</div>
+      ) : pack.pick ? (
+        <>
+          <div class="starter-actions">
+            <button class="btn" disabled={busy} onClick={() => setChoosing(!choosing)}>{choosing ? 'Hide the list' : 'Choose decks'}</button>
+            {choosing ? (
+              <button class="btn primary" disabled={busy || !picked.size} onClick={() => void run(remaining.filter((d) => picked.has(d.starterId)))}>
+                {busy ? 'Downloading…' : `Download ${picked.size} selected`}
+              </button>
+            ) : null}
+            <button class="btn ghost" disabled={busy} onClick={() => void run(remaining)}>
+              {have.size ? `Download the remaining ${remaining.length}` : `Download all ${remaining.length}`}
+            </button>
+          </div>
+          {choosing ? (
+            <div class="starter-pick">
+              {groups.map((g) => (
+                <div class="starter-group">
+                  {g ? <div class="starter-group-name">{g}</div> : null}
+                  <div class="deck-pick">
+                    {pack.decks.filter((d) => (d.group || '') === g).map((d) => {
+                      const here = have.has(d.starterId);
+                      const on = here || picked.has(d.starterId);
+                      return (
+                        <label class={`deck-check ${on ? 'on' : ''} ${here ? 'here' : ''}`}>
+                          <input type="checkbox" checked={on} disabled={here || busy} onChange={() => toggle(d.starterId)} />
+                          <span>{d.short || d.name}</span>
+                          {here ? <span class="muted small">on this device</span> : null}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <button class="btn primary" disabled={busy} onClick={() => void run(remaining)}>
+          {busy ? 'Downloading…' : have.size ? `Download the remaining ${remaining.length}` : `Download all ${remaining.length} decks`}
+        </button>
       )}
       {progress ? <p class="muted small">{progress}</p> : null}
       {error ? <p class="error">{error}</p> : null}

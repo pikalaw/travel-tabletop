@@ -400,3 +400,11 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .bar.combat .btn { flex: none; }
 .badge.atk { color: #fff; background: #b8322a; } .badge.blk { color: #fff; background: #2f5fa8; }
 .chip.attack { color: #ff9b93; }
+
+/* Starter packs you pick from (Jumpstart): decks grouped by colour. */
+.starter-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.starter-pick { margin-top: 10px; display: grid; gap: 10px; }
+.starter-group-name { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 4px; }
+.deck-check.here { opacity: .6; }
+.starter-pick .deck-pick { max-height: none; overflow: visible; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.starter-pick .deck-check { padding: 6px 8px; }
