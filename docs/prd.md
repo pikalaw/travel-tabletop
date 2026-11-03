@@ -262,5 +262,5 @@ It also records rejected actions, turn boundaries, and full snapshots of the boa
 
 ## Related docs
 
-- [Technical Design v2 (TypeScript + Vite)](./technical-design-v2.md): the rewrite in progress; architecture, stack, schemas, protocol. The [legacy design](./technical-design-legacy.md) describes the shipped app until the cutover
+- [Technical Design v2 (TypeScript + Vite)](./technical-design-v2.md): the rewrite in progress; architecture, stack, schemas, protocol. The [Technical Design v1](./technical-design-v1.md) describes the code until v2 ships
 - [Implementation plan](./implementation-plan.md): milestones, testing, dev environment

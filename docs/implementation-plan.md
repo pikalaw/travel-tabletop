@@ -4,7 +4,7 @@ Oct 30, 2026 · @Lawrence Tsang
 
 ## Scope
 
-This plan orders the work in seven milestones, records where each stands, and says how the app is tested and released. Features are defined in the [PRD](./prd.md) and the build is described in the [technical design](./technical-design-legacy.md); this doc only sequences and verifies them.
+This plan orders the work in seven milestones, records where each stands, and says how the app is tested and released. Features are defined in the [PRD](./prd.md) and the build is described in the [Technical Design v1](./technical-design-v1.md) (the code today) and the [Technical Design v2](./technical-design-v2.md) (the rewrite); this doc only sequences and verifies them.
 
 The board works on one device first: same-device mode is the first playable version, and networking is layered on afterwards.
 
@@ -86,19 +86,18 @@ If the last item fails, switch the transport to a Capacitor-wrapped native socke
 
 ## Rewrite to TypeScript + Vite (v2)
 
-The rewrite follows the [Technical Design v2](./technical-design-v2.md); the [legacy design](./technical-design-legacy.md) describes the shipped app until the cutover. The PRD doesn't change. Work happens on the `v2` branch; `main` keeps serving v1.
+The rewrite follows the [Technical Design v2](./technical-design-v2.md); the [Technical Design v1](./technical-design-v1.md) describes the code until v2 ships. The PRD doesn't change. The app isn't in production, so v2 replaces v1's code directly on `main`: no parallel branch, no rollback path, no cross-version pairing.
 
-**Feature freeze on v1.** While the port runs, v1 takes bug fixes only, and each fix is ported to v2 in the same sitting. New features start on v2 after the cutover, so nothing is built twice.
+**No new work on v1.** From R0 on, features go into v2 only; a v1 bug found meanwhile is fixed in the v2 port, not in v1.
 
 | Step | Work | Exit test |
 | --- | --- | --- |
-| R0 Prepare | Capture the v1 compatibility fixtures (a full game log, a backup file, IndexedDB record dumps, a recorded handshake). Create the `v2` branch with Vite, strict TypeScript, ESLint, Vitest and a CI workflow that checks but doesn't deploy. Convert the Python browser scripts to `@playwright/test` specs and run them against **v1** first | Every converted spec passes against v1, so the specs are proven before they judge v2 |
-| R1 Types and engine | `src/types/`, then `engine.ts` and `view.ts` ported, with the unit and property suites | All 43 tests pass; the v1 game log replays to the same final state |
-| R2 Host, sessions, transport, storage | `host/`, `client/`, `transport/`, `storage/` ported, with trust-boundary guards | Protocol tests pass; the v1 backup restores; the v1 records read back; the recorded handshake parses |
+| R0 Prepare | Record the v1 regression fixtures (a game log using every command, a backup file). Convert the Python browser scripts to `@playwright/test` specs and run them against **v1** first. Then remove v1's code and set up Vite, strict TypeScript, ESLint, Vitest and a CI workflow that checks but doesn't deploy | Every converted spec passed against v1 before v1 was removed, so the specs are proven before they judge v2 |
+| R1 Types and engine | `src/types/`, then `engine.ts` and `view.ts`, with the unit and property suites | All 43 tests pass; the v1 game log replays to the same final state |
+| R2 Host, sessions, transport, storage | `host/`, `client/`, `transport/`, `storage/`, with trust-boundary guards | Protocol tests pass; the v1 backup restores |
 | R3 UI | Components in TSX, the `UiState` reducer, gestures, dialogs, the stylesheet | Every browser spec passes against v2 |
-| R4 Offline and deploy | `src/sw.ts`, the PWA plugin, the update prompt, the deploy workflow (still not live) | The offline, update and legacy-upgrade specs pass |
-| R5 Devices | The device checklist against a v2 preview build (where to host it is an open decision in the v2 design) | Checklist ticked on the Android phone and the iPad |
-| R6 Cutover | Tag `v1-final`, merge `v2`, switch the Pages source to GitHub Actions, update each device | Both devices show the new build, keep their decks and saved games, and pair with each other |
+| R4 Offline and deploy | `src/sw.ts`, the PWA plugin, the update prompt, the deploy workflow; switch the Pages source to GitHub Actions | The offline and update specs pass; the site serves v2 |
+| R5 Devices | Update the installed app on the Android phone and the iPad, then run the device checklist | Each device took the update with its decks and saved games intact; checklist ticked |
 
 **Before R4:** decide whether v2 adds the in-game **Update** item and the "Ready to play offline" toast (listed in the v2 design's open decisions); if yes, the PRD gets those two lines.
 

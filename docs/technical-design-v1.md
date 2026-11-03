@@ -1,8 +1,8 @@
-# MTG Travel Tabletop — Technical Design (legacy: v1, plain JavaScript)
+# MTG Travel Tabletop — Technical Design v1 (plain JavaScript)
 
 Oct 30, 2026 · @Lawrence Tsang
 
-> **Legacy design.** This doc describes v1, the shipped app: plain JavaScript with no bundler. It stays accurate for v1 until the cutover, and is then frozen. The rewrite is specified in the [Technical Design v2 (TypeScript + Vite)](./technical-design-v2.md); new features are designed there, not here.
+> **v1 design.** This doc describes v1: plain JavaScript with no bundler. It is accurate for the code running until v2 ships, and is then frozen as a record. v2 is specified in the [Technical Design v2 (TypeScript + Vite)](./technical-design-v2.md); new features are designed there.
 
 ## Scope
 
