@@ -22,7 +22,7 @@ test('two devices: pair by text, play, alerts, pointing, undo, dice', async ({ b
   // the host looks at its library: the guest gets an alert
   await H.locator('.c33 .pile').click();
   await H.getByText('Look at top 1').click();
-  await expect(G.locator('.toast')).toContainText(['looking at the top 1']);
+  await expect(G.locator('.toast', { hasText: 'looking at the top 1' })).toHaveCount(1);
   await H.locator('.sheet').getByRole('button', { name: 'Done' }).click();
   await barButton(H, 'Done');
 

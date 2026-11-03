@@ -20,7 +20,7 @@ test('labels: hand, counters, opponent hand, ticker; whose turn; only the active
   await chip.scrollIntoViewIfNeeded();
   await drag(page, chip, page.locator('[data-drop="p2.battlefield"] [data-card]').first());
   await expect(page.locator('[data-drop="p2.battlefield"] .mark.atk')).toHaveCount(0);
-  await expect(page.locator('.toast')).toContainText('Only Player 1’s creatures can attack this turn.');
+  await expect(page.locator('.toast', { hasText: 'Only Player 1’s creatures can attack this turn.' })).toHaveCount(1);
 
   await resetBar(page); await barButton(page, 'Combat');
   const c = await point(page, page.locator('[data-drop="p1.battlefield"] [data-card]').first(), 0.4, 0.6);
