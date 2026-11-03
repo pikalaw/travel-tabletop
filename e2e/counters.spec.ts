@@ -106,7 +106,11 @@ for (const [name, vp] of [['portrait', { width: 412, height: 840 }], ['landscape
       await chip.scrollIntoViewIfNeeded();
       await drag(page, chip, card);
     }
-    await longPress(page, card, 0.4, 0.4);
+    // Open the full view with a right-click: in a small landscape card, a long-press point can
+    // land on a counter's grab area, which starts a drag instead.
+    const c = await point(page, card);
+    await page.mouse.click(c.x, c.y, { button: 'right' });
+    await expect(page.locator('.fullcard')).toHaveCount(1);
     const img = (await page.locator('.fullcard-inner img').boundingBox())!;
     const badges = (await page.locator('.full-badges').boundingBox())!;
     expect(badges.y).toBeGreaterThanOrEqual(img.y + img.height);
