@@ -107,7 +107,7 @@ GitHub Pages serves the built `dist/` folder, deployed by a workflow instead of 
 
 - **One-time setting:** in the repository's Settings → Pages, set the source to **GitHub Actions** when the first v2 build is ready. From then on the workflow publishes every push to `main`.
 - **`.github/workflows/deploy.yml`**, on every push to `main`: check out; set up Node (the version in `.nvmrc`); `npm ci`; `npm run typecheck`, `npm run lint`, `npm test`; `npm run build`; install Playwright's Chromium and run `npm run e2e` against `vite preview`; then upload `dist/` with `actions/upload-pages-artifact` and publish it with `actions/deploy-pages`. Any failing step stops the deploy, so a red build never reaches a device.
-- **v1 code** is replaced in place on `main`; it stays in git history, and its design in the v1 doc.
+- **v1 code** is replaced in place on `main`; its last commit is tagged `v1` (`2d61e84`), so `git checkout v1` brings it back, and its design stays in the v1 doc.
 - The site URL stays https://pikalaw.github.io/travel-tabletop/, so installed apps, bookmarks and game links keep working.
 
 ## Types
