@@ -1,0 +1,85 @@
+import { test, expect } from '@playwright/test';
+import { longPress, startOneDevice, playFromHand, idsIn, barButton, watchErrors } from './helpers';
+
+test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follow the host, undo', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page);
+  const bf = page.locator('[data-drop="p1.battlefield"]');
+  const p2bf = page.locator('[data-drop="p2.battlefield"]');
+  const ticker = page.locator('.ticker-text');
+  await playFromHand(page, 'p1.battlefield', 2);
+  const [host, second] = await idsIn(page, 'p1.battlefield');
+
+  // attach a hand card to the first battlefield card
+  await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first());
+  await barButton(page, 'Attach');
+  await expect(page.locator('.bar').first()).toContainText('tap the card to attach it to');
+  await page.locator(`[data-card="${host}"]`).click();
+  await expect(ticker).toContainText(/Player 1 attached .+ to .+/);
+  await expect(bf.locator('.card.tucked')).toHaveCount(1);
+  await expect(bf.locator('.att-count')).toHaveText(['+1']);
+
+  // attaching onto a tucked strip goes to its host
+  await longPress(page, page.locator(`[data-card="${second}"]`));
+  await barButton(page, 'Attach');
+  const strip = (await bf.locator('.card.tucked').first().boundingBox())!;
+  await page.mouse.click(strip.x + 6, strip.y + strip.height / 2);
+  await expect(bf.locator('.att-count')).toHaveText(['+2']);
+  await expect(bf.locator('.card.tucked')).toHaveCount(2);
+
+  // the group viewer: host plus two attachments; an attachment offers Detach
+  await longPress(page, page.locator(`[data-card="${host}"]`));
+  await expect(page.locator('.full-thumbs .thumb')).toHaveCount(3);
+  await expect(page.locator('.fullcard-meta')).toContainText('2 attached');
+  await page.locator('.full-thumbs .thumb').nth(1).click();
+  await expect(page.locator('.bar').first().getByRole('button', { name: 'Detach' })).toHaveCount(1);
+  await expect(page.locator('.fullcard-meta')).toContainText('Attached to');
+  // swipe right goes back to the host
+  const inner = (await page.locator('.fullcard-inner').boundingBox())!;
+  const cx = inner.x + inner.width / 2, cy = inner.y + inner.height / 2;
+  await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx + 120, cy, { steps: 6 }); await page.mouse.up();
+  await expect(page.locator('.full-thumbs .thumb').nth(0)).toHaveClass(/\bon\b/);
+  await barButton(page, 'Close');
+
+  // tapping a strip taps the host
+  const s2 = (await bf.locator('.card.tucked').first().boundingBox())!;
+  await page.mouse.click(s2.x + 6, s2.y + s2.height / 2);
+  await expect(ticker).toContainText(/Player 1 tapped /);
+
+  // tapping the slot background fans the group; Close slot folds it
+  const fb = (await bf.boundingBox())!;
+  await page.mouse.click(fb.x + fb.width - 10, fb.y + fb.height - 8);
+  await expect(bf).toHaveAttribute('data-fanned', /.+/);
+  await expect(bf.locator('.card.tucked')).toHaveCount(0);
+  await barButton(page, 'Close slot');
+  await expect(bf).not.toHaveAttribute('data-fanned', /.*/);
+
+  // detach from the viewer
+  await longPress(page, page.locator(`[data-card="${host}"]`));
+  await page.locator('.full-thumbs .thumb').nth(1).click();
+  await barButton(page, 'Detach');
+  await expect(ticker).toContainText(/Player 1 detached /);
+  await expect(bf.locator('.att-count')).toHaveText(['+1']);
+  await barButton(page, 'Close');
+
+  // moving the host (grabbed by its own face, left of the strips) takes its attachment along
+  const dragFrom = async (to: string) => {
+    const t = (await page.locator(to).boundingBox())!;
+    const from = (await page.locator(`[data-card="${host}"]`).boundingBox())!;
+    const a = { x: from.x + 40, y: from.y + from.height / 2 };
+    await page.mouse.move(a.x, a.y); await page.mouse.down();
+    for (let i = 1; i <= 12; i++) { await page.mouse.move(a.x + (t.x + t.width / 2 - a.x) * i / 12, a.y + (t.y + t.height / 2 - a.y) * i / 12); await page.waitForTimeout(10); }
+    await page.mouse.up(); await page.waitForTimeout(250);
+  };
+  await dragFrom('[data-drop="p2.battlefield"]');
+  await expect(p2bf.locator('[data-card]')).toHaveCount(2);
+  await expect(p2bf.locator('.card.tucked')).toHaveCount(1);
+  // the host to a graveyard: the attachment stays, detached
+  await dragFrom('.pile[data-drop="p2.graveyard"]');
+  await expect(p2bf.locator('[data-card]')).toHaveCount(1);
+  await expect(p2bf.locator('.card.tucked')).toHaveCount(0);
+  await expect(ticker).toContainText('→ Player 2\'s graveyard');
+  await barButton(page, 'Undo');
+  await expect(p2bf.locator('.card.tucked')).toHaveCount(1);
+  errs.expectNone();
+});

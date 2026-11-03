@@ -9,6 +9,7 @@
     "serve": "python3 -m http.server 8080"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "fast-check": "^4.10.2",
     "fflate": "^0.8.3",
     "htm": "^3.1.1",
