@@ -64,6 +64,21 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
   await expect(bf.locator('.att-count')).toHaveText(['+1']);
   await barButton(page, 'Close');
 
+  // grabbing the attached card's strip drags the whole group; it stays attached
+  const lands = page.locator('[data-drop="p1.lands"]');
+  const strip2 = (await bf.locator('.card.tucked').first().boundingBox())!;
+  const lb = (await lands.boundingBox())!;
+  await page.mouse.move(strip2.x + 6, strip2.y + strip2.height / 2); await page.mouse.down();
+  for (let i = 1; i <= 12; i++) {
+    await page.mouse.move(strip2.x + 6 + (lb.x + lb.width / 2 - strip2.x - 6) * i / 12, strip2.y + strip2.height / 2 + (lb.y + lb.height / 2 - strip2.y - strip2.height / 2) * i / 12);
+    await page.waitForTimeout(10);
+    if (i === 6) await expect(page.locator('.drag-ghost.group > *')).toHaveCount(2);
+  }
+  await page.mouse.up(); await page.waitForTimeout(250);
+  await expect(lands.locator('[data-card]')).toHaveCount(2);
+  await expect(lands.locator('.card.tucked')).toHaveCount(1);
+  await expect(lands.locator(`[data-card="${host}"] .att-count`)).toHaveText('+1');
+
   // moving the host (grabbed by its own face, left of the strips) takes its attachment along
   const dragFrom = async (to: string) => {
     const t = (await page.locator(to).boundingBox())!;

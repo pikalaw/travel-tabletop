@@ -88,13 +88,18 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): () => voi
   const startDrag = (g: Gesture & { el: HTMLElement }) => {
     g.dragging = true;
     clearTimeout(g.timer);
+    // A group drags as one, whichever of its cards is grabbed: an attached card brings its card
+    // and the rest of the group (only Detach splits a group). The attached cards peek out to the
+    // card's left, as on the board.
+    const row = g.el.closest<HTMLElement>('[data-drop]');
+    const hostId = g.el.dataset.attachedTo;
+    const hostEl = hostId && row ? row.querySelector<HTMLElement>(`[data-card="${CSS.escape(hostId)}"]`) : null;
+    if (hostEl) g.el = hostEl;
     const face = (el: HTMLElement) => el.querySelector<HTMLElement>('img, .card-face') || el;
     const src = face(g.el);
     const r = src.getBoundingClientRect();
     const w = Math.max(r.width, 40), hgt = Math.max(r.height, 40);
-    // A card with attachments drags as its group: the attached cards peek out to its left, as on the board.
     const id = g.el.dataset.card;
-    const row = g.el.closest<HTMLElement>('[data-drop]');
     g.group = id && row ? [...row.querySelectorAll<HTMLElement>(`[data-attached-to="${CSS.escape(id)}"]`)] : [];
     let ghost: HTMLElement;
     if (g.group.length) {
