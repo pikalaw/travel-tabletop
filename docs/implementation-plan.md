@@ -103,13 +103,13 @@ The rewrite follows the [Technical Design v2](./technical-design-v2.md); the [Te
 
 The rewrite is about 4,700 lines of code, 400 of CSS and 630 of tests. Writing it in one pass is possible, but checking it in one pass isn't: a behaviour change would be hard to trace, and nobody could review progress along the way. So the work is cut into the steps below. Each step is one commit, leaves every earlier check green, and ends with a check anyone can rerun.
 
-**Site downtime.** v1's code leaves `main` in step 0.4, and the site serves nothing from then until step 4.2 deploys v2. Nothing on the devices carries over; each device gets a fresh install in step 5.1.
+**Site downtime.** v1's code leaves `main` in step 0.3, and the site serves nothing from then until step 4.2 deploys v2. Nothing on the devices carries over; each device gets a fresh install in step 5.1.
 
 | Step | Change | Check |
 | --- | --- | --- |
 | 0.1 Fixtures | Drive v1 in the browser through a scripted game that uses every command (attachments, combat, undo included); save its exported log and a backup file under `tests/fixtures/v1/` | The files are committed; v1's own `replay` of the log reaches the game's final state |
 | 0.2 Browser specs | Port the 50-odd Python scripts to about a dozen `@playwright/test` spec files (`e2e/`), pinned to Playwright 1.63 to match this workspace's browser, and serve v1 for them | `npx playwright test` passes against v1 |
-| 0.4 Scaffold | Remove v1's code from `main`. Add Vite, strict TypeScript, ESLint with the module-boundary rule, Vitest, `vite.config.ts`, a placeholder `App`, and a CI workflow (typecheck, lint, unit tests, build) | CI passes; `npm run build` produces `dist/` |
+| 0.3 Scaffold | Remove v1's code from `main`. Add Vite, strict TypeScript, ESLint with the module-boundary rule, Vitest, `vite.config.ts`, a placeholder `App`, and a CI workflow (typecheck, lint, unit tests, build) | CI passes; `npm run build` produces `dist/` |
 | 1.1 Types | `src/types/`: state, commands, protocol, storage | `tsc --noEmit` passes |
 | 1.2 View helpers | `engine/view.ts` (zones, visibility) and its tests | Tests pass |
 | 1.3 Engine | `engine/engine.ts`, then the unit and property suites | All the engine tests pass, unchanged in meaning |
