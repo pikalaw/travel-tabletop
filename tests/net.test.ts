@@ -150,5 +150,9 @@ describe('handshake', () => {
     const [ht3, gt3] = memoryPair();
     hostHandshake(new LocalSession(new Host(), { mode: 'host' }), ht3, { startNew: async () => {}, onReady: () => {}, onError: () => {} });
     await expect(guestHandshake(gt3, { ...hello, appVersion: '9.9.9' })).rejects.toThrow(/Update both devices/);
+
+    const [ht4, gt4] = memoryPair();
+    hostHandshake(new LocalSession(new Host(), { mode: 'host' }), ht4, { startNew: async () => {}, onReady: () => {}, onError: () => {} });
+    await expect(guestHandshake(gt4, { ...hello, protocolVersion: 1 })).rejects.toThrow(/different builds/);
   });
 });

@@ -108,7 +108,9 @@ export async function buildHello({ name, decks, gameId }: { name: string; decks:
 /** Host side: check a hello. Returns null if fine, or a refusal message. */
 export async function checkHello(hello: HelloMessage): Promise<RefuseMessage | null> {
   if (hello.protocolVersion !== PROTOCOL_VERSION || hello.appVersion !== APP_VERSION) {
-    return { type: 'refuse', reason: 'version', detail: `Host runs version ${APP_VERSION}, guest runs ${hello.appVersion}. Update both devices to the same version.` };
+    return { type: 'refuse', reason: 'version', detail: hello.appVersion !== APP_VERSION
+      ? `Host runs version ${APP_VERSION}, guest runs ${hello.appVersion}. Update both devices to the same version.`
+      : 'The two devices run different builds of the app. Update both devices to the same version: on the home screen, tap Update now (or reload the page).' };
   }
   if (!hello.gameId) {
     const need = [...hello.spec.cards, ...(hello.spec.commanders || [])];
