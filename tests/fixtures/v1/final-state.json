@@ -1,0 +1,1505 @@
+{
+ "activePlayer": "p2",
+ "cards": {
+  "c1": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c1",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c10": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c10",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c11": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c11",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c12": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c12",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c13": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c13",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c14": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c14",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c15": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c15",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c16": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c16",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c17": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "613fc9216e40b2092440",
+   "face": "front",
+   "faceDown": false,
+   "id": "c17",
+   "isToken": false,
+   "name": "Cinder Pup",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c18": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "613fc9216e40b2092440",
+   "face": "front",
+   "faceDown": false,
+   "id": "c18",
+   "isToken": false,
+   "name": "Cinder Pup",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c19": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "613fc9216e40b2092440",
+   "face": "front",
+   "faceDown": false,
+   "id": "c19",
+   "isToken": false,
+   "name": "Cinder Pup",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c2": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c2",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c20": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "613fc9216e40b2092440",
+   "face": "front",
+   "faceDown": false,
+   "id": "c20",
+   "isToken": false,
+   "name": "Cinder Pup",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c21": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "5aaed7b78fc2298cc446",
+   "face": "front",
+   "faceDown": false,
+   "id": "c21",
+   "isToken": false,
+   "name": "Ashfang Raider",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c22": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "5aaed7b78fc2298cc446",
+   "face": "front",
+   "faceDown": false,
+   "id": "c22",
+   "isToken": false,
+   "name": "Ashfang Raider",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c23": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "5aaed7b78fc2298cc446",
+   "face": "front",
+   "faceDown": false,
+   "id": "c23",
+   "isToken": false,
+   "name": "Ashfang Raider",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c24": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "5aaed7b78fc2298cc446",
+   "face": "front",
+   "faceDown": false,
+   "id": "c24",
+   "isToken": false,
+   "name": "Ashfang Raider",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c25": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "88f6fedffa8daa8a1f96",
+   "face": "front",
+   "faceDown": false,
+   "id": "c25",
+   "isToken": false,
+   "name": "Kiln Brute",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c26": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "88f6fedffa8daa8a1f96",
+   "face": "front",
+   "faceDown": false,
+   "id": "c26",
+   "isToken": false,
+   "name": "Kiln Brute",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c27": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "88f6fedffa8daa8a1f96",
+   "face": "front",
+   "faceDown": false,
+   "id": "c27",
+   "isToken": false,
+   "name": "Kiln Brute",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c28": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "83a19ee8b08bbd8106b7",
+   "face": "front",
+   "faceDown": false,
+   "id": "c28",
+   "isToken": false,
+   "name": "Spark Volley",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c29": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "83a19ee8b08bbd8106b7",
+   "face": "front",
+   "faceDown": false,
+   "id": "c29",
+   "isToken": false,
+   "name": "Spark Volley",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c3": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c3",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c30": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "83a19ee8b08bbd8106b7",
+   "face": "front",
+   "faceDown": false,
+   "id": "c30",
+   "isToken": false,
+   "name": "Spark Volley",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c31": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "83a19ee8b08bbd8106b7",
+   "face": "front",
+   "faceDown": false,
+   "id": "c31",
+   "isToken": false,
+   "name": "Spark Volley",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c32": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "bde4fb7ffd3b0c05aa14",
+   "face": "front",
+   "faceDown": false,
+   "id": "c32",
+   "isToken": false,
+   "name": "Flare Up",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c33": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "bde4fb7ffd3b0c05aa14",
+   "face": "front",
+   "faceDown": false,
+   "id": "c33",
+   "isToken": false,
+   "name": "Flare Up",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c34": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "bde4fb7ffd3b0c05aa14",
+   "face": "front",
+   "faceDown": false,
+   "id": "c34",
+   "isToken": false,
+   "name": "Flare Up",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c35": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "8db5070804c47d3cc4fb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c35",
+   "isToken": false,
+   "name": "Forge Warden",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c36": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "8db5070804c47d3cc4fb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c36",
+   "isToken": false,
+   "name": "Forge Warden",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c37": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "c7b5d1032bf8aa9a1dcb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c37",
+   "isToken": false,
+   "name": "Molten Sentinel // Molten Colossus",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c38": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "c7b5d1032bf8aa9a1dcb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c38",
+   "isToken": false,
+   "name": "Molten Sentinel // Molten Colossus",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c39": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "13365ea009f594f56711",
+   "face": "front",
+   "faceDown": false,
+   "id": "c39",
+   "isToken": false,
+   "name": "Scry Ember",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c4": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c4",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c40": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "13365ea009f594f56711",
+   "face": "front",
+   "faceDown": false,
+   "id": "c40",
+   "isToken": false,
+   "name": "Scry Ember",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c41": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c41",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c42": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c42",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c43": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c43",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c44": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c44",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c45": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c45",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c46": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c46",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c47": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c47",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c48": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c48",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c49": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c49",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c5": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c5",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c50": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c50",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c51": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c51",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c52": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c52",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c53": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c53",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c54": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c54",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c55": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c55",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c56": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "4fad07b945e258477b7c",
+   "face": "front",
+   "faceDown": false,
+   "id": "c56",
+   "isToken": false,
+   "name": "Mossback Hound",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c57": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "4fad07b945e258477b7c",
+   "face": "front",
+   "faceDown": false,
+   "id": "c57",
+   "isToken": false,
+   "name": "Mossback Hound",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c58": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "4fad07b945e258477b7c",
+   "face": "front",
+   "faceDown": false,
+   "id": "c58",
+   "isToken": false,
+   "name": "Mossback Hound",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c59": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "4fad07b945e258477b7c",
+   "face": "front",
+   "faceDown": false,
+   "id": "c59",
+   "isToken": false,
+   "name": "Mossback Hound",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c6": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c6",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c60": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2323cbcd5371accf4f57",
+   "face": "front",
+   "faceDown": false,
+   "id": "c60",
+   "isToken": false,
+   "name": "Thornwood Elk",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c61": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2323cbcd5371accf4f57",
+   "face": "front",
+   "faceDown": false,
+   "id": "c61",
+   "isToken": false,
+   "name": "Thornwood Elk",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c62": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2323cbcd5371accf4f57",
+   "face": "front",
+   "faceDown": false,
+   "id": "c62",
+   "isToken": false,
+   "name": "Thornwood Elk",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c63": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2323cbcd5371accf4f57",
+   "face": "front",
+   "faceDown": false,
+   "id": "c63",
+   "isToken": false,
+   "name": "Thornwood Elk",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c64": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "b0bd05f777cf8dccb28c",
+   "face": "front",
+   "faceDown": false,
+   "id": "c64",
+   "isToken": false,
+   "name": "Grovekeeper Elder",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c65": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "b0bd05f777cf8dccb28c",
+   "face": "front",
+   "faceDown": false,
+   "id": "c65",
+   "isToken": false,
+   "name": "Grovekeeper Elder",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c66": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "b0bd05f777cf8dccb28c",
+   "face": "front",
+   "faceDown": false,
+   "id": "c66",
+   "isToken": false,
+   "name": "Grovekeeper Elder",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c67": {
+   "attacking": 1,
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "b2cf425d3d8a395752ec",
+   "face": "front",
+   "faceDown": false,
+   "id": "c67",
+   "isToken": false,
+   "name": "Rampant Bloom",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c68": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "b2cf425d3d8a395752ec",
+   "face": "front",
+   "faceDown": false,
+   "id": "c68",
+   "isToken": false,
+   "name": "Rampant Bloom",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c69": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "b2cf425d3d8a395752ec",
+   "face": "front",
+   "faceDown": false,
+   "id": "c69",
+   "isToken": false,
+   "name": "Rampant Bloom",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c7": {
+   "counters": {
+    "labeled": {},
+    "minus": 1,
+    "plus": 2
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c7",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c70": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "b2cf425d3d8a395752ec",
+   "face": "front",
+   "faceDown": false,
+   "id": "c70",
+   "isToken": false,
+   "name": "Rampant Bloom",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c71": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2cd68ea97b9076221a35",
+   "face": "front",
+   "faceDown": false,
+   "id": "c71",
+   "isToken": false,
+   "name": "Wild Surge",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c72": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2cd68ea97b9076221a35",
+   "face": "front",
+   "faceDown": false,
+   "id": "c72",
+   "isToken": false,
+   "name": "Wild Surge",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c73": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2cd68ea97b9076221a35",
+   "face": "front",
+   "faceDown": false,
+   "id": "c73",
+   "isToken": false,
+   "name": "Wild Surge",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c74": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "ac474d2124da2dd48b81",
+   "face": "front",
+   "faceDown": false,
+   "id": "c74",
+   "isToken": false,
+   "name": "Elder of the Grove",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c75": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "ac474d2124da2dd48b81",
+   "face": "front",
+   "faceDown": false,
+   "id": "c75",
+   "isToken": false,
+   "name": "Elder of the Grove",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c76": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "7d7463f46531799e880f",
+   "face": "front",
+   "faceDown": false,
+   "id": "c76",
+   "isToken": false,
+   "name": "Hollow Sapling // Ancient Hollow",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c77": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "7d7463f46531799e880f",
+   "face": "front",
+   "faceDown": false,
+   "id": "c77",
+   "isToken": false,
+   "name": "Hollow Sapling // Ancient Hollow",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c78": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "35ac565d26321bea8238",
+   "face": "front",
+   "faceDown": false,
+   "id": "c78",
+   "isToken": false,
+   "name": "Seedling Surveyor",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c79": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "35ac565d26321bea8238",
+   "face": "front",
+   "faceDown": false,
+   "id": "c79",
+   "isToken": false,
+   "name": "Seedling Surveyor",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c8": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c8",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  },
+  "c80": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-grove",
+   "defId": "2ccb872be3af699d07cb",
+   "face": "front",
+   "faceDown": false,
+   "id": "c80",
+   "isToken": false,
+   "name": "Forest",
+   "owner": "p2",
+   "revealed": false,
+   "tapped": false
+  },
+  "c9": {
+   "counters": {
+    "labeled": {},
+    "minus": 0,
+    "plus": 0
+   },
+   "deckId": "sample-ember",
+   "defId": "96e94b40c72e2e688d12",
+   "face": "front",
+   "faceDown": false,
+   "id": "c9",
+   "isToken": false,
+   "name": "Mountain",
+   "owner": "p1",
+   "revealed": false,
+   "tapped": false
+  }
+ },
+ "gameId": "2026-11-02-fixturev1game0000",
+ "mode": "same-device",
+ "nextId": 83,
+ "players": {
+  "p1": {
+   "counters": [
+    {
+     "key": "life",
+     "value": 20
+    }
+   ],
+   "libraryTopFaceUp": false,
+   "name": "Lawrence"
+  },
+  "p2": {
+   "counters": [
+    {
+     "key": "life",
+     "value": 17
+    }
+   ],
+   "libraryTopFaceUp": false,
+   "name": "Claire"
+  }
+ },
+ "result": {
+  "reason": "ended",
+  "winner": "p2"
+ },
+ "schemaVersion": 1,
+ "seq": 58,
+ "turn": 2,
+ "zones": {
+  "p1.battlefield": [
+   "c7",
+   "c28",
+   "c73"
+  ],
+  "p1.command": [],
+  "p1.exile": [
+   "c16"
+  ],
+  "p1.graveyard": [
+   "c31"
+  ],
+  "p1.hand": [
+   "c23",
+   "c1",
+   "c40"
+  ],
+  "p1.lands": [
+   "c37"
+  ],
+  "p1.library": [
+   "c26",
+   "c36",
+   "c13",
+   "c20",
+   "c32",
+   "c9",
+   "c27",
+   "c17",
+   "c19",
+   "c14",
+   "c25",
+   "c30",
+   "c35",
+   "c18",
+   "c12",
+   "c29",
+   "c15",
+   "c38",
+   "c3",
+   "c33",
+   "c24",
+   "c39",
+   "c2",
+   "c22",
+   "c6",
+   "c34",
+   "c5",
+   "c10",
+   "c8",
+   "c11",
+   "c21",
+   "c4"
+  ],
+  "p2.battlefield": [
+   "c67",
+   "c80"
+  ],
+  "p2.command": [],
+  "p2.exile": [],
+  "p2.graveyard": [
+   "c55",
+   "c66"
+  ],
+  "p2.hand": [
+   "c65",
+   "c50",
+   "c74",
+   "c51",
+   "c76"
+  ],
+  "p2.lands": [],
+  "p2.library": [
+   "c52",
+   "c44",
+   "c47",
+   "c53",
+   "c78",
+   "c68",
+   "c60",
+   "c45",
+   "c79",
+   "c57",
+   "c54",
+   "c64",
+   "c71",
+   "c75",
+   "c56",
+   "c69",
+   "c62",
+   "c77",
+   "c46",
+   "c72",
+   "c59",
+   "c63",
+   "c70",
+   "c42",
+   "c41",
+   "c43",
+   "c48",
+   "c58",
+   "c49",
+   "c61"
+  ],
+  "stack": []
+ }
+}
