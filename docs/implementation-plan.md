@@ -92,24 +92,23 @@ The rewrite follows the [Technical Design v2](./technical-design-v2.md); the [Te
 
 | Step | Work | Exit test |
 | --- | --- | --- |
-| R0 Prepare | Record the v1 regression fixtures (a game log using every command, a backup file). Convert the Python browser scripts to `@playwright/test` specs and run them against **v1** first. Serve the v1 tag through a deploy workflow. Then remove v1's code and set up Vite, strict TypeScript, ESLint, Vitest and a CI workflow that checks but doesn't deploy | Every converted spec passed against v1 before v1 was removed, so the specs are proven before they judge v2 |
+| R0 Prepare | Record the v1 regression fixtures (a game log using every command, a backup file). Convert the Python browser scripts to `@playwright/test` specs and run them against **v1** first. Then remove v1's code and set up Vite, strict TypeScript, ESLint, Vitest and a CI workflow that checks but doesn't deploy | Every converted spec passed against v1 before v1 was removed, so the specs are proven before they judge v2 |
 | R1 Types and engine | `src/types/`, then `engine.ts` and `view.ts`, with the unit and property suites | All 43 tests pass; the v1 game log replays to the same final state |
 | R2 Host, sessions, transport, storage | `host/`, `client/`, `transport/`, `storage/`, with trust-boundary guards | Protocol tests pass; the v1 backup restores |
 | R3 UI | Components in TSX, the `UiState` reducer, gestures, dialogs, the stylesheet | Every browser spec passes against v2 |
-| R4 Offline and deploy | `src/sw.ts`, the PWA plugin, the update prompt, and switching the deploy workflow from the v1 tag to v2 | The offline and update specs pass; the site serves v2 |
-| R5 Devices | Update the installed app on the Android phone and the iPad, then run the device checklist | Each device took the update with its decks and saved games intact; checklist ticked |
+| R4 Offline and deploy | `src/sw.ts`, the PWA plugin, the update prompt, the deploy workflow; you switch the Pages source to GitHub Actions | The offline and update specs pass; the site serves v2 |
+| R5 Devices | Update the installed app on the Android phone and the iPad, then run the device checklist | Each device runs v2 after a fresh install; checklist ticked |
 
 ### Rewrite steps
 
 The rewrite is about 4,700 lines of code, 400 of CSS and 630 of tests. Writing it in one pass is possible, but checking it in one pass isn't: a behaviour change would be hard to trace, and nobody could review progress along the way. So the work is cut into the steps below. Each step is one commit, leaves every earlier check green, and ends with a check anyone can rerun.
 
-**Keeping the site up.** v1's code leaves `main` in step 0.4, so before that, step 0.3 makes GitHub Pages serve the `v1` tag through a workflow. The live site, and the installed app on the devices, stay on v1 until step 4.2 switches the workflow to v2.
+**Site downtime.** v1's code leaves `main` in step 0.4, and the site serves nothing from then until step 4.2 deploys v2. Nothing on the devices carries over; each device gets a fresh install in step 5.1.
 
 | Step | Change | Check |
 | --- | --- | --- |
 | 0.1 Fixtures | Drive v1 in the browser through a scripted game that uses every command (attachments, combat, undo included); save its exported log and a backup file under `tests/fixtures/v1/` | The files are committed; v1's own `replay` of the log reaches the game's final state |
 | 0.2 Browser specs | Port the 50-odd Python scripts to about a dozen `@playwright/test` spec files (`e2e/`), pinned to Playwright 1.63 to match this workspace's browser, and serve v1 for them | `npx playwright test` passes against v1 |
-| 0.3 Serve the v1 tag | A deploy workflow that publishes the files at tag `v1`; you switch Settings → Pages → Source to **GitHub Actions** | The site shows v1's build number, and the phone sees no update |
 | 0.4 Scaffold | Remove v1's code from `main`. Add Vite, strict TypeScript, ESLint with the module-boundary rule, Vitest, `vite.config.ts`, a placeholder `App`, and a CI workflow (typecheck, lint, unit tests, build) | CI passes; `npm run build` produces `dist/` |
 | 1.1 Types | `src/types/`: state, commands, protocol, storage | `tsc --noEmit` passes |
 | 1.2 View helpers | `engine/view.ts` (zones, visibility) and its tests | Tests pass |
@@ -126,10 +125,10 @@ The rewrite is about 4,700 lines of code, 400 of CSS and 630 of tests. Writing i
 | 3.5 Combat and attachments | Attach mode, combat mode, the full view row, the matchup highlight | The attachments and combat specs pass |
 | 3.6 Two players | Same-device blind and unblind, pairing screens, networked play, game links | The two-device and game-link specs pass, and with them the whole browser suite |
 | 4.1 Offline | `src/sw.ts`, the PWA plugin, the update prompt, the one-time offline message | The offline and update specs pass against `vite preview` |
-| 4.2 Go live | Switch the deploy workflow from the `v1` tag to building `main`, with every check as a gate | The site shows a v2 build number |
-| 5.1 Devices | Update the installed app on the phone and the iPad; run the device checklist | Decks and saved games survived; the checklist is ticked |
+| 4.2 Go live | Add the deploy job to the workflow (build `main`, every check as a gate); you switch Settings → Pages → Source to **GitHub Actions** | The site shows a v2 build number |
+| 5.1 Devices | On the phone and the iPad: remove the v1 app and the site's data, install v2, re-import decks; run the device checklist | v2's build number shows; the checklist is ticked |
 
-**How each step is reported.** After each step I send a short note: what changed, which checks ran and their results, and anything that behaves differently from v1. Steps 0.3 and 4.2 need you for the Pages setting and the update on each device. If GitHub refuses a workflow file from this session, the way it refused the tag, you add that one file yourself.
+**How each step is reported.** After each step I send a short note: what changed, which checks ran and their results, and anything that behaves differently from v1. Step 4.2 needs you for the Pages setting, and 5.1 for reinstalling on each device. If GitHub refuses a workflow file from this session, the way it refused the tag, you add that one file yourself.
 
 **Decided (Nov 2):** updates stay on the home screen only, with no game-menu item; v2 adds the one-time "Ready to play offline" message, now in the PRD.
 
