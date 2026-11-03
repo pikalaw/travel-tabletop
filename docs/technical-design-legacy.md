@@ -1,6 +1,8 @@
-# MTG Travel Tabletop — Technical Design
+# MTG Travel Tabletop — Technical Design (legacy: v1, plain JavaScript)
 
 Oct 30, 2026 · @Lawrence Tsang
+
+> **Legacy design.** This doc describes v1, the shipped app: plain JavaScript with no bundler. It stays accurate for v1 until the cutover, and is then frozen. The rewrite is specified in the [Technical Design v2 (TypeScript + Vite)](./technical-design-v2.md); new features are designed there, not here.
 
 ## Scope
 
@@ -12,7 +14,7 @@ This doc describes how the app is built, in enough detail to rebuild it: modules
 
 One pure engine runs only on the host; both devices share the same UI and client code, and the guest differs only in sending commands over a transport instead of calling the host directly.
 
-> *Diagram omitted in this export: components on the guest and host devices.*
+&#91;embedded content: components on the guest and host devices\]
 
 Commands flow toward the host, which applies them in order through the engine, saves state, and sends the full state back to the guest.
 
@@ -59,7 +61,7 @@ tools/gen-sw-list.js
 tests/       engine.test.js, net.test.js, link.test.js
 ```
 
-**Manifest.** name "Travel Tabletop", short_name "Tabletop", start_url `./index.html`, scope `./`, display `standalone`, orientation `any`, background and theme colour `#0d1a15`, the three icons (the 512 maskable one with `purpose: maskable`). `index.html` sets `viewport-fit=cover, user-scalable=no` and the Apple web-app meta tags.
+**Manifest.** name "Travel Tabletop", short\_name "Tabletop", start\_url `./index.html`, scope `./`, display `standalone`, orientation `any`, background and theme colour `#0d1a15`, the three icons (the 512 maskable one with `purpose: maskable`). `index.html` sets `viewport-fit=cover, user-scalable=no` and the Apple web-app meta tags.
 
 ## Offline, service worker and updates
 
@@ -138,7 +140,7 @@ interface Command { type: string; actor: Actor; clientSeq?: number; payload: any
 
 | Command | Payload | Effect and preconditions |
 | --- | --- | --- |
-| `startGame` | gameId, mode, startingLife (default 20), deal (default 7), first, players: { p1, p2 } each { name, cards: [{defId, name, deckId}], commanders? } | Fresh state; card ids `c1…` in order; each library shuffled with host randomness; top `deal` to hand; commanders to the command zone; turn 1; activePlayer = `first` or p1 |
+| `startGame` | gameId, mode, startingLife (default 20), deal (default 7), first, players: { p1, p2 } each { name, cards: \[{defId, name, deckId}\], commanders? } | Fresh state; card ids `c1…` in order; each library shuffled with host randomness; top `deal` to hand; commanders to the command zone; turn 1; activePlayer = `first` or p1 |
 | `move` | cardId, from, to, toIndex? | See Moving cards |
 | `tap` | cardId, from, value? | Sets `tapped` (toggles without value) |
 | `untapAll` | player | Untaps that player's battlefield and lands |
@@ -150,16 +152,16 @@ interface Command { type: string; actor: Actor; clientSeq?: number; payload: any
 | `removeToken` | cardId, from | Only tokens |
 | `draw` / `mill` | player, n | Moves up to n from the library top: draw appends to hand, mill puts each on top of the graveyard; clears faceDown, revealed, tapped |
 | `shuffle` | zone | Fisher–Yates over the zone with host randomness |
-| `setLibraryTopFaceUp` | player, value | |
+| `setLibraryTopFaceUp` | player, value |  |
 | `setPlayerCounter` | player, key, value | Rounded to an integer |
 | `addPlayerCounter` / `removePlayerCounter` | player, key, value? | Names unique (case-insensitive); `life` cannot be removed |
 | `passTurn` | to? | activePlayer = to (default the other); turn + 1; untaps the new active player's battlefield and lands; clears combat marks |
 | `concede` | player | result = { winner: other, reason: 'concede' } |
 | `endGame` | winner? | result = { winner, reason: 'ended' } |
-| `attach` / `detach` | see Attachments | |
-| `attack` / `block` / `endCombat` | see Combat marks | |
+| `attach` / `detach` | see Attachments |  |
+| `attack` / `block` / `endCombat` | see Combat marks |  |
 
-`undo` is handled by the host, not the engine (see Host). Randomness: `randomNeeded(state, cmd)` returns how many numbers the host must supply (all deck cards for `startGame`, the zone size for `shuffle`, else 0); the engine reads them from `cmd.random`, clamped to [0, 1).
+`undo` is handled by the host, not the engine (see Host). Randomness: `randomNeeded(state, cmd)` returns how many numbers the host must supply (all deck cards for `startGame`, the zone size for `shuffle`, else 0); the engine reads them from `cmd.random`, clamped to \[0, 1).
 
 **Moving cards** (`move`). The host card's attachments travel with it when it goes to a battlefield zone (see Attachments); an attached card that moves is detached. The moved cards are removed from `from`. A token whose destination is not a battlefield zone or the stack is deleted. Otherwise each card passes through `changeZone(card, from, to)`:
 
@@ -250,8 +252,8 @@ One IndexedDB database `mtg-tabletop`, version 1.
 | `defs` | `id` | CardDef { id, name, front, back, scryfallId?, sizes? } |
 | `decks` | `id` | Deck { id, name, kind: 'deck' or 'token', cards (defIds, with repeats), commanders?, builtin?, starterId?, forDecks?, signature?, createdAt } |
 | `games` | `id` | { id, state, mode, role, setup, updatedAt, over } |
-| `snapshots` | [gameId, key] | { gameId, key, state }; index `gameId` |
-| `logs` | [gameId, seq] | LogEntry; index `gameId` |
+| `snapshots` | \[gameId, key\] | { gameId, key, state }; index `gameId` |
+| `logs` | \[gameId, seq\] | LogEntry; index `gameId` |
 | `meta` | `key` | `fixtures` (sample-deck version), `lastSetup` { names, pick, life }, `guestGame` |
 
 - **Card ids.** `defId = sha256("name|frontHash|backHash")`, first 20 hex characters (back hash empty when there is none). Identical imports produce identical ids on every device, which is what the handshake compares.
@@ -265,7 +267,7 @@ One IndexedDB database `mtg-tabletop`, version 1.
 `importDeck({ name, kind, text, extra, tokens })` in `scryfall.js`. It needs internet; nothing else does.
 
 1. **Parse** (`parseDecklist`). Skip blank lines and lines starting with `//` or `#`, and "Name …" lines. Section headers (an optional trailing colon): Commander(s) → commander; Deck / Main / Mainboard / Main deck → main; Sideboard, Maybeboard, Considering, Companion, Tokens, About → that section. A card line matches `^(\d+)\s*x?\s+(name)(\s+\((SET)\)(\s+number)?)?(\s+\*foil-tag\*)*$`, with a SET of 2–6 letters or digits. A line that doesn't match but starts with a letter is one copy of that name; anything else is an error. Main and commander lines are imported (and tokens-section lines for a token deck); the rest are ignored.
-2. **Resolve.** Unique entries (keyed by set and number, or lower-cased name) go to `POST https://api.scryfall.com/cards/collection` in batches of 75. The identifier is { set, collector_number }, { name, set }, or { name }. A result matches an entry by set and number, or by its name or a face's name (case-insensitive), or by a name starting with "\<name> //". Unmatched entries try `GET /cards/named?fuzzy=<name>`. Requests are 120 ms apart; a 429 retries after 1, 2 and 3 s; a 404 is "not found".
+2. **Resolve.** Unique entries (keyed by set and number, or lower-cased name) go to `POST https://api.scryfall.com/cards/collection` in batches of 75. The identifier is { set, collector\_number }, { name, set }, or { name }. A result matches an entry by set and number, or by its name or a face's name (case-insensitive), or by a name starting with "\<name> //". Unmatched entries try `GET /cards/named?fuzzy=<name>`. Requests are 120 ms apart; a 429 retries after 1, 2 and 3 s; a 404 is "not found".
 3. **Download.** Four at a time. A card already stored with all three sizes (by Scryfall id) is reused. Image URLs come from `image_uris`, or from `card_faces[0]` and `[1]` for double-faced cards; for each face the small (146×204), normal (488×680) and large (672×936) images are fetched, stored, and the CardDef written.
 4. **Write the deck.** `deck-<base36 time>-<5 random base36>`, with `cards` and `commanders` expanded by count, `signature = listSignature(text)`, and `extra` merged (for example `starterId`).
 5. **Tokens** (kind 'deck' only). Every `all_parts` entry with `component: 'token'` (except the card itself) is fetched through the collection endpoint by id and stored the same way. They go into token deck `tokens.deckId`, or `<deckId>-tokens` named "\<deck> · tokens". The cards are merged without duplicates, and the new deck's id is added to `forDecks`.
