@@ -240,7 +240,15 @@ export function Game({ session, onExit, onRematch, pairing }) {
     send('passTurn', { to: other(state.activePlayer) });
   }
   const hasCombatMarks = Object.values(state.cards).some((c) => c.attacking || c.blocking);
-  function endCombat() { send('endCombat', {}); setBlocker(null); setCombat(false); }
+  function endCombat() {
+    // One tap clears every mark, so ask first (Undo would bring them back, but it is easy to miss).
+    const cards = Object.values(state.cards);
+    const nA = cards.filter((c) => c.attacking).length;
+    const nB = cards.reduce((n, c) => n + (c.blocking || []).length, 0);
+    const what = [nA ? `${nA} attacker${nA > 1 ? 's' : ''}` : '', nB ? `${nB} block${nB > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ');
+    if (what && !window.confirm(`End combat and clear ${what}?`)) return;
+    send('endCombat', {}); setBlocker(null); setCombat(false);
+  }
 
   function pileTap(zone) {
     if (zoneKind(zone) === 'library') { setLib(zone); setLibN(1); return; }
