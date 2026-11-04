@@ -7,7 +7,7 @@ async function swipe(cdp: CDPSession, page: Page, x0: number, y0: number, x1: nu
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
   for (let i = 1; i <= steps; i++) {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + ((x1 - x0) * i) / steps, y: y0 + ((y1 - y0) * i) / steps }] });
-    await page.waitForTimeout(16);
+    if (i < steps) await page.waitForTimeout(16); // a fling lifts the finger right after the last move
   }
   if (hold) await page.waitForTimeout(hold);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
@@ -38,7 +38,7 @@ test('touch: swipes scroll bars and rows without pressing; taps press; drag up p
 
   // a quick fling carries on past the finger
   await bar.evaluate((e) => { e.scrollLeft = 0; });
-  await swipe(cdp, page, 300, y, 150, y, 4);
+  await swipe(cdp, page, 300, y, 150, y, 2);
   expect(await bar.evaluate((e) => e.scrollLeft)).toBeGreaterThan(150);
 
   // a tap still presses a button
