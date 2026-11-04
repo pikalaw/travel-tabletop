@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { copyBox } from './Dialogs';
 import { qrSvg, startScanner } from '../transport/qr';
-import { createOffer, acceptAnswer, answerOffer, describeReachability, type Reachability } from '../transport/webrtc';
+import { createOffer, acceptAnswer, answerOffer, describeReachability, describeProgress, watchConnection, type ConnectionProgress, type Reachability } from '../transport/webrtc';
 import type { Transport } from '../transport/transport';
 export function ShowCode({ code, caption }: { code: string; caption: string }) {
   const [copied, setCopied] = useState(false);
@@ -109,6 +109,13 @@ function ReachNote({ reach }: { reach: Reachability }) {
   );
 }
 
+/** Live progress while the two devices try to reach each other (for diagnosing pairing). */
+function useProgress(pc: RTCPeerConnection | null): ConnectionProgress | null {
+  const [p, setP] = useState<ConnectionProgress | null>(null);
+  useEffect(() => (pc ? watchConnection(pc, setP) : undefined), [pc]);
+  return p;
+}
+
 // ---------- Pairing flows (shared by first pairing and re-pairing) ----------
 
 const errText = (e: unknown) => String((e as Error | null)?.message || e);
@@ -119,6 +126,8 @@ export function HostPairFlow({ onTransport }: { onTransport: (t: Transport) => v
   const [code, setCode] = useState('');
   const [err, setErr] = useState('');
   const offer = useRef<Awaited<ReturnType<typeof createOffer>> | null>(null);
+  const [watching, setWatching] = useState<RTCPeerConnection | null>(null);
+  const progress = useProgress(watching);
   const begin = async (camera: boolean) => {
     setErr('');
     setStep('working');
@@ -130,8 +139,10 @@ export function HostPairFlow({ onTransport }: { onTransport: (t: Transport) => v
   };
   const onAnswer = async (ans: string) => {
     setStep('connecting'); setErr('');
+    setWatching(offer.current!.pc);
     try { await onTransport(await acceptAnswer(offer.current!.pc, offer.current!.dc, ans)); }
     catch (e) { setErr(errText(e)); setStep('scan'); }
+    finally { setWatching(null); }
   };
   return (
     <div class="pair">
@@ -160,7 +171,7 @@ export function HostPairFlow({ onTransport }: { onTransport: (t: Transport) => v
           <button class="btn ghost" onClick={() => setStep('offer')}>Back to my code</button>
         </div>
       ) : null}
-      {step === 'connecting' ? <p>Connecting…</p> : null}
+      {step === 'connecting' ? <p>Connecting…{progress ? <span class="muted small progress"> ({describeProgress(progress)})</span> : null}</p> : null}
     </div>
   );
 }
@@ -170,6 +181,8 @@ export function GuestPairFlow({ onTransport }: { onTransport: (t: Transport) => 
   const [step, setStep] = useState<'scan' | 'working' | 'answer'>('scan');
   const [code, setCode] = useState('');
   const [reach, setReach] = useState<Reachability | null>(null);
+  const [pc, setPc] = useState<RTCPeerConnection | null>(null);
+  const progress = useProgress(pc);
   const [err, setErr] = useState('');
   const onOffer = async (offerCode: string) => {
     setErr(''); setStep('working');
@@ -177,9 +190,11 @@ export function GuestPairFlow({ onTransport }: { onTransport: (t: Transport) => 
       const a = await answerOffer(offerCode);
       setCode(a.code);
       setReach(a.reach);
+      setPc(a.pc);
       setStep('answer');
       await onTransport(await a.transport);
     } catch (e) { setErr(errText(e)); setStep('scan'); }
+    finally { setPc(null); }
   };
   return (
     <div class="pair">
@@ -196,6 +211,7 @@ export function GuestPairFlow({ onTransport }: { onTransport: (t: Transport) => 
           <h3>2. Show this code to the host device</h3>
           <ShowCode code={code} caption="The host scans it (or pastes the text). This screen continues once connected." />
           {reach ? <ReachNote reach={reach} /> : null}
+          {progress ? <p class="muted small progress">Waiting for the host: {describeProgress(progress)}</p> : null}
         </div>
       ) : null}
     </div>

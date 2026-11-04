@@ -121,15 +121,32 @@ export async function answerOffer(offerCode: string): Promise<{ pc: RTCPeerConne
     await pc.setLocalDescription(await pc.createAnswer());
     await gathered(pc);
     const mine = pc.localDescription!.sdp;
-    const transport = dcP.then((dc) => openTransport(pc, dc, reachability(sdp)));
+    // Watch from now, not from when the channel arrives: a failure must show here too.
+    const transport = openTransport(pc, dcP, reachability(sdp), null);
     return { pc, code: encodeSignal('answer', mine), reach: reachability(mine), transport };
   } finally { stopCamera(cam); }
 }
 
-function openTransport(pc: RTCPeerConnection, dc: RTCDataChannel, other: Reachability): Promise<ChannelTransport> {
+/** Live connection progress while pairing, for the pairing screens. */
+export interface ConnectionProgress { state: string; checks: Checks | null }
+
+/** Call `fn` every second with the connection's state and checks until the returned stop(). */
+export function watchConnection(pc: RTCPeerConnection, fn: (p: ConnectionProgress) => void): () => void {
+  let seen: Checks | null = null;
+  const tick = () => void readChecks(pc).then((c) => { seen = most(seen, c); fn({ state: pc.iceConnectionState, checks: seen }); });
+  tick();
+  const t = setInterval(tick, 1000);
+  return () => clearInterval(t);
+}
+
+export const describeProgress = (p: ConnectionProgress) => `connection ${p.state}; ${describeChecks(p.checks)}`;
+
+/**
+ * Resolve with a Transport when the data channel opens, or fail with a report. `timeoutMs` null
+ * waits as long as it takes (the guest waits for the host to scan its code).
+ */
+function openTransport(pc: RTCPeerConnection, channel: RTCDataChannel | Promise<RTCDataChannel>, other: Reachability, timeoutMs: number | null = 20000): Promise<ChannelTransport> {
   return new Promise((resolve, reject) => {
-    const t = new ChannelTransport(pc, dc);
-    if (dc.readyState === 'open') { resolve(t); return; }
     const states = [pc.iceConnectionState as string];
     pc.addEventListener('iceconnectionstatechange', () => states.push(pc.iceConnectionState));
     let checks: Checks | null = null;
@@ -145,8 +162,14 @@ function openTransport(pc: RTCPeerConnection, dc: RTCDataChannel, other: Reachab
       checks = most(checks, await readChecks(pc));
       reject(new Error(`${message} (Details: this device offered ${describeReachability(mine)}; the other device offered ${describeReachability(other)}; states ${states.join(' → ')}; ${describeChecks(checks)}.)`));
     };
-    const timer = setTimeout(() => void fail('Could not connect. Make sure both devices are on the same Wi-Fi or hotspot.'), 20000);
-    dc.addEventListener('open', () => { if (done) return; done = true; clearTimeout(timer); clearInterval(poll); t.markOpen(); resolve(t); }, { once: true });
+    const timer = timeoutMs === null ? undefined : setTimeout(() => void fail('Could not connect. Make sure both devices are on the same Wi-Fi or hotspot.'), timeoutMs);
+    void Promise.resolve(channel).then((dc) => {
+      if (done) return;
+      const t = new ChannelTransport(pc, dc);
+      const opened = () => { if (done) return; done = true; clearTimeout(timer); clearInterval(poll); t.markOpen(); resolve(t); };
+      if (dc.readyState === 'open') opened();
+      else dc.addEventListener('open', opened, { once: true });
+    });
     pc.addEventListener('connectionstatechange', () => {
       if (pc.connectionState === 'failed') void fail('Connection failed. Both devices must be on the same local network.');
     });
