@@ -149,7 +149,7 @@ export function HostPairFlow({ onTransport }: { onTransport: (t: Transport) => v
       {err ? <p class="error">{err}</p> : null}
       {step === 'start' ? (
         <div class="pair-step">
-          <p>Both devices must be on the same Wi-Fi or phone hotspot. No internet is needed.</p>
+          <p>Both devices must be on the same Wi-Fi. No internet is needed. A hotspot works only from a third device that isn't playing.</p>
           <p class="muted small">The app asks for the camera first: you need it to scan the guest's code, and it also lets the two devices find each other directly on the local network.</p>
           <button class="btn primary" onClick={() => void begin(true)}>Allow camera and create code</button>
           <button class="btn ghost" onClick={() => void begin(false)}>Create code without camera (text pairing)</button>
@@ -202,7 +202,7 @@ export function GuestPairFlow({ onTransport }: { onTransport: (t: Transport) => 
       {step === 'scan' ? (
         <div class="pair-step">
           <h3>1. Scan the code on the host device</h3>
-          <ReadCode onCode={onOffer} prompt="Both devices must be on the same Wi-Fi or phone hotspot." />
+          <ReadCode onCode={onOffer} prompt="Both devices must be on the same Wi-Fi (a hotspot only from a third device)." />
         </div>
       ) : null}
       {step === 'working' ? <p>Reading code…</p> : null}

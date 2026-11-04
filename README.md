@@ -2,7 +2,7 @@
 
 A rules-free Magic: The Gathering playmat that runs as an offline web app (PWA) on phones,
 tablets and desktop browsers. Two players share one device, or play on two devices connected
-over a local Wi-Fi network or phone hotspot. No internet is needed during play.
+over the same local Wi-Fi network. No internet is needed during play.
 
 Strict TypeScript, built with Vite; Preact for the UI.
 
@@ -34,8 +34,10 @@ From then on it runs offline. Requirements: a current Safari on iOS / iPadOS, or
      “Unblind to …” to see your hand, and the board turns to that player's side.
    - **Two devices:** one device picks Host, the other picks Join. The host shows a QR code and
      the guest scans it. The guest then shows a code and the host scans that. Pasting the text
-     codes works too. Both devices must be on the same network; a phone hotspot is fine, and
-     cellular data can be off.
+     codes works too. Both devices must be on the same Wi-Fi, and the network must let its devices
+     reach each other. A phone hotspot works only from a third device: the phone sharing
+     the hotspot can't also play, because Android Chrome leaves the tethering network out of
+     WebRTC's connection candidates.
 3. **Controls.**
    - **Drag** any card anywhere. On a library, drop on the top half for the top, the bottom half
      for the bottom.

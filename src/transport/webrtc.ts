@@ -21,7 +21,7 @@ function gathered(pc: RTCPeerConnection, timeoutMs = 4000): Promise<void> {
 /**
  * Browsers hide a device's local IP addresses from WebRTC (they offer a random "….local" name
  * instead) unless the page may use the camera; Safari is stricter and shows them only while the
- * camera is actually running. Two devices on a phone hotspot often can't resolve each other's
+ * camera is actually running. Two devices on a shared network often can't resolve each other's
  * ".local" names, so the pairing code is built while a camera stream is open.
  */
 async function openCamera(ask: boolean): Promise<MediaStream | null> {
@@ -162,7 +162,7 @@ function openTransport(pc: RTCPeerConnection, channel: RTCDataChannel | Promise<
       checks = most(checks, await readChecks(pc));
       reject(new Error(`${message} (Details: this device offered ${describeReachability(mine)}; the other device offered ${describeReachability(other)}; states ${states.join(' → ')}; ${describeChecks(checks)}.)`));
     };
-    const timer = timeoutMs === null ? undefined : setTimeout(() => void fail('Could not connect. Make sure both devices are on the same Wi-Fi or hotspot.'), timeoutMs);
+    const timer = timeoutMs === null ? undefined : setTimeout(() => void fail('Could not connect. Make sure both devices are on the same Wi-Fi. A hotspot must come from a third device, not one of the two playing, and the network must let its devices reach each other.'), timeoutMs);
     void Promise.resolve(channel).then((dc) => {
       if (done) return;
       const t = new ChannelTransport(pc, dc);

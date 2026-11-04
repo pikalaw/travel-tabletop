@@ -23,7 +23,7 @@ Phase 1 is a two-player, offline, rules-free Magic: The Gathering tabletop, play
 
 ## Platform and connection
 
-The app installs from a web link onto phones and tablets and works fully offline after the first visit. Two devices connect over a shared local network, such as one phone's hotspot, with no internet.
+The app installs from a web link onto phones and tablets and works fully offline after the first visit. Two devices connect over a shared local network, with no internet. The device that shares a hotspot can't be one of the two players (see the v2 design's risks), so a hotspot must come from a third device or a travel router.
 
 - **Devices.** iPhone, iPad, and Android phones and tablets, in any mix. It also runs in desktop browsers.
 - **Modes.** One device shared by both players, or two devices (one hosts, one joins).

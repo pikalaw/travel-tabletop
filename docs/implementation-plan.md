@@ -20,12 +20,12 @@ M2 runs alongside M1 because neither depends on the other; every later milestone
 
 | Milestone | Status | Exit test |
 | --- | --- | --- |
-| M1 Networking spike | Open: desktop browsers connect; the phone hotspot with an iPad is untested | Messages flow both ways, in both role assignments, with no internet |
+| M1 Networking spike | Open: desktop browsers connect; on real devices, a playing phone's own hotspot can't work, and Pixel↔iPad on home Wi-Fi failed (cause unknown) | Messages flow both ways, in both role assignments, with no internet |
 | M2 Layout mock | Done | A card in your own battlefield can be recognised and tapped on a phone in both orientations |
 | M3 Engine and single-device board | Done | Engine unit and property tests pass; a scripted command sequence on the board gives the expected state |
 | M4 Same-device mode | Done | Two people play a full game on one device, and the log replays to the same final state |
 | M5 Decks | Done, except a live Scryfall run | Import real decks, go offline, play a same-device game with them |
-| M6 Networked play | Done on desktop browsers | A full networked game on the Android phone and the iPad over a hotspot, including a forced disconnect and resume |
+| M6 Networked play | Done on desktop browsers | A full networked game on the Android phone and the iPad on a shared Wi-Fi network, including a forced disconnect and resume |
 | M7 Library tools and polish | Done | The PRD walkthrough passes on devices |
 
 ## Milestone details
@@ -38,7 +38,8 @@ Each milestone ends with an exit test; nothing in a later milestone starts until
 - [x] Scan or paste the offer and answer; messages echo both ways over a data channel
 - [x] Offer size after deflate and SDP slimming: about 500 characters on desktop Chromium
 - [ ] How reliably the QR code scans from a phone screen
-- [ ] Run with the Android phone's hotspot and cellular data off, in both role assignments (Android host, iPad host)
+- [x] Android phone's own hotspot, cellular data off: does not work. The phone sharing the hotspot can't play, because Android Chrome leaves tethering interfaces out of WebRTC's candidates (Pixel test, Nov 2026)
+- [ ] Run on home Wi-Fi in both role assignments (Android host, iPad host). First try, Pixel host and iPad guest: 241 checks sent from the Pixel, none answered or received. Next: read the iPad's progress line, then try another network or a third-device hotspot to rule out client isolation
 
 If the last item fails, switch the transport to a Capacitor-wrapped native socket behind the same transport interface, and repeat.
 
@@ -75,7 +76,7 @@ If the last item fails, switch the transport to a Capacitor-wrapped native socke
 - [x] Guest client: commands, rejected commands, read-only while disconnected, reconnection
 - [x] Host: stale-command rejection, full-state broadcast, a guest reconnecting mid-game
 - [x] Wake lock
-- [ ] The same on real devices over a hotspot (see M1)
+- [ ] The same on real devices over a shared Wi-Fi network (see M1)
 
 **M7 — Library tools and polish**
 
@@ -164,7 +165,7 @@ The unit suites are 43 tests in `tests/engine.test.js`, `tests/net.test.js` and 
 
 **Device checklist** (Android phone + iPad)
 
-- [ ] QR pairing over the phone's hotspot with cellular data off, both role assignments
+- [ ] QR pairing on a shared Wi-Fi network (or a third device's hotspot), both role assignments
 - [ ] Gestures: open a collapsed slot, swipe, tap and untap, long-press, drag a card, drag a counter
 - [ ] All four layouts (phone and tablet, portrait and landscape); rotating mid-game
 - [ ] Screen stays on for 10 minutes idle in a game
@@ -202,7 +203,7 @@ Develop in a desktop browser; move to devices only for networking, touch feel an
 | Same-device mode | Yes | — |
 | Host and guest sync, undo, stale commands | Yes (two windows, text pairing) | — |
 | QR pairing by camera | — | Yes |
-| iPad Safari over a phone hotspot | — | Yes (M1) |
+| iPad Safari with an Android phone on shared Wi-Fi | — | Yes (M1) |
 | Long-press timing, swipe vs. drag, tap targets | Emulated only | Yes |
 | Wake lock, page suspension, PWA install on iOS | — | Yes |
 
