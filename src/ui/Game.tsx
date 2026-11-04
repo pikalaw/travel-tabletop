@@ -515,6 +515,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
         {card.attachedTo
           ? <button class="btn" onClick={() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button>
           : k !== 'library' ? <button class="btn" onClick={() => { dispatch({ type: 'mode', mode: { kind: 'attach', cardId: card.id, zone: fullZone } }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Attach</button> : null}
+        {card.attachedTo ? <button class="btn" onClick={() => send('setLead', { cardId: card.id, from: fullZone })}>Make lead</button> : null}
         {groupSize > 0 ? <button class="btn" onClick={detachAll}>Detach all</button> : null}
         <CounterChips label={label} attack={showAttack} />
         <span class="spacer" />

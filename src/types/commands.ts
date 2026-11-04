@@ -53,6 +53,8 @@ export interface StatePayloads {
   detach: { cardId: string; from: ZoneId };
   /** Detach every card attached to `cardId` (a host), in one step. Added in protocol 2. */
   detachAll: { cardId: string; from: ZoneId };
+  /** Make an attached card the lead (host) of its group. Added in protocol 3. */
+  setLead: { cardId: string; from: ZoneId };
   attack: { cardId: string; from: ZoneId; value?: boolean };
   block: { cardId: string; from: ZoneId; attackerId: string; attackerZone: ZoneId; value?: boolean };
   endCombat: Record<string, never>;
@@ -66,7 +68,7 @@ export const STATE_COMMAND_TYPES = [
   'addCounter', 'removeCounter', 'createToken', 'removeToken', 'draw', 'mill',
   'shuffle', 'setLibraryTopFaceUp', 'setPlayerCounter', 'addPlayerCounter',
   'removePlayerCounter', 'passTurn', 'concede', 'endGame', 'attach', 'detach',
-  'attack', 'block', 'endCombat', 'detachAll',
+  'attack', 'block', 'endCombat', 'detachAll', 'setLead',
 ] as const satisfies readonly StateCommandType[];
 
 interface Envelope {

@@ -132,6 +132,60 @@ describe('attachments', () => {
     expect(checkInvariants(h.state)).toBeNull();
   });
 
+  it('a new attachment goes farthest from the host, at the left end of its group', () => {
+    const { h, a, b, c, d } = setup();
+    att(h, d, 'p1.hand', b, 'p1.battlefield');
+    expect(att(h, c, 'p1.battlefield', b, 'p1.battlefield').ok).toBe(true);
+    expect(h.state.zones['p1.battlefield']).toEqual([a, c, d, b]);
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('make lead: swaps with the old lead, the group attaches to it, combat marks move, tapped and counters stay', () => {
+    const { h, a, b, c, d } = setup();
+    att(h, d, 'p1.hand', b, 'p1.battlefield');
+    att(h, c, 'p1.battlefield', b, 'p1.battlefield'); // [a, c, d, b]
+    const x = h.state.zones['p2.hand'][0];
+    h.dispatch({ type: 'move', actor: 'p2', payload: { cardId: x, from: 'p2.hand', to: 'p2.battlefield' } });
+    h.dispatch({ type: 'tap', actor: 'p1', payload: { cardId: b, from: 'p1.battlefield' } });
+    h.dispatch({ type: 'addCounter', actor: 'p1', payload: { cardId: b, from: 'p1.battlefield', kind: 'plus' } });
+    expect(h.dispatch({ type: 'attack', actor: 'p1', payload: { cardId: b, from: 'p1.battlefield' } }).ok).toBe(true);
+    expect(h.dispatch({ type: 'block', actor: 'p2', payload: { cardId: x, from: 'p2.battlefield', attackerId: b, attackerZone: 'p1.battlefield' } }).ok).toBe(true);
+    const before = h.state;
+
+    expect(h.dispatch({ type: 'setLead', actor: 'p1', payload: { cardId: c, from: 'p1.battlefield' } }).ok).toBe(true);
+    const s = h.state;
+    expect(s.zones['p1.battlefield']).toEqual([a, b, d, c]);
+    expect(s.cards[c].attachedTo).toBeUndefined();
+    expect([b, d].map((id) => s.cards[id].attachedTo)).toEqual([c, c]);
+    expect(s.cards[c].attacking).toBe(before.cards[b].attacking);
+    expect(s.cards[b].attacking).toBeUndefined();
+    expect(s.cards[x].blocking).toEqual([c]);
+    expect([s.cards[b].tapped, s.cards[c].tapped]).toEqual([true, false]);
+    expect([s.cards[b].counters.plus, s.cards[c].counters.plus]).toEqual([1, 0]);
+    expect(checkInvariants(s)).toBeNull();
+
+    // the lead itself has nothing to promote; one undo puts everything back
+    expect(h.dispatch({ type: 'setLead', actor: 'p1', payload: { cardId: c, from: 'p1.battlefield' } })).toMatchObject({ ok: false, error: 'invalid' });
+    expect(h.dispatch({ type: 'undo', actor: 'p1', payload: {} }).ok).toBe(true);
+    expect(h.state.zones['p1.battlefield']).toEqual(before.zones['p1.battlefield']);
+    expect(h.state.cards[b].attacking).toBe(before.cards[b].attacking);
+    expect(h.state.cards[x].blocking).toEqual([b]);
+  });
+
+  it('make lead moves a blocking group\'s blocks to the new lead', () => {
+    const { h, b, d } = setup();
+    att(h, d, 'p1.hand', b, 'p1.battlefield');
+    const x = h.state.zones['p2.hand'][0];
+    h.dispatch({ type: 'move', actor: 'p2', payload: { cardId: x, from: 'p2.hand', to: 'p2.battlefield' } });
+    h.dispatch({ type: 'passTurn', actor: 'p1', payload: { to: 'p2' } });
+    h.dispatch({ type: 'attack', actor: 'p2', payload: { cardId: x, from: 'p2.battlefield' } });
+    expect(h.dispatch({ type: 'block', actor: 'p1', payload: { cardId: b, from: 'p1.battlefield', attackerId: x, attackerZone: 'p2.battlefield' } }).ok).toBe(true);
+    expect(h.dispatch({ type: 'setLead', actor: 'p1', payload: { cardId: d, from: 'p1.battlefield' } }).ok).toBe(true);
+    expect(h.state.cards[d].blocking).toEqual([x]);
+    expect(h.state.cards[b].blocking).toBeUndefined();
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
   it('moves into the host zone, even the opponent battlefield', () => {
     const h = started();
     const mine = h.state.zones['p1.hand'][0], theirs = h.state.zones['p2.hand'][0];
@@ -209,15 +263,15 @@ describe('attachments', () => {
     const { h, a, b, c, d } = setup();
     att(h, d, 'p1.hand', b, 'p1.battlefield');
     att(h, a, 'p1.battlefield', b, 'p1.battlefield');
-    expect(h.state.zones['p1.battlefield']).toEqual([d, a, b, c]);
+    expect(h.state.zones['p1.battlefield']).toEqual([a, d, b, c]);
     const before = h.state;
     expect(h.dispatch({ type: 'detachAll', actor: 'p1', payload: { cardId: b, from: 'p1.battlefield' } }).ok).toBe(true);
-    expect(h.state.zones['p1.battlefield']).toEqual([b, a, d, c]);
+    expect(h.state.zones['p1.battlefield']).toEqual([b, d, a, c]);
     expect([a, d].map((id) => h.state.cards[id].attachedTo)).toEqual([undefined, undefined]);
     expect(checkInvariants(h.state)).toBeNull();
-    // the same as detaching each in turn
+    // the same as detaching each in turn, nearest the host last
     let s = before;
-    for (const id of [d, a]) s = (apply(s, { type: 'detach', actor: 'p1', payload: { cardId: id, from: 'p1.battlefield' } }) as { state: GameState }).state;
+    for (const id of [a, d]) s = (apply(s, { type: 'detach', actor: 'p1', payload: { cardId: id, from: 'p1.battlefield' } }) as { state: GameState }).state;
     expect(s.zones['p1.battlefield']).toEqual(h.state.zones['p1.battlefield']);
     expect(h.dispatch({ type: 'detachAll', actor: 'p1', payload: { cardId: b, from: 'p1.battlefield' } })).toMatchObject({ ok: false, error: 'invalid' });
     expect(h.dispatch({ type: 'detachAll', actor: 'p1', payload: { cardId: b, from: 'p1.hand' } })).toMatchObject({ ok: false, error: 'stale' });

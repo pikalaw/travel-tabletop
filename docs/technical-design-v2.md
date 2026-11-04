@@ -75,7 +75,7 @@ e2e/                       Playwright scenarios (see Testing)
 
 - `base: '/travel-tabletop/'`, the GitHub Pages project path; every asset URL and the service worker scope derive from it.
 - `plugins: [preact(), VitePWA({ … })]`, configured as in the next section.
-- `define`: `__APP_VERSION__` from `package.json` and `__BUILD_ID__` from the first 7 characters of `GITHUB_SHA` (or `dev` locally). `version.ts` exports them as `APP_VERSION` and `BUILD_ID`; `PROTOCOL_VERSION` is a literal, bumped when host and guest messages change (2: `detachAll`).
+- `define`: `__APP_VERSION__` from `package.json` and `__BUILD_ID__` from the first 7 characters of `GITHUB_SHA` (or `dev` locally). `version.ts` exports them as `APP_VERSION` and `BUILD_ID`; `PROTOCOL_VERSION` is a literal, bumped when host and guest messages change (2: `detachAll`; 3: `setLead`, and new attachments go farthest from the lead).
 - `build.target: 'es2022'`, `build.sourcemap: true` (source maps are served, so errors on a device point at real lines).
 
 **Scripts** (`package.json`): `dev` (Vite dev server), `build` (`tsc --noEmit && vite build`), `preview` (serves `dist/` the way Pages will), `typecheck`, `lint`, `test` (Vitest), `e2e` (Playwright against `preview`).
@@ -210,6 +210,7 @@ interface CommandEnvelope { type: string; actor: Actor; clientSeq?: number; payl
 | `endGame` | winner? | result = { winner, reason: 'ended' } |
 | `attach` / `detach` | see Attachments |  |
 | `detachAll` | cardId (a host), from | Detaches every card attached to it, the same as detaching each in turn, nearest the host last; invalid if nothing is attached. Added in protocol 2 |
+| `setLead` | cardId (an attached card), from | Makes it the group's lead (host): it swaps places with the old lead, the rest of the group attaches to it, and the old lead's `attacking` number, its `blocking` list and every block aimed at it move to the new lead; `tapped` and counters stay on their own cards; invalid on a card that is not attached. Added in protocol 3 |
 | `attack` / `block` / `endCombat` | see Combat marks |  |
 
 `undo` is handled by the host, not the engine (see Host). Randomness: `randomNeeded(state, cmd)` returns how many numbers the host must supply (all deck cards for `startGame`, the zone size for `shuffle`, else 0); the engine reads them from `cmd.random`, clamped to \[0, 1).
@@ -223,7 +224,7 @@ interface CommandEnvelope { type: string; actor: Actor; clientSeq?: number; payl
 
 They are inserted at `toIndex`, clamped to the destination's length; no index means the end. `moved` lists `{ id, from, to, toIndex }` for the log and ticker.
 
-**Attachments.** `attach { cardId, from, toCardId, toZone }`: `toZone` must be a battlefield zone holding `toCardId`. If the target is itself attached, its host becomes the target (one level only). Attaching a card to itself, or to its own attachment, is invalid. A card that has attachments brings them along onto the new host. The group goes through `changeZone` into `toZone` and is inserted just before the host. `detach { cardId, from }` clears the link and moves the card to just after its former host.
+**Attachments.** `attach { cardId, from, toCardId, toZone }`: `toZone` must be a battlefield zone holding `toCardId`. If the target is itself attached, its host becomes the target (one level only). Attaching a card to itself, or to its own attachment, is invalid. A card that has attachments brings them along onto the new host. The group goes through `changeZone` into `toZone` and is inserted at the left end of the host's group, so the newest attachment is the farthest from the host (protocol 2 and earlier inserted it just before the host). An older log replays with a different attachment order; the order is only cosmetic. `detach { cardId, from }` clears the link and moves the card to just after its former host.
 
 After every command `fixAttachments` restores these rules:
 

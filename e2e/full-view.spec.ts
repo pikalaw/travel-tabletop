@@ -112,3 +112,35 @@ test('one device: passing the turn blinds the hand', async ({ page }) => {
   await expect(page.locator('.board')).toContainText('hand (hidden)');
   errs.expectNone();
 });
+
+test('make lead: an attached card becomes the group\'s lead card; new attachments go to the far left', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page);
+  await playFromHand(page, 'p1.battlefield', 2);
+  const [a, b] = await idsIn(page, 'p1.battlefield');
+  // attach b onto a, then a hand card onto a: the newest goes farthest left
+  await longPress(page, page.locator(`[data-card="${b}"]`), 0.7, 0.3);
+  await barButton(page, 'Attach');
+  const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
+  await page.mouse.click(pa.x, pa.y);
+  await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first(), 0.15, 0.5);
+  await barButton(page, 'Attach');
+  const pa2 = await point(page, `.board [data-card="${a}"]`, 0.5, 0.5);
+  await page.mouse.click(pa2.x, pa2.y);
+  await expect.poll(async () => (await idsIn(page, 'p1.battlefield')).length).toBe(3);
+  const [handCard, ...rest] = await idsIn(page, 'p1.battlefield');
+  expect(rest).toEqual([b, a]);
+
+  // the lead card offers no Make lead; an attached card does
+  await longPress(page, page.locator(`[data-card="${a}"]`));
+  await expect(page.locator('.bar').first().getByRole('button', { name: 'Make lead' })).toHaveCount(0);
+  await page.locator('.full-thumbs .thumb').nth(2).click(); // thumbnails: lead, then closest first → b, handCard
+  await barButton(page, 'Make lead');
+  await expect(page.locator('.ticker-text')).toContainText('the lead card of its group');
+  await barButton(page, 'Close');
+  await expect.poll(() => idsIn(page, 'p1.battlefield')).toEqual([a, b, handCard]);
+  const bf = page.locator('[data-drop="p1.battlefield"]');
+  await expect(bf.locator(`[data-card="${a}"]`)).toHaveAttribute('data-attached-to', handCard!);
+  await expect(bf.locator(`[data-card="${b}"]`)).toHaveAttribute('data-attached-to', handCard!);
+  errs.expectNone();
+});

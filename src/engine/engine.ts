@@ -260,7 +260,10 @@ function run(input: GameState, cmd: Command): ApplyResult {
       for (const id of group) src.splice(src.indexOf(id), 1);
       for (const id of group) { changeZone(state.cards[id]!, from, toZone); state.cards[id]!.attachedTo = host.id; }
       const dst = state.zones[toZone];
-      const idx = dst.indexOf(host.id); // just before the host: closest to it
+      // Left of the host's whole group: the newest attachment is the farthest from the host.
+      // (Up to protocol 2 it went just before the host, closest to it.)
+      const first = dst.findIndex((id) => id === host.id || state.cards[id]!.attachedTo === host.id);
+      const idx = first < 0 ? dst.indexOf(host.id) : first;
       dst.splice(idx, 0, ...group);
       moved.push({ id: c.id, from, to: toZone, toIndex: idx + group.length - 1 });
       for (const [i, id] of own.entries()) moved.push({ id, from, to: toZone, toIndex: idx + i });
@@ -332,6 +335,34 @@ function run(input: GameState, cmd: Command): ApplyResult {
         z.splice(z.indexOf(n.id) + 1, 0, id);
       }
       for (const [i, id] of [...own].reverse().entries()) moved.push({ id, from: n.from, to: n.from, toIndex: z.indexOf(n.id) + 1 + i });
+      break;
+    }
+
+    case 'setLead': {
+      // An attached card becomes its group's lead (host): it swaps places with the old lead, the
+      // rest of the group attaches to it, and the group's combat marks move to it. Tapped state
+      // and counters stay on their own cards.
+      const n = need(p.cardId, p.from); if (!located(n)) return n;
+      const c = n.card;
+      if (!c.attachedTo) return fail('invalid', 'that card is already the lead of its group');
+      const old = state.cards[c.attachedTo]!;
+      const z = state.zones[n.from];
+      const members = attachmentsOf(state, n.from, old.id);
+      const ci = z.indexOf(c.id), oi = z.indexOf(old.id);
+      z[ci] = old.id; z[oi] = c.id;
+      delete c.attachedTo;
+      for (const id of [old.id, ...members]) if (id !== c.id) state.cards[id]!.attachedTo = c.id;
+      if (old.attacking) {
+        c.attacking = old.attacking;
+        delete old.attacking;
+        for (const x of Object.values(state.cards)) {
+          if (x.blocking?.includes(old.id)) x.blocking = [...new Set(x.blocking.map((a) => (a === old.id ? c.id : a)))];
+        }
+      }
+      if (old.blocking?.length) {
+        c.blocking = [...new Set([...(c.blocking || []), ...old.blocking])];
+        delete old.blocking;
+      }
       break;
     }
 
