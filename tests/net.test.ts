@@ -166,6 +166,6 @@ describe('reachability', () => {
       'a=candidate:3 1 udp 2122260223 6b1f2a3c-0d4e-4f5a-9b8c-7d6e5f4a3b2c.local 54323 typ host generation 0',
       'a=candidate:4 1 udp 1686052607 203.0.113.9 54324 typ srflx raddr 0.0.0.0 rport 0',
     ].join('\r\n');
-    expect(reachability(sdp)).toEqual({ direct: 2, hidden: 1 });
+    expect(reachability(sdp)).toEqual({ direct: 2, hidden: 1, addresses: ['192.168.1.20 udp', 'fe80::1 udp'] });
   });
 });

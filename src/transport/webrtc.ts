@@ -43,20 +43,50 @@ export interface Reachability {
   direct: number;
   /** Hidden ".local" names, which only work where the network passes mDNS. */
   hidden: number;
+  /** The direct addresses themselves (local network addresses, for diagnosing). */
+  addresses: string[];
 }
 
 export function reachability(sdp: string): Reachability {
   let direct = 0, hidden = 0;
+  const addresses: string[] = [];
   for (const line of sdp.split(/\r?\n/)) {
-    const m = /^a=candidate:\S+ \d+ \S+ \d+ (\S+) \d+ typ host/i.exec(line);
+    const m = /^a=candidate:\S+ \d+ (\S+) \d+ (\S+) \d+ typ host/i.exec(line);
     if (!m) continue;
-    if (m[1]!.toLowerCase().endsWith('.local')) hidden++; else direct++;
+    if (m[2]!.toLowerCase().endsWith('.local')) hidden++;
+    else { direct++; addresses.push(`${m[2]} ${m[1]!.toLowerCase()}`); }
   }
-  return { direct, hidden };
+  return { direct, hidden, addresses };
 }
 
 export const describeReachability = (r: Reachability) =>
-  `${r.direct} direct address${r.direct === 1 ? '' : 'es'}, ${r.hidden} hidden (.local)`;
+  `${r.direct} direct address${r.direct === 1 ? '' : 'es'}${r.addresses.length ? ` (${r.addresses.join(', ')})` : ''}, ${r.hidden} hidden (.local)`;
+
+/** Connectivity checks seen while connecting: address pairs tried and ICE check counts. */
+interface Checks { pairs: number; succeeded: number; sent: number; answered: number; received: number }
+
+async function readChecks(pc: RTCPeerConnection): Promise<Checks | null> {
+  try {
+    const c: Checks = { pairs: 0, succeeded: 0, sent: 0, answered: 0, received: 0 };
+    (await pc.getStats()).forEach((r: { type?: string; state?: string; requestsSent?: number; responsesReceived?: number; requestsReceived?: number }) => {
+      if (r.type !== 'candidate-pair') return;
+      c.pairs++;
+      c.sent += r.requestsSent || 0;
+      c.answered += r.responsesReceived || 0;
+      c.received += r.requestsReceived || 0;
+      if (r.state === 'succeeded') c.succeeded++;
+    });
+    return c;
+  } catch { return null; }
+}
+
+/** The most checks seen in either reading (a failed connection may drop its stats). */
+const most = (a: Checks | null, b: Checks | null): Checks | null =>
+  !a ? b : !b ? a : { pairs: Math.max(a.pairs, b.pairs), succeeded: Math.max(a.succeeded, b.succeeded), sent: Math.max(a.sent, b.sent), answered: Math.max(a.answered, b.answered), received: Math.max(a.received, b.received) };
+
+const describeChecks = (c: Checks | null) => (c
+  ? `${c.pairs} address pair${c.pairs === 1 ? '' : 's'} tried, ${c.succeeded} worked; checks sent ${c.sent}, answered ${c.answered}, received ${c.received}`
+  : 'no connection statistics');
 
 /** Host side, step 1: create the offer. With `camera`, the camera runs while it is built. */
 export async function createOffer(camera = false): Promise<{ pc: RTCPeerConnection; dc: RTCDataChannel; code: string; reach: Reachability }> {
@@ -100,12 +130,25 @@ function openTransport(pc: RTCPeerConnection, dc: RTCDataChannel, other: Reachab
   return new Promise((resolve, reject) => {
     const t = new ChannelTransport(pc, dc);
     if (dc.readyState === 'open') { resolve(t); return; }
+    const states = [pc.iceConnectionState as string];
+    pc.addEventListener('iceconnectionstatechange', () => states.push(pc.iceConnectionState));
+    let checks: Checks | null = null;
+    const poll = setInterval(() => void readChecks(pc).then((c) => { checks = most(checks, c); }), 1000);
     // What to show when it fails: how each side said it could be reached, and how far ICE got.
-    const details = () => `(Details: the other device offered ${describeReachability(other)}; connection ${pc.iceConnectionState}.)`;
-    const timer = setTimeout(() => reject(new Error(`Could not connect. Make sure both devices are on the same Wi-Fi or hotspot. ${details()}`)), 20000);
-    dc.addEventListener('open', () => { clearTimeout(timer); t.markOpen(); resolve(t); }, { once: true });
+    let done = false;
+    const fail = async (message: string) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      clearInterval(poll);
+      const mine = reachability(pc.localDescription?.sdp || '');
+      checks = most(checks, await readChecks(pc));
+      reject(new Error(`${message} (Details: this device offered ${describeReachability(mine)}; the other device offered ${describeReachability(other)}; states ${states.join(' → ')}; ${describeChecks(checks)}.)`));
+    };
+    const timer = setTimeout(() => void fail('Could not connect. Make sure both devices are on the same Wi-Fi or hotspot.'), 20000);
+    dc.addEventListener('open', () => { if (done) return; done = true; clearTimeout(timer); clearInterval(poll); t.markOpen(); resolve(t); }, { once: true });
     pc.addEventListener('connectionstatechange', () => {
-      if (pc.connectionState === 'failed') { clearTimeout(timer); reject(new Error(`Connection failed. Both devices must be on the same local network. ${details()}`)); }
+      if (pc.connectionState === 'failed') void fail('Connection failed. Both devices must be on the same local network.');
     });
   });
 }
