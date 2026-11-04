@@ -34,10 +34,8 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
   await page.locator('.full-thumbs .thumb').nth(1).click();
   await expect(page.locator('.bar').first().getByRole('button', { name: 'Detach', exact: true })).toHaveCount(1);
   await expect(page.locator('.fullcard-meta')).toContainText('Attached to');
-  // swipe right goes back to the host
-  const inner = (await page.locator('.fullcard-inner').boundingBox())!;
-  const cx = inner.x + inner.width / 2, cy = inner.y + inner.height / 2;
-  await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx + 120, cy, { steps: 6 }); await page.mouse.up();
+  // the host's thumb goes back to the host (swipes step between groups; see full-view.spec)
+  await page.locator('.full-thumbs .thumb').nth(0).click();
   await expect(page.locator('.full-thumbs .thumb').nth(0)).toHaveClass(/\bon\b/);
   await barButton(page, 'Close');
 
@@ -46,9 +44,9 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
   await page.mouse.click(s2.x + 6, s2.y + s2.height / 2);
   await expect(ticker).toContainText(/Player 1 tapped /);
 
-  // tapping the slot background fans the group; Close slot folds it
+  // tapping the slot's "tap to open" strip (top right, above the cards) fans the group; Close slot folds it
   const fb = (await bf.boundingBox())!;
-  await page.mouse.click(fb.x + fb.width - 10, fb.y + fb.height - 8);
+  await page.mouse.click(fb.x + fb.width - 10, fb.y + 4);
   await expect(bf).toHaveAttribute('data-fanned', /.+/);
   await expect(bf.locator('.card.tucked')).toHaveCount(0);
   await expect(bf.locator('.link-bar')).toHaveCount(2); // a gold bar joins each attached card to the next

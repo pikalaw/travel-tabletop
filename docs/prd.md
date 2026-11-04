@@ -46,7 +46,7 @@ Each player sees the same 5×3 grid from their own side: rows 1–2 are the oppo
 - **Whose turn.** The player-counter cell (5,1) is labelled "Turn N · name" and lists that player first. Wherever a player's name appears on the board (the turn label, the counters cell, the hand count and every row label such as "Claire · lands" or "Lawrence's hand"), the attacking (active) player's name is in a hot coral; the defending player's is in a cool blue. These swap when the turn passes. A clear wash runs from red on the active (attacking) player's side to blue on the defender's, and flips when the turn passes.
 - **Player colours.** Player 1 is gold, player 2 is teal, used for the unblind buttons and dialogs, the pointer ring and the player-counter sheet.
 - **Orientation.** Any device, portrait or landscape, one responsive layout. Rotating changes only the layout, never game state.
-- **Sizing.** Rows have unequal heights: the player's battlefield and hand are tallest, the opponent's lands shortest. Columns 1 and 3 are narrow; column 2 takes the remaining width. Extra space on larger screens enlarges the rows.
+- **Sizing.** The two battlefields get the most height, since both players decide attacks there, and are the same height. The hand is shorter than the battlefields and taller than the lands. The two lands rows are the shortest and the same height, with a floor that keeps land cards big enough to tap on a phone held sideways. Columns 1 and 3 are narrow; column 2 takes the remaining width. Extra space on larger screens enlarges the rows.
 - **Phone readability.** On phones the board shows card art only; reading a card means a long-press.
 
 **Footer.** Two rows.
@@ -81,6 +81,8 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 **Gestures**
 
 1. **Tap** acts as in the table. **Long-press** (about half a second) opens the full-screen view of a card whose face you can see. **Drag** moves a card, a counter or a tag.
+   - In the full-screen view, a **sideways swipe** on the card goes to the previous or next card in the same slot. A group counts as one stop: the view opens on the group's card, and its thumbnails reach the attachments. Cards whose face you can't see are skipped, and in a library tray only the tray's cards count. Faint **←** and **→** signs at the sides show when there is a card that way; they are signs, not buttons. The arrow keys do the same on a keyboard.
+   - **Dragging the card up or down** in the full-screen view returns to the board with the card's whole group under the finger, to drop on any slot.
 2. A row whose cards don't fit is **collapsed**: the cards overlap and "TAP TO OPEN" shows at its top right. The same label shows on a battlefield or lands row holding a card with attachments tucked behind it, since a tap fans the group out. A tap anywhere on it opens it; a tap on a card in a collapsed row only opens the row.
 3. An **open** row lays the cards side by side and scrolls sideways; "TAP TO CLOSE" shows in the same place. A mostly sideways swipe scrolls (with a fling); any other movement on a card drags it. Tapping the empty part of the slot closes it.
 4. A row whose cards fit is always laid out side by side.
@@ -135,7 +137,7 @@ A card can be attached to another card on the battlefield or lands, such as an A
 
 - **Attach.** In the full-screen view, tap **Attach**, then tap the card to attach it to. The card can come from any zone except a library, and can go onto either player's card. It moves into that card's zone but keeps its owner. Attaching to a card that is itself attached goes onto the card at the bottom of the group (one level only). A card that carries attachments brings them along. Tapping the card itself cancels.
 - **How it looks.** Attached cards tuck behind their card, each peeking out to its left by a quarter of a card. The card shows a gold "+N" mark at its top left. A tap on a tucked strip acts on the card it is attached to.
-- **Inspect.** Long-press the card, or a strip, to open the group in the full-screen view: a thumbnail row shows the card and each attachment (closest first), plus its combat cards when it is in combat (see Combat marks), and a sideways swipe or a thumbnail tap moves between them. Actions in the footer apply to the card shown. Tapping the slot fans every group out, each card shown in full with wider gaps between groups; a gold bar joins each attached card to the next card of its group.
+- **Inspect.** Long-press the card, or a strip, to open the group in the full-screen view: a thumbnail row shows the card and each attachment (closest first), plus its combat cards when it is in combat (see Combat marks), and a thumbnail tap moves between them. A sideways swipe goes to the next group or card in the slot. Actions in the footer apply to the card shown. Tapping the slot fans every group out, each card shown in full with wider gaps between groups; a gold bar joins each attached card to the next card of its group.
 - **Moving and tapping.** Dragging any card of a group moves the whole group, to any battlefield or lands; the whole group follows the finger while dragging. Tapping the card taps only that card. Only **Detach**, in an attached card's full-screen view, splits a group, just as Attach makes one; Detach puts the card just right of its former card. **Detach all**, in the full-screen view of any card in a group, asks "Detach all?" and then frees every attached card in one step (one Undo brings them all back), each just right of the card, nearest first.
 - **Leaving play.** When the card leaves the battlefield, its attachments detach and stay where they are; the players move them as the rules say.
 - **Not covered:** cards exiled "under" another card, and merged cards (mutate).
@@ -191,7 +193,7 @@ Both players can share one device: the board stays visible to both, and only han
 **Blind and unblind**
 
 - A game starts blinded. While blinded, the hand slot shows card backs, labelled "(hidden)".
-- **Blind my hand** (footer or menu) hides the hand again.
+- **Blind my hand** (footer or menu) hides the hand again, and so does **Pass turn**.
 - While blinded, the footer shows **Unblind to \<player 1>** and **Unblind to \<player 2>**, filled with each player's colour.
 - Unblinding first asks "Are you sure you are \<name>?" in a dialog filled with that player's colour, with Cancel and "Yes, I'm \<name>". Tapping outside the box cancels. There are no codes: a blinded hand can still be dragged onto the board, so a code would protect nothing; players rely on trust and on the ticker, which shows such moves.
 - Unblinding to a player also switches the board to that player's perspective: their rows move to the bottom and their hand fills (5,2). Switching perspective is only a re-render; state does not change.
@@ -240,7 +242,7 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 **Lifecycle**
 
 - **New game.** Choose One device, Host (two devices) or Join (two devices). Enter names (the guest enters only their own), and pick one or more decks per player; both players may pick the same deck, and every player needs at least one. Set starting life: 20, 30, 40 or any number. The last setup is remembered. The app shuffles each library and deals 7 cards to each hand; player 1 goes first. Mulligans are manual.
-- **Pass turn.** After a confirmation ("End Lawrence's turn?", with **Pass to Claire**), hands the turn to the other player, untaps that player's battlefield and lands, clears combat marks, and logs a turn marker.
+- **Pass turn.** After a confirmation ("End Lawrence's turn?", with **Pass to Claire**), hands the turn to the other player, untaps that player's battlefield and lands, clears combat marks, and logs a turn marker. On one device it also blinds the hand, so the next player unblinds to their own side.
 - **Concede** ends the game; a banner names the winner, and the log records the result.
 - **Rematch** starts a new game with the same decks.
 - **Resume.** The home screen lists games in progress on this device, with Resume and Delete, and a joined game (on a guest device) with Reconnect and Forget. The host reopens its saved game and re-pairs with the guest.

@@ -52,7 +52,18 @@ interface Gesture {
   group: HTMLElement[];
 }
 
-export function attachGestures(root: HTMLElement, h: GestureHandlers): () => void {
+export interface Gestures {
+  /** Remove every listener. */
+  detach: () => void;
+  /**
+   * Take over a pointer that is already moving (from a view with its own pointer handling, such as
+   * the full view) as a drag of card element `el`, from (x0, y0) to (x, y). Returns false if the
+   * card may not be dragged now.
+   */
+  adopt: (el: HTMLElement, pointerId: number, x0: number, y0: number, x: number, y: number) => boolean;
+}
+
+export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures {
   let g: Gesture | null = null; // current gesture
   let glide = 0; // animation frame of a running fling
   let swallowClick = false; // the click that follows a pan must not press a button
@@ -228,7 +239,17 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): () => voi
   window.addEventListener('pointercancel', cancel);
   root.addEventListener('contextmenu', context);
   window.addEventListener('touchmove', touchmove, { passive: false });
-  return () => {
+  const adopt = (el: HTMLElement, pointerId: number, x0: number, y0: number, x: number, y: number) => {
+    if (h.canDrag && !h.canDrag(el)) return false;
+    cancelAnimationFrame(glide);
+    if (g) clear();
+    const cur: Gesture & { el: HTMLElement } = { el, sc: null, sl0: 0, id: pointerId, x0, y0, x, y, dragging: false, panning: false, long: false,
+      ghost: null, hover: null, timer: undefined, v: 0, t: performance.now(), gw: 0, gh: 0, ox: 0, oy: 0, group: [] };
+    g = cur;
+    startDrag(cur);
+    return true;
+  };
+  const detach = () => {
     clear();
     root.removeEventListener('dragstart', nodrag);
     root.removeEventListener('pointerdown', down);
@@ -240,6 +261,7 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): () => voi
     root.removeEventListener('contextmenu', context);
     window.removeEventListener('touchmove', touchmove);
   };
+  return { detach, adopt };
 }
 
 /** Work out what a drop at (x, y) on target t means. */

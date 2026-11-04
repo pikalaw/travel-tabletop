@@ -112,7 +112,9 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .board {
   position: absolute; inset: 0; display: grid; gap: 3px; padding: 3px;
   grid-template-columns: minmax(54px, 16%) 1fr minmax(54px, 16%);
-  grid-template-rows: 0.75fr 1.05fr 1.45fr 0.85fr 1.15fr;
+  /* Battlefields get the most room, then the hand, then the lands. Both sides match. The land
+     rows' floor keeps land cards tappable on a phone held sideways. */
+  grid-template-rows: minmax(43px, 0.55fr) 1.4fr 1.4fr minmax(43px, 0.55fr) 1fr;
   grid-template-areas: "c11 c12 c13" "c21 c22 c23" "c31 c32 c33" "c41 c42 c43" "c51 c52 c53";
 }
 @media (orientation: landscape) {
@@ -411,7 +413,9 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .reach.warn { color: var(--warn); }
 
 /* Full view: step to the previous or next card or group in the same slot */
-.full-step { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 44px; height: 44px; font-size: 20px; background: rgba(20,30,26,.85); }
+.full-step { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 18px; color: var(--ink); background: rgba(20,30,26,.7); pointer-events: none; }
 .full-step.prev { left: 6px; }
 .full-step.next { right: 6px; }
-.full-step:disabled { opacity: .25; }
+.full-step.off { opacity: 0; }
+/* The full view's card handles its own swipes and drag up. */
+.fullcard-inner { touch-action: none; }

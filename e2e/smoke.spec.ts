@@ -31,7 +31,8 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(hand).toHaveCount(6);
 
-  await longPress(page, field.first());
+  // hold above the card's counter badge, which covers its middle on a small card
+  await longPress(page, field.first(), 0.5, 0.2);
   await expect(page.locator('.fullcard')).toHaveCount(1);
   await page.getByRole('button', { name: 'Flip' }).click();
   await barButton(page, 'Close');

@@ -41,6 +41,8 @@ export async function longPress(page: Page, t: Target, fx = 0.5, fy = 0.5) {
 
 /** Tap a board card away from its marks and badges. */
 export async function tapCard(page: Page, cardId: string) {
+  // An open row scrolls; bring the card into its visible part first, as a player would.
+  await page.locator(`.board [data-card="${cardId}"]`).first().scrollIntoViewIfNeeded();
   const p = await point(page, `.board [data-card="${cardId}"]`, 0.4, 0.6);
   await page.mouse.click(p.x, p.y);
   await page.waitForTimeout(250);

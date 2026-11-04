@@ -122,13 +122,19 @@ export interface FullCardProps {
   row?: FullRow | null;
   onPick?: (id: string) => void;
   onCounter?: ((type: 'addCounter' | 'removeCounter', kind: string, label: string | undefined) => void) | null;
-  /** The previous and next card or group in the same slot, for the ← and → buttons. */
+  /** The previous and next card or group in the same slot: a sideways swipe (or arrow key) goes there. */
   step?: { prev: string | null; next: string | null } | null;
   onStep?: (id: string) => void;
+  /** Dragging the card up or down: hand the moving pointer (which went down at x0, y0) back to the board. */
+  onDragOut?: ((e: PointerEvent, x0: number, y0: number) => void) | null;
 }
 
-export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {} }: FullCardProps) {
-  const swipe = useRef<{ x: number; y: number } | null>(null);
+/** How far a finger moves before a swipe, or a drag up or down, counts. */
+const SWIPE_PX = 50;
+const DRAG_OUT_PX = 40;
+
+export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null }: FullCardProps) {
+  const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
   // The arrow keys step through the slot too. One listener for the view's life, reading the
   // latest targets, so a key pressed right after a step never acts on the previous card.
   const latest = useRef({ step, onStep });
@@ -151,28 +157,35 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
   const img = cardImage(ctx, card, zone, card.faceDown && ctx.viewer === card.owner, 'large');
   const c = card.counters;
   const art = ctx.art.get(card.defId);
-  const seq = row ? [...row.group, ...row.partners] : [];
-  const at = seq.indexOf(cardId);
   const host = card.attachedTo ? st.cards[card.attachedTo] : null;
   const zoneOfId = (id: string): ZoneId => findZone(st, id) || zone;
   const seen = (x: CardInstance) => canSeeFace(st, x, zoneOfId(x.id), ctx.viewer) || (x.faceDown && ctx.viewer === x.owner);
   const nameOf = (x: CardInstance) => (seen(x) ? x.name : 'a hidden card');
-  // Swipe sideways on the card to move through the row.
+  // On the card: a sideways swipe goes to the previous or next card or group in the slot;
+  // dragging up or down goes back to the board carrying the card's group, to drop on any slot.
   const down = (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-    swipe.current = {
-      x: e.clientX,
-      y: e.clientY,
-    };
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+  };
+  const move = (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
+    const s0 = swipe.current;
+    if (!s0 || !onDragOut || e.pointerId !== s0.id) return;
+    const dx = e.clientX - s0.x,
+      dy = e.clientY - s0.y;
+    if (Math.abs(dy) > DRAG_OUT_PX && Math.abs(dy) > 1.5 * Math.abs(dx)) {
+      swipe.current = null;
+      onDragOut(e, s0.x, s0.y);
+    }
   };
   const up = (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
     const s0 = swipe.current;
     swipe.current = null;
-    if (!row || !s0 || (e.target as HTMLElement).closest('[data-badge]')) return;
+    if (!s0 || !step || e.pointerId !== s0.id) return;
     const dx = e.clientX - s0.x,
       dy = e.clientY - s0.y;
-    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
-    const next = at + (dx < 0 ? 1 : -1);
-    if (next >= 0 && next < seq.length) onPick(seq[next]!);
+    if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < Math.abs(dy)) return;
+    const to = dx < 0 ? step.next : step.prev;
+    if (to) onStep(to);
   };
   const badges = [
     card.attacking ? (
@@ -256,13 +269,14 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
   return (
     <div class={`fullcard ${row ? 'grouped' : ''}`}>
       <div class="fullcard-main">
+        {/* Signs only: they show that a swipe leads somewhere; the swipe itself does the moving. */}
         {step ? (
           <>
-            <button class="btn round full-step prev" aria-label="Previous card in this slot" disabled={!step.prev} onClick={() => step.prev && onStep(step.prev)}>←</button>
-            <button class="btn round full-step next" aria-label="Next card in this slot" disabled={!step.next} onClick={() => step.next && onStep(step.next)}>→</button>
+            <span class={`full-step prev ${step.prev ? '' : 'off'}`} aria-hidden="true">←</span>
+            <span class={`full-step next ${step.next ? '' : 'off'}`} aria-hidden="true">→</span>
           </>
         ) : null}
-        <div class="fullcard-inner" data-card-target={card.id} data-zone={zone} onPointerDown={down} onPointerUp={up}>
+        <div class="fullcard-inner" data-card-target={card.id} data-zone={zone} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { swipe.current = null; }}>
           {img.url ? (
             <img src={img.url} alt={card.name} draggable={false} />
           ) : (

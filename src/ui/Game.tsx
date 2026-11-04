@@ -7,7 +7,7 @@ import { confirmBox, promptBox } from './Dialogs';
 import { Board } from './Board';
 import { cardImage, type BoardCtx } from './Cards';
 import { saveFile } from './files';
-import { attachGestures, type Drop, type GestureHandlers } from './gestures';
+import { attachGestures, type Drop, type GestureHandlers, type Gestures } from './gestures';
 import { setGameLink } from './link';
 import {
   CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, AwaySheet, Sheet, zoneTitle,
@@ -146,14 +146,16 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   // ----- gestures -----
   const handlers = useRef<Required<GestureHandlers> | null>(null);
   handlers.current = { onTap, onLongPress, onDrop, canDrag };
+  const gestures = useRef<Gestures | null>(null);
   useEffect(() => {
     const root = rootRef.current!;
-    return attachGestures(root, {
+    gestures.current = attachGestures(root, {
       onTap: (el, e) => handlers.current!.onTap(el, e),
       onLongPress: (el) => handlers.current!.onLongPress(el),
       onDrop: (el, d) => handlers.current!.onDrop(el, d),
       canDrag: (el) => handlers.current!.canDrag(el),
     });
+    return () => { gestures.current?.detach(); gestures.current = null; };
   }, []);
 
   function canDrag(_el: HTMLElement): boolean {
@@ -291,6 +293,19 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
     const visible = inPrivateTray || canSeeFace(state, card, zone, viewer) || (card.faceDown && viewer === card.owner);
     if (!visible) { toast('You can’t see that card’s face.', 'info'); return; }
     dispatch({ type: 'full', full: { cardId, zone, anchor: cardId } });
+  }
+
+  /**
+   * Dragging the full view's card up or down: back to the board with the card's group under the finger,
+   * to drop on any slot. The board's own element for the card (or the tray's) is what drags.
+   */
+  function dragOutOfFull(cardId: string, zone: ZoneId, e: PointerEvent, x0: number, y0: number) {
+    const root = rootRef.current;
+    const els = root ? [...root.querySelectorAll<HTMLElement>(`[data-card="${CSS.escape(cardId)}"]`)].filter((el) => !el.closest('.full-wrap')) : [];
+    const el = els.find((x) => x.dataset.zone === zone) || els[0];
+    if (!el || !gestures.current) { toast('Close the full view to move this card.', 'info'); return; }
+    closeFull();
+    gestures.current.adopt(el, e.pointerId, x0, y0, e.clientX, e.clientY);
   }
 
   /** Close the full view; a card in combat leaves its matchup highlighted on the board. */
@@ -607,7 +622,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
             <FullCard ctx={ctx} cardId={full.cardId} zone={fullZone} row={fullRow}
               onCounter={(type, kind, lbl) => send(type, { cardId: full.cardId, from: fullZone, kind, label: lbl })}
               onPick={(id) => dispatch({ type: 'full', full: { cardId: id, zone: findZone(state, id) || fullZone, anchor: full.anchor } })}
-              step={fullStep} onStep={(id) => dispatch({ type: 'full', full: { cardId: id, zone: fullZone, anchor: id } })} />
+              step={fullStep} onStep={(id) => dispatch({ type: 'full', full: { cardId: id, zone: fullZone, anchor: id } })}
+              onDragOut={(e, x0, y0) => dragOutOfFull(full.cardId, fullZone, e, x0, y0)} />
           </div>
         ) : null}
         {sheetEl}

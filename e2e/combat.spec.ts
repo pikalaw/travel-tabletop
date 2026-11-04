@@ -100,6 +100,7 @@ test('combat in open slots: attack chip, mark placement on a tapped card, tap on
   await expect(me).toHaveClass(/\bopen\b/); await expect(opp).toHaveClass(/\bopen\b/);
   // a tap on the ⚔ mark counts as a tap on its card
   await tapCard(page, d[2]!);
+  await page.locator(`[data-card="${a[0]}"] .mark.atk`).scrollIntoViewIfNeeded();
   const m = await point(page, `[data-card="${a[0]}"] .mark.atk`);
   await page.mouse.click(m.x, m.y); await page.waitForTimeout(250);
   await expect(marks(page, d[2]!)).toContainText('🛡');

@@ -1,7 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { point, longPress, startOneDevice, playFromHand, idsIn, barButton, answerDialog, watchErrors } from './helpers';
 
-test('full view: ← and → step through the slot, one stop per group; arrow keys too', async ({ page }) => {
+/** Swipe across the full view's card: dx < 0 goes to the next card or group, dx > 0 to the previous one. */
+async function swipe(page: Page, dx: number) {
+  const r = (await page.locator('.fullcard-inner').boundingBox())!;
+  const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+  await page.mouse.move(cx, cy); await page.mouse.down();
+  await page.mouse.move(cx + dx, cy, { steps: 6 }); await page.mouse.up();
+}
+
+test('full view: swipes step through the slot, one stop per group; arrows are signs; arrow keys too', async ({ page }) => {
   const errs = watchErrors(page);
   await startOneDevice(page);
   await playFromHand(page, 'p1.battlefield', 3);
@@ -15,23 +23,27 @@ test('full view: ← and → step through the slot, one stop per group; arrow ke
   await expect(page.locator('[data-drop="p1.battlefield"] .card.tucked')).toHaveCount(1);
 
   const shown = page.locator('.fullcard-inner');
-  const prev = page.getByRole('button', { name: 'Previous card in this slot' });
-  const next = page.getByRole('button', { name: 'Next card in this slot' });
+  const prev = page.locator('.full-step.prev'), next = page.locator('.full-step.next');
 
   await longPress(page, page.locator(`[data-card="${c}"]`));
   await expect(shown).toHaveAttribute('data-card-target', c!);
-  await expect(next).toBeDisabled();
-  await prev.click();
+  // the arrows are signs, not buttons; a missing neighbour hides its arrow
+  await expect(page.locator('.fullcard').getByRole('button', { name: /card in this slot/ })).toHaveCount(0);
+  await expect(next).toHaveClass(/\boff\b/);
+  await expect(prev).not.toHaveClass(/\boff\b/);
+  await swipe(page, 120);
   await expect(shown).toHaveAttribute('data-card-target', b!);
-  await prev.click();
+  await swipe(page, 120);
   // the group counts once, and opens on its host with the group row
   await expect(shown).toHaveAttribute('data-card-target', a!);
   await expect(page.locator('.fullcard-meta')).toContainText('1 attached');
-  await expect(prev).toBeDisabled();
-  // from the attachment, → goes past the whole group
+  await expect(prev).toHaveClass(/\boff\b/);
+  await swipe(page, 120); // nothing before the first group
+  await expect(shown).toHaveAttribute('data-card-target', a!);
+  // from the attachment, a swipe goes past the whole group
   await page.locator('.full-thumbs .thumb').nth(1).click();
   await expect(page.locator('.fullcard-meta')).toContainText('Attached to');
-  await next.click();
+  await swipe(page, -120);
   await expect(shown).toHaveAttribute('data-card-target', b!);
   await page.keyboard.press('ArrowRight');
   await expect(shown).toHaveAttribute('data-card-target', c!);
@@ -42,10 +54,51 @@ test('full view: ← and → step through the slot, one stop per group; arrow ke
   // the opponent's hand is hidden, so stepping through your own hand stays in your hand
   const hand = await idsIn(page, 'p1.hand');
   await longPress(page, page.locator(`[data-card="${hand[0]}"]`));
-  await expect(prev).toBeDisabled();
-  await next.click();
+  await expect(prev).toHaveClass(/\boff\b/);
+  await swipe(page, -120);
   await expect(shown).toHaveAttribute('data-card-target', hand[1]!);
   await barButton(page, 'Close');
+  errs.expectNone();
+});
+
+test('full view: dragging the card up or down carries its whole group back to the board', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page);
+  await playFromHand(page, 'p1.battlefield', 2);
+  const [a] = await idsIn(page, 'p1.battlefield');
+  await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first());
+  await barButton(page, 'Attach');
+  const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
+  await page.mouse.click(pa.x, pa.y);
+  const group = await idsIn(page, 'p1.battlefield');
+  const attached = await page.locator(`[data-drop="p1.battlefield"] [data-attached-to="${a}"]`).getAttribute('data-card');
+
+  // open the attachment, drag up off the card, then onto the lands row
+  await longPress(page, page.locator(`[data-card="${a}"]`));
+  await page.locator('.full-thumbs .thumb').nth(1).click();
+  const r = (await page.locator('.fullcard-inner').boundingBox())!;
+  const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+  await page.mouse.move(cx, cy); await page.mouse.down();
+  await page.mouse.move(cx, cy - 80, { steps: 6 });
+  await expect(page.locator('.fullcard')).toHaveCount(0);
+  await expect(page.locator('.drag-ghost.group')).toHaveCount(1);
+  const lands = (await page.locator('[data-drop="p1.lands"]').boundingBox())!;
+  await page.mouse.move(lands.x + lands.width / 2, lands.y + lands.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(() => idsIn(page, 'p1.lands')).toEqual(expect.arrayContaining([a!, attached!]));
+  expect(await idsIn(page, 'p1.battlefield')).toHaveLength(group.length - 2);
+
+  // dragging down does the same: the other card goes from the battlefield to the graveyard
+  const [rest] = await idsIn(page, 'p1.battlefield');
+  await longPress(page, page.locator(`[data-card="${rest}"]`));
+  const r2 = (await page.locator('.fullcard-inner').boundingBox())!;
+  await page.mouse.move(r2.x + r2.width / 2, r2.y + r2.height / 3); await page.mouse.down();
+  await page.mouse.move(r2.x + r2.width / 2, r2.y + r2.height / 3 + 80, { steps: 6 });
+  await expect(page.locator('.fullcard')).toHaveCount(0);
+  const grave = (await page.locator('[data-drop="p1.graveyard"]').boundingBox())!;
+  await page.mouse.move(grave.x + grave.width / 2, grave.y + grave.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(() => idsIn(page, 'p1.graveyard')).toContain(rest!);
   errs.expectNone();
 });
 
