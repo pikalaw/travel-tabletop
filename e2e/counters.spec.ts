@@ -127,6 +127,9 @@ test('the attack chip shows only to the player whose turn it is (or to a blinded
   await expect(chip).toHaveCount(1);
   await resetBar(page); await barButton(page, 'Pass turn');
   await page.locator('.confirm-box .btn.yes').click();
+  // passing the turn blinds the table, which sees the chip
+  await expect(chip).toHaveCount(1);
+  await unblind(page, 'Player 1');
   await expect(chip).toHaveCount(0);
   await barButton(page, 'Blind my hand');
   await unblind(page, 'Player 2');

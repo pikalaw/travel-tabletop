@@ -129,15 +129,22 @@ export interface FullCardProps {
 
 export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {} }: FullCardProps) {
   const swipe = useRef<{ x: number; y: number } | null>(null);
-  // The arrow keys step through the slot too.
+  // The arrow keys step through the slot too. One listener for the view's life, reading the
+  // latest targets, so a key pressed right after a step never acts on the previous card.
+  const latest = useRef({ step, onStep });
+  latest.current = { step, onStep };
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      const to = e.key === 'ArrowLeft' ? step?.prev : e.key === 'ArrowRight' ? step?.next : null;
-      if (to) { e.preventDefault(); onStep(to); }
+      const { step: st, onStep: go } = latest.current;
+      const to = e.key === 'ArrowLeft' ? st?.prev : e.key === 'ArrowRight' ? st?.next : null;
+      if (to) {
+        e.preventDefault();
+        go(to);
+      }
     };
     addEventListener('keydown', key);
     return () => removeEventListener('keydown', key);
-  }, [step?.prev, step?.next, onStep]);
+  }, []);
   const st = ctx.state;
   const card = st.cards[cardId];
   if (!card) return null;
