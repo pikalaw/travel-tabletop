@@ -223,8 +223,19 @@ body.dragging .opp-hand { pointer-events: auto; padding: 4px 8px; margin: -4px -
 body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset: 0; }
 .c12 .row.can-open::after, .c12 .row-box.open::before { top: auto; bottom: 3px; }
 /* Turn side: a faint red wash from the attacking (active) player's side to blue on the defender's. */
-.board.my-turn { background: linear-gradient(to top, rgba(214, 64, 52, .38), rgba(214, 64, 52, .12) 42%, rgba(60, 110, 220, .12) 58%, rgba(60, 110, 220, .38)); }
-.board.their-turn { background: linear-gradient(to bottom, rgba(214, 64, 52, .38), rgba(214, 64, 52, .12) 42%, rgba(60, 110, 220, .12) 58%, rgba(60, 110, 220, .38)); }
+/* Turn tint: each player's half of the board gets its own layer, spanning exactly that player's
+   rows (the opponent's two rows on top, this side's three below), so the split follows the row
+   heights at every screen size. Red is the active player's side, blue the other; each fades to
+   faint where the halves meet. The layers are grid items behind the cells; the margins cover
+   the board's padding and half of the gap between the halves. */
+.board { isolation: isolate; }
+.board::before, .board::after { content: ''; grid-column: 1 / -1; z-index: -1; pointer-events: none; }
+.board::before { grid-row: 1 / 3; margin: -3px -3px -1.5px; }
+.board::after { grid-row: 3 / 6; margin: -1.5px -3px -3px; }
+.board.my-turn::before { background: linear-gradient(to bottom, rgba(60, 110, 220, .38), rgba(60, 110, 220, .12)); }
+.board.my-turn::after { background: linear-gradient(to bottom, rgba(214, 64, 52, .12), rgba(214, 64, 52, .38)); }
+.board.their-turn::before { background: linear-gradient(to bottom, rgba(214, 64, 52, .38), rgba(214, 64, 52, .12)); }
+.board.their-turn::after { background: linear-gradient(to bottom, rgba(60, 110, 220, .12), rgba(60, 110, 220, .38)); }
 .ctr-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; font-size: 11px; line-height: 1.15; overflow: hidden; }
 /* Attacking (active) player in the hot colour, defending player in the cool one, matching the board gradient. */
 :root { --hot: #ff7b5f; --cool: #7aa7ff; }
