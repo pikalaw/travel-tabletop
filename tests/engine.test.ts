@@ -391,19 +391,24 @@ const ZONES = allZones();
 
 describe('properties', () => {
   it('card conservation holds after any command sequence', () => {
-    let attachedSeen = 0, blocksSeen = 0;
+    let attachedSeen = 0, blocksSeen = 0, leadsSeen = 0;
     fc.assert(fc.property(fc.array(cmdArb, { maxLength: 60 }), fc.integer({ min: 1, max: 1e6 }), (steps, seed) => {
       const h = started(new Table(seeded(seed)));
       for (const step of steps) {
         const r = h.dispatch(concretize(h.state, step));
         if (r.ok && step.type === 'attach') attachedSeen++;
         if (r.ok && step.type === 'block') blocksSeen++;
+        if (r.ok && step.type === 'setLead') leadsSeen++;
         const bad = checkInvariants(h.state);
         if (bad) throw new Error(bad);
       }
-    }), { numRuns: 150 });
-    expect(attachedSeen).toBeGreaterThan(10); // the generator really exercises attachments
-    expect(blocksSeen).toBeGreaterThan(10);   // …and blocks
+    }), { numRuns: 400 });
+    // The generator really exercises attachments, blocks and lead changes. The bars sit well
+    // below the usual counts (measured over 10 runs of 400: attaches 28–53, blocks 79–95,
+    // lead changes 3–15), so a random run doesn't flake.
+    expect(attachedSeen).toBeGreaterThan(10);
+    expect(blocksSeen).toBeGreaterThan(10);
+    expect(leadsSeen).toBeGreaterThan(0);
   });
 
   it('a non-owner never sees hand faces unless revealed', () => {
