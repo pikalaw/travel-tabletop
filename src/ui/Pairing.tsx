@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { copyBox } from './Dialogs';
 import { qrSvg, startScanner } from '../transport/qr';
-import { createOffer, acceptAnswer, answerOffer, unlockLocalNetwork } from '../transport/webrtc';
+import { createOffer, acceptAnswer, answerOffer, describeReachability, type Reachability } from '../transport/webrtc';
 import type { Transport } from '../transport/transport';
 export function ShowCode({ code, caption }: { code: string; caption: string }) {
   const [copied, setCopied] = useState(false);
@@ -99,6 +99,16 @@ export function ReadCode({ onCode, prompt }: { onCode: (code: string) => void | 
   );
 }
 
+/** How this device's code says it can be reached; a warning when only hidden names are offered. */
+function ReachNote({ reach }: { reach: Reachability }) {
+  return (
+    <p class={`muted small reach ${reach.direct ? '' : 'warn'}`}>
+      This code offers {describeReachability(reach)}.
+      {reach.direct ? null : ' The other device may not find this one: allow the camera when asked, or connect both to the same Wi-Fi network.'}
+    </p>
+  );
+}
+
 // ---------- Pairing flows (shared by first pairing and re-pairing) ----------
 
 const errText = (e: unknown) => String((e as Error | null)?.message || e);
@@ -112,9 +122,8 @@ export function HostPairFlow({ onTransport }: { onTransport: (t: Transport) => v
   const begin = async (camera: boolean) => {
     setErr('');
     setStep('working');
-    if (camera) await unlockLocalNetwork();
     try {
-      offer.current = await createOffer();
+      offer.current = await createOffer(camera);
       setCode(offer.current.code);
       setStep('offer');
     } catch (e) { setErr(errText(e)); setStep('start'); }
@@ -140,6 +149,7 @@ export function HostPairFlow({ onTransport }: { onTransport: (t: Transport) => v
         <div class="pair-step">
           <h3>1. On the guest device, choose Join and scan this code</h3>
           <ShowCode code={code} caption="Or copy the text code and paste it on the guest." />
+          {offer.current ? <ReachNote reach={offer.current.reach} /> : null}
           <button class="btn primary" onClick={() => setStep('scan')}>2. Next: scan the guest's code</button>
         </div>
       ) : null}
@@ -159,12 +169,14 @@ export function HostPairFlow({ onTransport }: { onTransport: (t: Transport) => v
 export function GuestPairFlow({ onTransport }: { onTransport: (t: Transport) => void | Promise<void> }) {
   const [step, setStep] = useState<'scan' | 'working' | 'answer'>('scan');
   const [code, setCode] = useState('');
+  const [reach, setReach] = useState<Reachability | null>(null);
   const [err, setErr] = useState('');
   const onOffer = async (offerCode: string) => {
     setErr(''); setStep('working');
     try {
       const a = await answerOffer(offerCode);
       setCode(a.code);
+      setReach(a.reach);
       setStep('answer');
       await onTransport(await a.transport);
     } catch (e) { setErr(errText(e)); setStep('scan'); }
@@ -183,6 +195,7 @@ export function GuestPairFlow({ onTransport }: { onTransport: (t: Transport) => 
         <div class="pair-step">
           <h3>2. Show this code to the host device</h3>
           <ShowCode code={code} caption="The host scans it (or pastes the text). This screen continues once connected." />
+          {reach ? <ReachNote reach={reach} /> : null}
         </div>
       ) : null}
     </div>

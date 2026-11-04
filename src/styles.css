@@ -408,3 +408,4 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .deck-check.here { opacity: .6; }
 .starter-pick .deck-pick { max-height: none; overflow: visible; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 .starter-pick .deck-check { padding: 6px 8px; }
+.reach.warn { color: var(--warn); }

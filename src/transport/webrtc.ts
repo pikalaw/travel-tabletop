@@ -19,26 +19,56 @@ function gathered(pc: RTCPeerConnection, timeoutMs = 4000): Promise<void> {
 }
 
 /**
- * Safari and Chrome hide local IP addresses from WebRTC unless the page has camera access.
- * Asking for the camera once (we need it to scan codes anyway) lets devices connect directly.
- * Returns true if access was granted.
+ * Browsers hide a device's local IP addresses from WebRTC (they offer a random "….local" name
+ * instead) unless the page may use the camera; Safari is stricter and shows them only while the
+ * camera is actually running. Two devices on a phone hotspot often can't resolve each other's
+ * ".local" names, so the pairing code is built while a camera stream is open.
  */
-export async function unlockLocalNetwork(): Promise<boolean> {
+async function openCamera(ask: boolean): Promise<MediaStream | null> {
   try {
-    const s = await navigator.mediaDevices.getUserMedia({ video: true });
-    s.getTracks().forEach((t) => t.stop());
-    return true;
-  } catch { return false; }
+    if (!ask) {
+      // Without asking: only when the camera is already allowed (no prompt appears).
+      const p = await navigator.permissions?.query({ name: 'camera' as PermissionName }).catch(() => null);
+      if (p?.state !== 'granted') return null;
+    }
+    return await navigator.mediaDevices.getUserMedia({ video: true });
+  } catch { return null; }
 }
 
-/** Host side, step 1: create the offer. */
-export async function createOffer(): Promise<{ pc: RTCPeerConnection; dc: RTCDataChannel; code: string }> {
-  const pc = new RTCPeerConnection({ iceServers: [] });
-  const dc = pc.createDataChannel('mtg', { ordered: true });
-  await pc.setLocalDescription(await pc.createOffer());
-  await gathered(pc);
-  const code = encodeSignal('offer', pc.localDescription!.sdp);
-  return { pc, dc, code };
+const stopCamera = (s: MediaStream | null) => s?.getTracks().forEach((t) => t.stop());
+
+/** What a pairing code tells the other device about how to reach this one. */
+export interface Reachability {
+  /** IP addresses the other device can try directly. */
+  direct: number;
+  /** Hidden ".local" names, which only work where the network passes mDNS. */
+  hidden: number;
+}
+
+export function reachability(sdp: string): Reachability {
+  let direct = 0, hidden = 0;
+  for (const line of sdp.split(/\r?\n/)) {
+    const m = /^a=candidate:\S+ \d+ \S+ \d+ (\S+) \d+ typ host/i.exec(line);
+    if (!m) continue;
+    if (m[1]!.toLowerCase().endsWith('.local')) hidden++; else direct++;
+  }
+  return { direct, hidden };
+}
+
+export const describeReachability = (r: Reachability) =>
+  `${r.direct} direct address${r.direct === 1 ? '' : 'es'}, ${r.hidden} hidden (.local)`;
+
+/** Host side, step 1: create the offer. With `camera`, the camera runs while it is built. */
+export async function createOffer(camera = false): Promise<{ pc: RTCPeerConnection; dc: RTCDataChannel; code: string; reach: Reachability }> {
+  const cam = await openCamera(camera);
+  try {
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    const dc = pc.createDataChannel('mtg', { ordered: true });
+    await pc.setLocalDescription(await pc.createOffer());
+    await gathered(pc);
+    const sdp = pc.localDescription!.sdp;
+    return { pc, dc, code: encodeSignal('offer', sdp), reach: reachability(sdp) };
+  } finally { stopCamera(cam); }
 }
 
 /** Host side, step 2: accept the guest's answer. Resolves with a Transport when the channel opens. */
@@ -46,31 +76,36 @@ export async function acceptAnswer(pc: RTCPeerConnection, dc: RTCDataChannel, an
   const { kind, sdp } = decodeSignal(answerCode);
   if (kind !== 'answer') throw new Error('That is an offer code. Scan the code shown on the guest device.');
   await pc.setRemoteDescription({ type: 'answer', sdp });
-  return openTransport(pc, dc);
+  return openTransport(pc, dc, reachability(sdp));
 }
 
 /** Guest side: accept the host's offer and produce an answer code. */
-export async function answerOffer(offerCode: string): Promise<{ pc: RTCPeerConnection; code: string; transport: Promise<ChannelTransport> }> {
+export async function answerOffer(offerCode: string): Promise<{ pc: RTCPeerConnection; code: string; reach: Reachability; transport: Promise<ChannelTransport> }> {
   const { kind, sdp } = decodeSignal(offerCode);
   if (kind !== 'offer') throw new Error('That is an answer code. Scan the code shown on the host device.');
-  const pc = new RTCPeerConnection({ iceServers: [] });
-  const dcP = new Promise<RTCDataChannel>((resolve) => { pc.ondatachannel = (e) => resolve(e.channel); });
-  await pc.setRemoteDescription({ type: 'offer', sdp });
-  await pc.setLocalDescription(await pc.createAnswer());
-  await gathered(pc);
-  const code = encodeSignal('answer', pc.localDescription!.sdp);
-  const transport = dcP.then((dc) => openTransport(pc, dc));
-  return { pc, code, transport };
+  const cam = await openCamera(false);
+  try {
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    const dcP = new Promise<RTCDataChannel>((resolve) => { pc.ondatachannel = (e) => resolve(e.channel); });
+    await pc.setRemoteDescription({ type: 'offer', sdp });
+    await pc.setLocalDescription(await pc.createAnswer());
+    await gathered(pc);
+    const mine = pc.localDescription!.sdp;
+    const transport = dcP.then((dc) => openTransport(pc, dc, reachability(sdp)));
+    return { pc, code: encodeSignal('answer', mine), reach: reachability(mine), transport };
+  } finally { stopCamera(cam); }
 }
 
-function openTransport(pc: RTCPeerConnection, dc: RTCDataChannel): Promise<ChannelTransport> {
+function openTransport(pc: RTCPeerConnection, dc: RTCDataChannel, other: Reachability): Promise<ChannelTransport> {
   return new Promise((resolve, reject) => {
     const t = new ChannelTransport(pc, dc);
     if (dc.readyState === 'open') { resolve(t); return; }
-    const timer = setTimeout(() => reject(new Error('Could not connect. Make sure both devices are on the same Wi-Fi or hotspot.')), 20000);
+    // What to show when it fails: how each side said it could be reached, and how far ICE got.
+    const details = () => `(Details: the other device offered ${describeReachability(other)}; connection ${pc.iceConnectionState}.)`;
+    const timer = setTimeout(() => reject(new Error(`Could not connect. Make sure both devices are on the same Wi-Fi or hotspot. ${details()}`)), 20000);
     dc.addEventListener('open', () => { clearTimeout(timer); t.markOpen(); resolve(t); }, { once: true });
     pc.addEventListener('connectionstatechange', () => {
-      if (pc.connectionState === 'failed') { clearTimeout(timer); reject(new Error('Connection failed. Both devices must be on the same local network.')); }
+      if (pc.connectionState === 'failed') { clearTimeout(timer); reject(new Error(`Connection failed. Both devices must be on the same local network. ${details()}`)); }
     });
   });
 }
