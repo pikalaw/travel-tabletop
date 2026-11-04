@@ -19,7 +19,7 @@ import { listDecks, loadLog } from '../storage/db';
 import { loadArt, type Art } from '../storage/art';
 import type { Session } from '../client/session';
 import type { Notice } from '../types/commands';
-import type { Actor, CardInstance, GameState, PlayerId, ZoneId } from '../types/state';
+import type { Actor, CardInstance, GameState, PlayerId, Viewer, ZoneId } from '../types/state';
 import type { Deck, LogManifest } from '../types/storage';
 
 const timeNow = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -256,7 +256,12 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   function passTurn() {
     const from = state.players[state.activePlayer].name, to = state.players[other(state.activePlayer)].name;
     void confirmBox({ title: `End ${from}’s turn?`, body: `The turn passes to ${to}, whose cards untap.`, ok: `Pass to ${to}` })
-      .then((yes) => { if (yes) send('passTurn', { to: other(state.activePlayer) }); });
+      .then((yes) => {
+        if (!yes) return;
+        send('passTurn', { to: other(state.activePlayer) });
+        // One device: the screen goes to the next player, so the hand that was showing is hidden.
+        if (same) blind();
+      });
   }
   const hasCombatMarks = Object.values(state.cards).some((c) => c.attacking || c.blocking);
   function endCombat() {
@@ -458,6 +463,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
     if (!has(fullRow)) fullRow = fullRowOf(state, full.cardId); // the shown card left the anchor's row
     if (fullRow && fullRow.group.length + fullRow.partners.length < 2) fullRow = null;
   }
+  const fullStep = full && fullZone ? slotSteps(state, full.cardId, fullZone, viewer, sheet) : null;
   const matchSet = ctx.match;
   const showAttack = actor === 'table' || actingPlayer === state.activePlayer;
 
@@ -600,7 +606,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
           <div class="full-wrap">
             <FullCard ctx={ctx} cardId={full.cardId} zone={fullZone} row={fullRow}
               onCounter={(type, kind, lbl) => send(type, { cardId: full.cardId, from: fullZone, kind, label: lbl })}
-              onPick={(id) => dispatch({ type: 'full', full: { cardId: id, zone: findZone(state, id) || fullZone, anchor: full.anchor } })} />
+              onPick={(id) => dispatch({ type: 'full', full: { cardId: id, zone: findZone(state, id) || fullZone, anchor: full.anchor } })}
+              step={fullStep} onStep={(id) => dispatch({ type: 'full', full: { cardId: id, zone: fullZone, anchor: id } })} />
           </div>
         ) : null}
         {sheetEl}
@@ -683,6 +690,27 @@ function CounterChips({ label, attack = true }: { label: string; attack?: boolea
 function hostOf(state: GameState, id: string): string {
   const c = state.cards[id];
   return c?.attachedTo && state.cards[c.attachedTo] ? c.attachedTo : id;
+}
+
+/**
+ * The ← and → targets of the full view: the cards of the shown card's slot, in board order,
+ * with each group counted once (by its host). Only cards whose face this viewer may see count;
+ * in a private library tray (peek, reveal, search, inspect), the cards the tray shows.
+ */
+export function slotSteps(state: GameState, cardId: string, zone: ZoneId, viewer: Viewer, sheet: SheetState | null): { prev: string | null; next: string | null } {
+  const tray = sheet && sheet.kind !== 'zone' && 'zone' in sheet && sheet.zone === zone && ['peek', 'reveal', 'search', 'inspect'].includes(sheet.kind);
+  const all = state.zones[zone] || [];
+  const ids = tray && 'ids' in sheet ? all.filter((id) => sheet.ids.includes(id)) : all;
+  const units: string[] = [];
+  for (const id of ids) {
+    const h = hostOf(state, id);
+    if (units.includes(h) || !state.cards[h]) continue;
+    const c = state.cards[h]!;
+    if (tray || canSeeFace(state, c, zone, viewer) || (c.faceDown && viewer === c.owner)) units.push(h);
+  }
+  const at = units.indexOf(hostOf(state, cardId));
+  if (at < 0) return { prev: null, next: null };
+  return { prev: units[at - 1] ?? null, next: units[at + 1] ?? null };
 }
 
 /** Attachments of a battlefield host, closest first (the order the full view shows them). */

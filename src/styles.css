@@ -409,3 +409,9 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .starter-pick .deck-pick { max-height: none; overflow: visible; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 .starter-pick .deck-check { padding: 6px 8px; }
 .reach.warn { color: var(--warn); }
+
+/* Full view: step to the previous or next card or group in the same slot */
+.full-step { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 44px; height: 44px; font-size: 20px; background: rgba(20,30,26,.85); }
+.full-step.prev { left: 6px; }
+.full-step.next { right: 6px; }
+.full-step:disabled { opacity: .25; }

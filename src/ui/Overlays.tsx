@@ -1,7 +1,7 @@
 // Overlays on the game screen: card viewer sheets, full-screen card, counters, log, tokens,
 // dice, menu.
 
-import { useState, useRef } from 'preact/hooks';
+import { useEffect, useState, useRef } from 'preact/hooks';
 import type { ComponentChildren, JSX } from 'preact';
 import { promptBox } from './Dialogs';
 import { Row, cardImage, BACK_URL, type BoardCtx } from './Cards';
@@ -122,10 +122,22 @@ export interface FullCardProps {
   row?: FullRow | null;
   onPick?: (id: string) => void;
   onCounter?: ((type: 'addCounter' | 'removeCounter', kind: string, label: string | undefined) => void) | null;
+  /** The previous and next card or group in the same slot, for the ← and → buttons. */
+  step?: { prev: string | null; next: string | null } | null;
+  onStep?: (id: string) => void;
 }
 
-export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onCounter = null }: FullCardProps) {
+export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {} }: FullCardProps) {
   const swipe = useRef<{ x: number; y: number } | null>(null);
+  // The arrow keys step through the slot too.
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const to = e.key === 'ArrowLeft' ? step?.prev : e.key === 'ArrowRight' ? step?.next : null;
+      if (to) { e.preventDefault(); onStep(to); }
+    };
+    addEventListener('keydown', key);
+    return () => removeEventListener('keydown', key);
+  }, [step?.prev, step?.next, onStep]);
   const st = ctx.state;
   const card = st.cards[cardId];
   if (!card) return null;
@@ -237,6 +249,12 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
   return (
     <div class={`fullcard ${row ? 'grouped' : ''}`}>
       <div class="fullcard-main">
+        {step ? (
+          <>
+            <button class="btn round full-step prev" aria-label="Previous card in this slot" disabled={!step.prev} onClick={() => step.prev && onStep(step.prev)}>←</button>
+            <button class="btn round full-step next" aria-label="Next card in this slot" disabled={!step.next} onClick={() => step.next && onStep(step.next)}>→</button>
+          </>
+        ) : null}
         <div class="fullcard-inner" data-card-target={card.id} data-zone={zone} onPointerDown={down} onPointerUp={up}>
           {img.url ? (
             <img src={img.url} alt={card.name} draggable={false} />
