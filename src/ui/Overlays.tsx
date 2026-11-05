@@ -125,15 +125,17 @@ export interface FullCardProps {
   /** The previous and next card or group in the same slot: a sideways swipe (or arrow key) goes there. */
   step?: { prev: string | null; next: string | null } | null;
   onStep?: (id: string) => void;
-  /** Dragging the card up or down: hand the moving pointer (which went down at x0, y0) back to the board. */
+  /** Dragging the card up: hand the moving pointer (which went down at x0, y0) back to the board. */
   onDragOut?: ((e: PointerEvent, x0: number, y0: number) => void) | null;
+  /** Swiping the card down: back to the board, the same as Close. */
+  onClose?: (() => void) | null;
 }
 
-/** How far a finger moves before a swipe, or a drag up or down, counts. */
+/** How far a finger moves before a swipe, a drag up or a swipe down counts. */
 const SWIPE_PX = 50;
 const DRAG_OUT_PX = 40;
 
-export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null }: FullCardProps) {
+export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null }: FullCardProps) {
   const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
   // The arrow keys step through the slot too. One listener for the view's life, reading the
   // latest targets, so a key pressed right after a step never acts on the previous card.
@@ -162,7 +164,8 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
   const seen = (x: CardInstance) => canSeeFace(st, x, zoneOfId(x.id), ctx.viewer) || (x.faceDown && ctx.viewer === x.owner);
   const nameOf = (x: CardInstance) => (seen(x) ? x.name : 'a hidden card');
   // On the card: a sideways swipe goes to the previous or next card or group in the slot;
-  // dragging up or down goes back to the board carrying the card's group, to drop on any slot.
+  // dragging up goes back to the board carrying the card's group, to drop on any slot; a swipe
+  // down just closes the view.
   const down = (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
@@ -172,7 +175,7 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
     if (!s0 || !onDragOut || e.pointerId !== s0.id) return;
     const dx = e.clientX - s0.x,
       dy = e.clientY - s0.y;
-    if (Math.abs(dy) > DRAG_OUT_PX && Math.abs(dy) > 1.5 * Math.abs(dx)) {
+    if (-dy > DRAG_OUT_PX && -dy > 1.5 * Math.abs(dx)) {
       swipe.current = null;
       onDragOut(e, s0.x, s0.y);
     }
@@ -180,10 +183,14 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
   const up = (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
     const s0 = swipe.current;
     swipe.current = null;
-    if (!s0 || !step || e.pointerId !== s0.id) return;
+    if (!s0 || e.pointerId !== s0.id) return;
     const dx = e.clientX - s0.x,
       dy = e.clientY - s0.y;
-    if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < Math.abs(dy)) return;
+    if (dy > SWIPE_PX && dy > 1.5 * Math.abs(dx)) {
+      onClose?.();
+      return;
+    }
+    if (!step || Math.abs(dx) < SWIPE_PX || Math.abs(dx) < Math.abs(dy)) return;
     const to = dx < 0 ? step.next : step.prev;
     if (to) onStep(to);
   };

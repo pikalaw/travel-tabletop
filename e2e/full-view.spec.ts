@@ -61,7 +61,7 @@ test('full view: swipes step through the slot, one stop per group; arrows are si
   errs.expectNone();
 });
 
-test('full view: dragging the card up or down carries its whole group back to the board', async ({ page }) => {
+test('full view: dragging the card up carries its whole group back to the board; a swipe down only closes', async ({ page }) => {
   const errs = watchErrors(page);
   await startOneDevice(page);
   await playFromHand(page, 'p1.battlefield', 2);
@@ -88,17 +88,15 @@ test('full view: dragging the card up or down carries its whole group back to th
   await expect.poll(() => idsIn(page, 'p1.lands')).toEqual(expect.arrayContaining([a!, attached!]));
   expect(await idsIn(page, 'p1.battlefield')).toHaveLength(group.length - 2);
 
-  // dragging down does the same: the other card goes from the battlefield to the graveyard
+  // a swipe down only closes the view: nothing moves
   const [rest] = await idsIn(page, 'p1.battlefield');
   await longPress(page, page.locator(`[data-card="${rest}"]`));
   const r2 = (await page.locator('.fullcard-inner').boundingBox())!;
   await page.mouse.move(r2.x + r2.width / 2, r2.y + r2.height / 3); await page.mouse.down();
-  await page.mouse.move(r2.x + r2.width / 2, r2.y + r2.height / 3 + 80, { steps: 6 });
+  await page.mouse.move(r2.x + r2.width / 2, r2.y + r2.height / 3 + 90, { steps: 6 }); await page.mouse.up();
   await expect(page.locator('.fullcard')).toHaveCount(0);
-  const grave = (await page.locator('[data-drop="p1.graveyard"]').boundingBox())!;
-  await page.mouse.move(grave.x + grave.width / 2, grave.y + grave.height / 2, { steps: 8 });
-  await page.mouse.up();
-  await expect.poll(() => idsIn(page, 'p1.graveyard')).toContain(rest!);
+  await expect(page.locator('.drag-ghost')).toHaveCount(0);
+  expect(await idsIn(page, 'p1.battlefield')).toContain(rest!);
   errs.expectNone();
 });
 

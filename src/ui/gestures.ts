@@ -12,6 +12,9 @@
 // that starts inside one scrolls it (and cancels the tap); any other movement on a card drags it.
 
 const DRAG_PX = 8;
+/** A two-finger spread counts once the fingers are this much farther apart (ratio, and at least SPREAD_PX). */
+const SPREAD_RATIO = 1.3;
+const SPREAD_PX = 30;
 /** How much of each attached card shows to the left of its card in a dragged group (as on the board). */
 const GROUP_PEEK = 0.25;
 const LONG_MS = 480;
@@ -32,6 +35,11 @@ export interface GestureHandlers {
   onLongPress: (el: HTMLElement) => void;
   onDrop: (src: HTMLElement, drop: Drop) => void;
   canDrag?: (el: HTMLElement) => boolean;
+  /**
+   * A two-finger spread (zoom-in gesture). `card` is the card the first finger was on (or the one
+   * under the fingers' midpoint), `row` the slot it happened in; either may be null.
+   */
+  onSpread?: (card: HTMLElement | null, row: HTMLElement | null) => void;
 }
 
 interface Gesture {
@@ -67,6 +75,13 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
   let g: Gesture | null = null; // current gesture
   let glide = 0; // animation frame of a running fling
   let swallowClick = false; // the click that follows a pan must not press a button
+  // Every finger currently down, for two-finger gestures.
+  const pts = new Map<number, { x: number; y: number }>();
+  let spread: { a: number; b: number; d0: number; card: HTMLElement | null; row: HTMLElement | null; fired: boolean } | null = null;
+  const dist = (a: number, b: number) => {
+    const p = pts.get(a), q = pts.get(b);
+    return p && q ? Math.hypot(p.x - q.x, p.y - q.y) : 0;
+  };
 
   const clear = () => {
     if (!g) return;
@@ -79,6 +94,20 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
 
   const down = (e: PointerEvent) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (e.pointerType === 'touch') pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // A second finger: a two-finger gesture, which replaces whatever the first finger began.
+    if (pts.size === 2 && !spread) {
+      const [a, b] = [...pts.keys()] as [number, number];
+      const p = pts.get(a)!, q = pts.get(b)!;
+      const mid = document.elementFromPoint((p.x + q.x) / 2, (p.y + q.y) / 2) as HTMLElement | null;
+      const first = g?.el?.dataset.card ? g.el : null;
+      const card = first || mid?.closest<HTMLElement>('[data-card]') || null;
+      const row = (card || mid)?.closest<HTMLElement>('[data-drop]') || null;
+      if (g) { for (const el of [g.el, ...g.group]) el?.classList.remove('drag-source'); clear(); }
+      spread = { a, b, d0: Math.max(1, dist(a, b)), card: card && root.contains(card) ? card : null, row: row && root.contains(row) ? row : null, fired: false };
+      return;
+    }
+    if (spread) return;
     const t = e.target as HTMLElement;
     let el = t.closest<HTMLElement>(SOURCE_SEL);
     if (el && !root.contains(el)) el = null;
@@ -149,6 +178,17 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
   };
 
   const move = (e: PointerEvent) => {
+    if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (spread) {
+      if (e.pointerId !== spread.a && e.pointerId !== spread.b) return;
+      e.preventDefault();
+      const d = dist(spread.a, spread.b);
+      if (!spread.fired && d > spread.d0 * SPREAD_RATIO && d - spread.d0 > SPREAD_PX) {
+        spread.fired = true;
+        h.onSpread?.(spread.card, spread.row);
+      }
+      return;
+    }
     if (!g || e.pointerId !== g.id) return;
     const px = g.x, pt = g.t;
     g.x = e.clientX; g.y = e.clientY; g.t = e.timeStamp;
@@ -180,7 +220,17 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
     }
   };
 
+  const endSpread = (e: PointerEvent) => {
+    pts.delete(e.pointerId);
+    if (spread && (e.pointerId === spread.a || e.pointerId === spread.b)) {
+      spread = null;
+      swallowClick = true; setTimeout(() => { swallowClick = false; }, 400);
+      return true;
+    }
+    return false;
+  };
   const up = (e: PointerEvent) => {
+    if (endSpread(e)) return;
     if (!g || e.pointerId !== g.id) return;
     const cur = g;
     for (const el of [cur.el, ...cur.group]) el?.classList.remove('drag-source');
@@ -221,13 +271,13 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
   };
   const click = (e: MouseEvent) => { if (swallowClick) { swallowClick = false; e.stopPropagation(); e.preventDefault(); } };
 
-  const cancel = (e: PointerEvent) => { if (g && e.pointerId === g.id) { for (const el of [g.el, ...g.group]) el?.classList.remove('drag-source'); clear(); } };
+  const cancel = (e: PointerEvent) => { if (endSpread(e)) return; if (g && e.pointerId === g.id) { for (const el of [g.el, ...g.group]) el?.classList.remove('drag-source'); clear(); } };
   const context = (e: MouseEvent) => {
     const el = (e.target as HTMLElement).closest<HTMLElement>('[data-card]');
     if (el && root.contains(el)) { e.preventDefault(); clear(); h.onLongPress(el); }
   };
   // While dragging, stop the page from scrolling under the finger.
-  const touchmove = (e: TouchEvent) => { if (g?.dragging || g?.panning) e.preventDefault(); };
+  const touchmove = (e: TouchEvent) => { if (g?.dragging || g?.panning || spread) e.preventDefault(); };
 
   // Stop the browser's own image drag, which would cancel the pointer gesture.
   const nodrag = (e: Event) => e.preventDefault();

@@ -145,7 +145,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
 
   // ----- gestures -----
   const handlers = useRef<Required<GestureHandlers> | null>(null);
-  handlers.current = { onTap, onLongPress, onDrop, canDrag };
+  handlers.current = { onTap, onLongPress, onDrop, canDrag, onSpread };
   const gestures = useRef<Gestures | null>(null);
   useEffect(() => {
     const root = rootRef.current!;
@@ -154,6 +154,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
       onLongPress: (el) => handlers.current!.onLongPress(el),
       onDrop: (el, d) => handlers.current!.onDrop(el, d),
       canDrag: (el) => handlers.current!.canDrag(el),
+      onSpread: (card, row) => handlers.current!.onSpread(card, row),
     });
     return () => { gestures.current?.detach(); gestures.current = null; };
   }, []);
@@ -296,7 +297,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   }
 
   /**
-   * Dragging the full view's card up or down: back to the board with the card's group under the finger,
+   * Dragging the full view's card up: back to the board with the card's group under the finger,
    * to drop on any slot. The board's own element for the card (or the tray's) is what drags.
    */
   function dragOutOfFull(cardId: string, zone: ZoneId, e: PointerEvent, x0: number, y0: number) {
@@ -306,6 +307,24 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
     if (!el || !gestures.current) { toast('Close the full view to move this card.', 'info'); return; }
     closeFull();
     gestures.current.adopt(el, e.pointerId, x0, y0, e.clientX, e.clientY);
+  }
+
+  /**
+   * Two-finger spread on the board: the full view, like a long-press. On a collapsed slot it opens
+   * the slot's first card (the lead of its first group); otherwise the card under the fingers.
+   */
+  function onSpread(cardEl: HTMLElement | null, rowEl: HTMLElement | null) {
+    if (full || sheet) return;
+    const zone = rowEl?.dataset.drop;
+    if (rowEl?.dataset.collapsed && isZone(zone)) {
+      const first = state.zones[zone][0];
+      if (!first) return;
+      const lead = hostOf(state, first);
+      const el = rowEl.querySelector<HTMLElement>(`[data-card="${CSS.escape(lead)}"]`);
+      if (el) onLongPress(el);
+      return;
+    }
+    if (cardEl) onLongPress(cardEl);
   }
 
   /** Close the full view; a card in combat leaves its matchup highlighted on the board. */
@@ -624,7 +643,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
               onCounter={(type, kind, lbl) => send(type, { cardId: full.cardId, from: fullZone, kind, label: lbl })}
               onPick={(id) => dispatch({ type: 'full', full: { cardId: id, zone: findZone(state, id) || fullZone, anchor: full.anchor } })}
               step={fullStep} onStep={(id) => dispatch({ type: 'full', full: { cardId: id, zone: fullZone, anchor: id } })}
-              onDragOut={(e, x0, y0) => dragOutOfFull(full.cardId, fullZone, e, x0, y0)} />
+              onDragOut={(e, x0, y0) => dragOutOfFull(full.cardId, fullZone, e, x0, y0)} onClose={closeFull} />
           </div>
         ) : null}
         {sheetEl}
