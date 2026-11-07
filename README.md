@@ -47,6 +47,9 @@ From then on it runs offline. Requirements: a current Safari on iOS / iPadOS, or
      down, reveal, counters. Swipe sideways for the previous or next card or group in the same
      slot; drag the card up to carry its group back to the board and drop it on another slot; swipe
      down to close. A two-finger spread on a slot also opens the full-screen view.
+   - **Coloured left borders** mark cards just changed in play: red for the active player's
+     changes, blue for the other player's. The previous turn's borders stay until the active
+     player's first change. Only the active player can pass the turn.
    - **Tap a library** for draw, mill, look at the top N, reveal, search and shuffle. Looking at
      or searching any library alerts the other player.
    - **Footer:** undo (reverts the last action, whoever took it), untap all, pass turn, counters

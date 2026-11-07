@@ -180,6 +180,10 @@ body.dragging .pile[data-layout="library"].drop-hover .drop-hint { display: bloc
 .card { position: relative; flex: none; display: flex; align-items: center; justify-content: center; touch-action: inherit; }
 .card-inner { position: relative; transition: transform .14s ease; }
 .card.tapped .card-inner { transform: rotate(90deg); }
+/* Changed this turn or last: a left border in the changer's role colour (see Card). */
+.changed-bar { position: absolute; left: 0; top: 0; height: 100%; width: 4px; border-radius: 2px; z-index: 3; pointer-events: none; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
+.changed-bar.atk { background: var(--hot); }
+.changed-bar.def { background: var(--cool); }
 .card-face { width: 100%; height: 100%; border-radius: 4.5%/3.2%; display: block; object-fit: cover; background: #222; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
 .card-face.dim { filter: brightness(.6) saturate(.6); }
 .card-face.missing { display: grid; place-items: center; background: #2a2f2c; border: 1px solid #555; padding: 4px; text-align: center; font-size: 10px; color: var(--ink-2); overflow: hidden; }

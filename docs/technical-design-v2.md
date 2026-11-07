@@ -75,7 +75,7 @@ e2e/                       Playwright scenarios (see Testing)
 
 - `base: '/travel-tabletop/'`, the GitHub Pages project path; every asset URL and the service worker scope derive from it.
 - `plugins: [preact(), VitePWA({ … })]`, configured as in the next section.
-- `define`: `__APP_VERSION__` from `package.json` and `__BUILD_ID__` from the first 7 characters of `GITHUB_SHA` (or `dev` locally). `version.ts` exports them as `APP_VERSION` and `BUILD_ID`; `PROTOCOL_VERSION` is a literal, bumped when host and guest messages change (2: `detachAll`; 3: `setLead`, and new attachments go farthest from the lead).
+- `define`: `__APP_VERSION__` from `package.json` and `__BUILD_ID__` from the first 7 characters of `GITHUB_SHA` (or `dev` locally). `version.ts` exports them as `APP_VERSION` and `BUILD_ID`; `PROTOCOL_VERSION` is a literal, bumped when host and guest messages change (2: `detachAll`; 3: `setLead`, and new attachments go farthest from the lead; 4: `changed` marks).
 - `build.target: 'es2022'`, `build.sourcemap: true` (source maps are served, so errors on a device point at real lines).
 
 **Scripts** (`package.json`): `dev` (Vite dev server), `build` (`tsc --noEmit && vite build`), `preview` (serves `dist/` the way Pages will), `typecheck`, `lint`, `test` (Vitest), `e2e` (Playwright against `preview`).
@@ -150,6 +150,7 @@ interface CardInstance {
   attachedTo?: string;        // host card id (same battlefield zone, one level)
   attacking?: number;         // attack number 1, 2, … while marked attacking
   blocking?: string[];        // ids of the attackers it blocks
+  changed?: { by: PlayerId; turn: number }; // last changed in play, by whom and in which turn (protocol 4)
 }
 
 interface PlayerState {
@@ -239,6 +240,8 @@ After every command `fixAttachments` restores these rules:
 - `endCombat` and `passTurn` delete every `attacking` and `blocking`.
 
 `fixCombat` runs after every command, after `fixAttachments`. A card not in a battlefield zone loses both marks. A card off the active player's side loses `attacking`, and a card on the active player's side loses `blocking`, so a change of control removes a creature from combat. A blocker's references to cards no longer attacking are dropped.
+
+**Changed marks.** `fixChanged` runs after `fixCombat`. A card out of play loses `changed`. On `passTurn` it drops marks with `turn < state.turn - 1`. A marking command (`move` except a reorder within one zone, `attach`, `detach`, `detachAll`, `setLead`, `tap`, `flip`, `setFaceDown`, `addCounter`, `removeCounter`, `createToken`, `attack`, `block`) sets `changed = { by, turn }` on every card it touched (the payload's `cardId` and the moved cards) that is now in play; `by` is the actor, or the active player for `table`, and `host` marks nothing. When `by` is the active player, marks with `turn < state.turn` are dropped first. The untap in `passTurn`, `untapAll` and `endCombat` mark nothing. `checkInvariants` checks that only cards in play carry a mark and none is older than the previous turn. The v1 compatibility replay compares states without `changed`, a field v1 never had.
 
 **Notices** are logged and broadcast but change no state: `peek` (zone, n), `revealTop` (zone, n, ids), `searchOpen` / `searchClose` (zone), `inspect` (zone), `point` (cardId? zone?), `showCard` (cardId, zone), `coinFlip`, `rollDie` (sides), `randomPick` (zone), `info`. The host fills results: coin `heads` / `tails`; die sides clamped to 2–1000 with result 1…sides; randomPick's `cardId` (an empty zone is invalid). A `searchClose` on a library is followed by a host-issued `shuffle`. Alert notices: peek, revealTop, searchOpen, searchClose, inspect, coinFlip, rollDie, randomPick.
 
@@ -393,6 +396,8 @@ During a game, a changed hash is put back.
 | 5 | player counters | P.hand | stack |
 
 Row zones are drawn by `Row`, piles by `Pile` (the top card, with a library split into Top and Bottom drop halves). The board's class is `my-turn` or `their-turn`. Its background is two layers, the board's `::before` and `::after`, placed as grid items behind the cells: one spans the opponent's two rows, the other this side's three, so the tint splits exactly where the players' rows meet at every screen size (the margins reach over the padding). The active player's half fades from red `rgba(214,64,52,.38)` at its outer edge to `.12` near the seam; the other half does the same in blue `rgba(60,110,220,…)`. At the seam each layer reaches 12 px past it and fades to transparent, so the colours cross-fade over 24 px centred on the gap. Cells are translucent, so the tint shows through. Every player name on the board (turn label, counters cell, opponent hand count, and the name in each row label, rendered by a `Who` component) is `--hot` `#ff7b5f` (class `role-atk`) for the active player and `--cool` `#7aa7ff` (`role-def`) for the other; the rest of each label stays grey.
+
+A card in play with `changed` gets a `.changed-bar` (4 px, `--hot` when `changed.by` is the active player, else `--cool`) at the left of the `.card` frame. The frame never rotates (only `.card-inner` does), so on a tapped card the bar stays on the left, with `top` and `height` set to the turned picture's extent. **Pass turn** (footer and menu) shows only when the actor is the active player or `table`.
 
 **Rows** (`Cards.tsx`). Card height = slot height − 14 px; width = height × 63/88 (a tapped card's box is square, and its image is rotated 90°).
 

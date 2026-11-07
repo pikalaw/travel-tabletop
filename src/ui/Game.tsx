@@ -59,6 +59,9 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   const P: PlayerId = same ? persp : session.me;
   const actor: Actor = same ? (viewer === 'nobody' ? 'table' : viewer) : session.me;
   const actingPlayer: PlayerId = actor === 'table' ? persp : (actor as PlayerId);
+  // Only the active (attacking) player passes the turn; a blinded table may too, so the attacker
+  // does not have to unblind just to pass.
+  const canPass = actor === 'table' || actor === state.activePlayer;
   const send = (type: string, payload: object) => session.send(type, payload, actor);
   const combat = mode.kind === 'combat' ? mode : null;
   const attaching = mode.kind === 'attach' ? mode : null;
@@ -473,7 +476,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   }
   const menuItems: (MenuItem | null)[] = [
     same && viewer !== 'nobody' ? { label: 'Blind my hand', onClick: () => { blind(); setSheet(null); } } : null,
-    { label: 'Pass the turn', onClick: () => { setSheet(null); passTurn(); } },
+    canPass ? { label: 'Pass the turn', onClick: () => { setSheet(null); passTurn(); } } : null,
     !same || state.result ? { label: 'Export action log (JSON Lines)', onClick: () => void exportLog() } : null,
     session.kind === 'host' && pairing ? { label: 'Re-pair the guest device', onClick: () => setSheet({ kind: 'pair' }) } : null,
     session.kind === 'guest' && pairing ? { label: 'Reconnect to the host', onClick: () => setSheet({ kind: 'pair' }) } : null,
@@ -586,7 +589,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
       <div class="bar">
         <button class="btn" onClick={() => send('undo', {})} title="Undo the last action">Undo</button>
         <button class="btn" onClick={() => send('untapAll', { player: actingPlayer })}>Untap all</button>
-        <button class="btn" onClick={passTurn}>Pass turn</button>
+        {canPass ? <button class="btn" onClick={passTurn}>Pass turn</button> : null}
         <button class="btn" onClick={() => dispatch({ type: 'mode', mode: { kind: 'combat', blocker: null } })}>Combat</button>
         {hasCombatMarks ? <button class="btn warn" onClick={endCombat}>End combat</button> : null}
         {matchSet?.size ? <button class="btn on" onClick={() => dispatch({ type: 'match', cardId: null })}>Clear highlight</button> : null}

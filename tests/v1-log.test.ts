@@ -14,14 +14,27 @@ const lines = read('game.jsonl').trim().split('\n');
 const entries = lines.slice(1).map((l) => JSON.parse(l) as LogEntry);
 const final = JSON.parse(read('final-state.json')) as GameState;
 
+/**
+ * The replayed state without the fields v1 never had: `changed` marks (protocol 4) are a v2
+ * display aid, set by the same commands. Everything v1 kept must still match exactly.
+ */
+function asV1(state: GameState): GameState {
+  const s = structuredClone(state);
+  for (const c of Object.values(s.cards)) delete c.changed;
+  return s;
+}
+
 describe('the v1 game log', () => {
   it('replays to v1’s final state', () => {
-    expect(replay(entries)).toEqual(final);
+    const replayed = asV1(replay(entries));
+    expect(replayed).toEqual(final);
     // and exactly: no keys holding undefined, the same JSON once keys are sorted (the fixture's are)
     const canon = (x: unknown): string => JSON.stringify(x, (_k, v: unknown) => (v && typeof v === 'object' && !Array.isArray(v)
       ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v));
-    expect(canon(replay(entries))).toBe(canon(final));
-    expect(replay(entries)).toStrictEqual(final);
+    expect(canon(replayed)).toBe(canon(final));
+    expect(replayed).toStrictEqual(final);
+    // the game ended with cards in play, so the marks really were set along the way
+    expect(Object.values(replay(entries).cards).some((c) => c.changed)).toBe(true);
   });
 
   it('regenerates every ticker line', () => {

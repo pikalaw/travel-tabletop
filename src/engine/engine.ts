@@ -528,8 +528,44 @@ function run(input: GameState, cmd: Command): ApplyResult {
 
   fixAttachments(state);
   fixCombat(state);
+  fixChanged(state, cmd, moved);
   state.seq = input.seq + 1;
   return { state, moved };
+}
+
+/** Commands that change a card in play, and so mark it as changed (see `CardInstance.changed`). */
+const MARKING: ReadonlySet<Command['type']> = new Set<Command['type']>([
+  'move', 'attach', 'detach', 'detachAll', 'setLead', 'tap', 'flip', 'setFaceDown',
+  'addCounter', 'removeCounter', 'createToken', 'attack', 'block',
+]);
+
+/**
+ * Keep the "changed" marks. A marking command marks the cards it touched that are in play, for
+ * the player who sent it (on a blinded table, the active player). The active player's first
+ * marking command in a turn clears the marks from earlier turns; a turn pass drops marks more
+ * than one turn old; a card out of play has none. Routine changes (the untap when a turn passes,
+ * Untap all, ending combat) mark nothing.
+ */
+export function fixChanged(state: GameState, cmd: Command, moved: readonly Movement[]): void {
+  const inPlay = new Set([...PLAYERS.flatMap((pl) => [...state.zones[`${pl}.battlefield`], ...state.zones[`${pl}.lands`]])]);
+  for (const c of Object.values(state.cards)) if (c.changed && !inPlay.has(c.id)) delete c.changed;
+  if (cmd.type === 'passTurn') {
+    for (const c of Object.values(state.cards)) if (c.changed && c.changed.turn < state.turn - 1) delete c.changed;
+    return;
+  }
+  if (!MARKING.has(cmd.type)) return;
+  const by: PlayerId | null = cmd.actor === 'p1' || cmd.actor === 'p2' ? cmd.actor : cmd.actor === 'table' ? state.activePlayer : null;
+  if (!by) return;
+  const p = (cmd.payload ?? {}) as Record<string, unknown>;
+  if (cmd.type === 'move' && p.from === p.to) return; // reordering a row changes no card
+  const touched = new Set(moved.map((m) => m.id));
+  if (typeof p.cardId === 'string') touched.add(p.cardId);
+  const marked = [...touched].filter((id) => inPlay.has(id));
+  if (!marked.length) return;
+  if (by === state.activePlayer) {
+    for (const c of Object.values(state.cards)) if (c.changed && c.changed.turn < state.turn) delete c.changed;
+  }
+  for (const id of marked) state.cards[id]!.changed = { by, turn: state.turn };
 }
 
 /**
@@ -564,6 +600,8 @@ export function checkInvariants(state: GameState): string | null {
     if (c.attacking && zoneOwner(z) !== state.activePlayer) return `card ${c.id} attacks from the defending side`;
     if (c.blocking && zoneOwner(z) === state.activePlayer) return `card ${c.id} blocks from the attacking side`;
     for (const a of c.blocking || []) if (!state.cards[a]?.attacking) return `card ${c.id} blocks ${a}, which is not attacking`;
+    if (c.changed && !isBattlefieldZone(z)) return `card ${c.id} has a changed mark out of play`;
+    if (c.changed && c.changed.turn < state.turn - 1) return `card ${c.id} has a changed mark from turn ${c.changed.turn}`;
   }
   return null;
 }

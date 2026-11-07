@@ -38,6 +38,12 @@ export interface CardInstance {
   attacking?: number;
   /** Ids of the attackers this card blocks. */
   blocking?: string[];
+  /**
+   * Who last changed this card while it was in play (battlefield or lands), and in which turn:
+   * drawn as a coloured left border so the other player can see what was just done. Added in
+   * protocol 4.
+   */
+  changed?: { by: PlayerId; turn: number };
 }
 
 export interface PlayerCounter {

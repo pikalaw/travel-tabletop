@@ -98,6 +98,11 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
   const w = Math.round(h * RATIO);
   const tapped = card.tapped && (zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands');
   const boxW = tapped ? h : w;
+  // Changed this turn or last: a left border in the colour of the changer's current role (red for
+  // the active player, blue for the other). It sits on the card's frame, which never rotates, so a
+  // tapped card shows it on its left too, spanning the turned picture's height.
+  const inPlay = zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands';
+  const changed = inPlay && card.changed ? (card.changed.by === ctx.state.activePlayer ? 'atk' : 'def') : null;
   const markers: JSX.Element[] = [];
   if (card.isToken) markers.push(<span class="mark token">T</span>);
   if (card.faceDown)
@@ -153,6 +158,13 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
       style={`width:${boxW}px;height:${h}px;${style}`}
     >
       {linkLeft ? <span class="link-bar" aria-hidden="true" style={`left:${-linkLeft - 8}px;width:${linkLeft + 16}px`} /> : null}
+      {changed ? (
+        <span
+          class={`changed-bar ${changed}`}
+          aria-hidden="true"
+          style={tapped ? `top:${Math.round((h - w) / 2)}px;height:${w}px` : ''}
+        />
+      ) : null}
       <div class="card-inner" style={`width:${w}px;height:${h}px`}>
         {img.url ? (
           <img

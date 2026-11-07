@@ -156,6 +156,15 @@ Players can mark attackers and blockers so both can see who blocks what. The mar
 - A refused mark explains itself, e.g. "Only Claire's creatures can attack this turn."
 - No lines are drawn between cards; the numbered marks stay readable in collapsed or scrolled slots and after a perspective switch.
 
+## Changed cards
+
+A card in play that a player just changed carries a coloured **left border**, so the other player can see at a glance what was done. It is red for the active (attacking) player's changes and blue for the defending player's, the same colours as their names, so a player's marks turn from red to blue when the turn passes to the other player.
+
+- **What marks a card:** putting it into play (battlefield or lands), tapping or untapping it, a counter added or removed, attaching, detaching or Make lead, flipping, turning face down, a combat mark, and creating a token. Changing a card on either side counts, for whoever made the change.
+- **What does not:** the untap when a turn passes, **Untap all**, ending combat, reordering a row, and anything in a hand, library or other pile. A card that leaves play loses its border.
+- **Tapped cards** show the border on their left too, along the turned card.
+- **When they clear:** the previous turn's borders stay up until the active player's first change of the new turn, so the next player sees what was just done, even after drawing. Changes the defender makes during the turn (a block, an instant) are this turn's and stay. Borders more than one turn old clear when the turn passes. Undo brings cleared borders back.
+
 ## Counters, tokens and footer tools
 
 Card counters, tokens, player counters and randomness are all manual tools; the app never interprets them.
@@ -244,7 +253,7 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 **Lifecycle**
 
 - **New game.** Choose One device, Host (two devices) or Join (two devices). Enter names (the guest enters only their own), and pick one or more decks per player; both players may pick the same deck, and every player needs at least one. Set starting life: 20, 30, 40 or any number. The last setup is remembered. The app shuffles each library and deals 7 cards to each hand; player 1 goes first. Mulligans are manual.
-- **Pass turn.** After a confirmation ("End Lawrence's turn?", with **Pass to Claire**), hands the turn to the other player, untaps that player's battlefield and lands, clears combat marks, and logs a turn marker. On one device it also blinds the hand, so the next player unblinds to their own side.
+- **Pass turn.** Only the active player has it, in the footer and the menu (on one device, also while the hands are blinded, so the attacker need not unblind to pass). After a confirmation ("End Lawrence's turn?", with **Pass to Claire**), hands the turn to the other player, untaps that player's battlefield and lands, clears combat marks, and logs a turn marker. On one device it also blinds the hand, so the next player unblinds to their own side.
 - **Concede** ends the game; a banner names the winner, and the log records the result.
 - **Rematch** starts a new game with the same decks.
 - **Resume.** The home screen lists games in progress on this device, with Resume and Delete, and a joined game (on a guest device) with Reconnect and Forget. The host reopens its saved game and re-pairs with the guest.

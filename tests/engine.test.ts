@@ -385,6 +385,82 @@ describe('combat marks', () => {
   });
 });
 
+// ---------- Changed marks ----------
+
+describe('changed marks', () => {
+  const send = (h: Table, type: string, payload: Record<string, unknown>, actor = 'p1') => h.dispatch({ type, actor, payload } as never);
+  function setup() {
+    const h = started(); // p1 active, turn 1
+    const [a1, a2, a3] = h.state.zones['p1.hand'];
+    const [b1, b2] = h.state.zones['p2.hand'];
+    for (const id of [a1, a2]) send(h, 'move', { cardId: id, from: 'p1.hand', to: 'p1.battlefield' });
+    for (const id of [b1, b2]) send(h, 'move', { cardId: id, from: 'p2.hand', to: 'p2.battlefield' }, 'p2');
+    return { h, a1, a2, a3, b1, b2 };
+  }
+  const by = (h: Table, id: string) => h.state.cards[id].changed;
+
+  it('marks cards put into play or changed in play, for whoever sent the command', () => {
+    const { h, a1, b1, a3 } = setup();
+    expect(by(h, a1)).toEqual({ by: 'p1', turn: 1 });
+    expect(by(h, b1)).toEqual({ by: 'p2', turn: 1 });
+    expect(by(h, a3)).toBeUndefined(); // still in hand
+    send(h, 'tap', { cardId: b1, from: 'p2.battlefield' }); // p1 taps p2's card
+    expect(by(h, b1)).toEqual({ by: 'p1', turn: 1 });
+    // a blinded table acts for the active player
+    send(h, 'addCounter', { cardId: a1, from: 'p1.battlefield', kind: 'plus' }, 'table');
+    expect(by(h, a1)).toEqual({ by: 'p1', turn: 1 });
+  });
+
+  it('routine changes mark nothing: untap all, the untap at a turn pass, ending combat, reordering', () => {
+    const { h, a2, b1 } = setup();
+    send(h, 'tap', { cardId: b1, from: 'p2.battlefield' }, 'p2');
+    send(h, 'passTurn', { to: 'p2' }); // turn 2: p2's cards untap, which marks nothing
+    expect(h.state.cards[b1].tapped).toBe(false);
+    expect(by(h, b1)).toEqual({ by: 'p2', turn: 1 });
+    send(h, 'tap', { cardId: a2, from: 'p1.battlefield' }); // the defender's tap: marked
+    send(h, 'untapAll', { player: 'p1' });
+    expect(by(h, a2)).toEqual({ by: 'p1', turn: 2 });
+    send(h, 'attack', { cardId: b1, from: 'p2.battlefield' }, 'p2'); // the active player's first marking move
+    send(h, 'endCombat', {}, 'p2');
+    send(h, 'move', { cardId: a2, from: 'p1.battlefield', to: 'p1.battlefield', toIndex: 0 }, 'p2');
+    expect(by(h, a2)).toEqual({ by: 'p1', turn: 2 });
+    expect(by(h, b1)).toEqual({ by: 'p2', turn: 2 });
+  });
+
+  it("the active player's first marking move clears earlier turns' marks; a pass drops marks two turns old", () => {
+    const { h, a1, a2, b1, b2 } = setup();
+    send(h, 'passTurn', { to: 'p2' }); // turn 2, p2 active
+    // the defender acts first in the new turn: its mark belongs to this turn and stays
+    send(h, 'tap', { cardId: a2, from: 'p1.battlefield' });
+    expect(by(h, a2)).toEqual({ by: 'p1', turn: 2 });
+    expect(by(h, a1)).toEqual({ by: 'p1', turn: 1 }); // turn 1 marks still shown
+    // drawing marks nothing, so it clears nothing
+    send(h, 'draw', { player: 'p2', n: 1 }, 'p2');
+    expect(by(h, a1)).toBeDefined();
+    // the active player's first marking move clears turn 1's marks only
+    send(h, 'tap', { cardId: b1, from: 'p2.battlefield' }, 'p2');
+    expect([by(h, a1), by(h, b2)]).toEqual([undefined, undefined]);
+    expect(by(h, a2)).toEqual({ by: 'p1', turn: 2 });
+    expect(by(h, b1)).toEqual({ by: 'p2', turn: 2 });
+    // p1 passes on turn 3 without a marking move: at the next pass, turn-2 marks are two turns old
+    send(h, 'passTurn', { to: 'p1' }, 'p2'); // turn 3
+    expect(by(h, b1)).toEqual({ by: 'p2', turn: 2 });
+    send(h, 'passTurn', { to: 'p2' }); // turn 4
+    expect([by(h, a2), by(h, b1)]).toEqual([undefined, undefined]);
+  });
+
+  it('a card leaving play loses its mark, and undo brings marks back', () => {
+    const { h, a1, b1 } = setup();
+    send(h, 'move', { cardId: a1, from: 'p1.battlefield', to: 'p1.graveyard' });
+    expect(by(h, a1)).toBeUndefined();
+    send(h, 'passTurn', { to: 'p2' });
+    send(h, 'tap', { cardId: b1, from: 'p2.battlefield' }, 'p2'); // clears turn 1's marks
+    expect(h.dispatch({ type: 'undo', actor: 'p2', payload: {} }).ok).toBe(true);
+    expect(by(h, b1)).toEqual({ by: 'p2', turn: 1 });
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+});
+
 // ---------- Property tests ----------
 
 const ZONES = allZones();

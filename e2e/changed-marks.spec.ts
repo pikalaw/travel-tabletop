@@ -1,0 +1,59 @@
+import { test, expect } from '@playwright/test';
+import { startOneDevice, playFromHand, idsIn, drag, tapCard, barButton, resetBar, answerDialog, unblind, watchErrors } from './helpers';
+
+test('changed marks: a left border in the changer\'s role colour, cleared by the next player\'s first change', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page);
+  const bar = (id: string) => page.locator(`[data-card="${id}"] > .changed-bar`);
+
+  // Player 1 (active) plays two cards and taps one: red borders, the tapped one too
+  await playFromHand(page, 'p1.battlefield', 2);
+  const [a, b] = await idsIn(page, 'p1.battlefield');
+  const row = page.locator('[data-drop="p1.battlefield"]');
+  if (await row.getAttribute('data-collapsed')) await tapCard(page, b!); // the first tap opens a collapsed row
+  await tapCard(page, b!);
+  await expect(page.locator(`[data-card="${b}"].tapped`)).toHaveCount(1);
+  for (const id of [a!, b!]) await expect(bar(id)).toHaveClass(/\batk\b/);
+  // on a tapped card the border spans the turned picture, on the left of the frame
+  const frame = (await page.locator(`[data-card="${b}"]`).boundingBox())!;
+  const tb = (await bar(b!).boundingBox())!;
+  expect(Math.abs(tb.x - frame.x)).toBeLessThan(2);
+  expect(tb.height).toBeLessThan(frame.height - 10);
+
+  // the pass: Player 1's marks stay, now blue (Player 1 defends)
+  await resetBar(page); await barButton(page, 'Pass turn'); await answerDialog(page, true);
+  await unblind(page, 'Player 2');
+  for (const id of [a!, b!]) await expect(bar(id)).toHaveClass(/\bdef\b/);
+  // drawing changes no card in play, so nothing clears
+  await page.locator('.c33 .pile').click();
+  await page.getByRole('button', { name: 'Draw 1' }).click();
+  await barButton(page, 'Done');
+  await expect(bar(a!)).toHaveCount(1);
+  // Player 2's first change clears them; its own card gets a red border
+  await drag(page, page.locator('[data-drop="p2.hand"] [data-card]').first(), page.locator('[data-drop="p2.battlefield"]'));
+  const [c] = await idsIn(page, 'p2.battlefield');
+  await expect(bar(c!)).toHaveClass(/\batk\b/);
+  for (const id of [a!, b!]) await expect(bar(id)).toHaveCount(0);
+  // undo brings the previous turn's marks back
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(bar(a!)).toHaveClass(/\bdef\b/);
+  errs.expectNone();
+});
+
+test('only the active player, or a blinded table, sees Pass turn', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page);
+  const pass = page.locator('.bar').first().getByRole('button', { name: 'Pass turn', exact: true });
+  await expect(pass).toHaveCount(1); // Player 1 is active
+  await resetBar(page); await barButton(page, 'Pass turn'); await answerDialog(page, true);
+  // blinded by the pass: the table may pass
+  await expect(page.getByRole('button', { name: 'Unblind to Player 2' })).toBeVisible();
+  await expect(pass).toHaveCount(1);
+  // Player 1 unblinds during Player 2's turn: no Pass turn, in the footer or the menu
+  await unblind(page, 'Player 1');
+  await expect(pass).toHaveCount(0);
+  await page.locator('.bar [aria-label="Menu"]').scrollIntoViewIfNeeded();
+  await page.locator('.bar [aria-label="Menu"]').click();
+  await expect(page.getByText('Pass the turn')).toHaveCount(0);
+  errs.expectNone();
+});

@@ -84,7 +84,7 @@ If the last item fails, switch the transport to a Capacitor-wrapped native socke
 - [x] Dice and random pick, pointer, ticker and recent actions, opponent hand count
 - [x] Log export as JSON Lines
 - [x] Added after the original plan: attachments, combat marks, multiple open slots, touch scrolling handled in code, turn label and turn gradient, names coloured by combat role, combat cards in the full view, matchup highlight
-- [x] Added during device testing: group drag and Detach all, Avatar Jumpstart starter pack, pairing diagnostics, Pass turn blinds the hand (one device), slot swipes, drag up and swipe down in the full view, two-finger spread to open it, row heights favouring the battlefields, Make lead and newest attachments on the far left
+- [x] Added during device testing: group drag and Detach all, Avatar Jumpstart starter pack, pairing diagnostics, Pass turn blinds the hand (one device), slot swipes, drag up and swipe down in the full view, two-finger spread to open it, row heights favouring the battlefields, Make lead and newest attachments on the far left, changed-card borders, Pass turn for the active player only
 
 ## Rewrite to TypeScript + Vite (v2)
 
@@ -159,6 +159,7 @@ The unit suites are 43 tests in `tests/engine.test.js`, `tests/net.test.js` and 
 - **Attachments:** attach from hand, onto a strip, group viewer, fan out, detach, host moves and leaves play, undo.
 - **Counters:** removal by drag on the board and in the full view (mouse and touch); − and + buttons.
 - **Dialogs:** every in-app dialog (pass turn, end combat, concede, labeled counter, counter value, delete game, rename and delete deck, duplicate import) with OK, Cancel, a backdrop tap, Enter and Escape; no browser dialog opens.
+- **Changed marks:** red and blue left borders by role, on tapped cards too; kept through a draw, cleared by the next player's first change, restored by undo; Pass turn only for the active player or a blinded table.
 - **Full view and matchup:** stepping through a slot by swipe and arrow key (one stop per group, hidden cards skipped), dragging a group up out of the full view onto another slot, swipe down to close, two-finger spread on collapsed and open slots (touch), combat cards in the thumbnail row (attacker and blocker views), marks and counters below the card in both orientations, matchup highlight and clearing it, dropping a card on the opponent's hand count.
 - **Combat:** marking in combat mode, tags, marks on tapped cards, several open slots, End combat, Pass turn confirmation, side enforcement, the Attack tag only for the active player.
 - **Labels:** turn label and order, hand label, opponent hand count, turn gradient, TAP TO CLOSE.
