@@ -54,3 +54,18 @@ test('spread: on a collapsed slot it opens the first card; on an open slot, the 
   await expect(page.locator('.fullcard-inner')).toHaveAttribute('data-card-target', hand[1]!);
   errs.expectNone();
 });
+
+test('touch: a dialog opened by a tap stays open; a tap outside it still cancels', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page);
+  const chip = page.locator('[data-counter="label"]');
+  await chip.scrollIntoViewIfNeeded();
+  const b = (await chip.boundingBox())!;
+  await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+  await expect(page.locator('.dialog-input')).toHaveCount(1);
+  await page.waitForTimeout(400);
+  await expect(page.locator('.dialog-input')).toHaveCount(1); // the click after the tap did not close it
+  await page.touchscreen.tap(10, 10);
+  await expect(page.locator('.dialog-input')).toHaveCount(0);
+  errs.expectNone();
+});

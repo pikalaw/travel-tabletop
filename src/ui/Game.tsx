@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { toast } from './toast';
+import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
 import { Board } from './Board';
 import { cardImage, type BoardCtx } from './Cards';
@@ -703,8 +704,9 @@ function RevealScreen({ ctx, shown, onClose }: { ctx: BoardCtx; shown: { actor: 
 
 /** "Are you sure you are …?" before unblinding, in that player's colour (the colour of their button). */
 function ConfirmPlayer({ pl, name, onOk, onCancel }: { pl: PlayerId; name: string; onOk: () => void; onCancel: () => void }) {
+  const outside = useOutsideTap(onCancel);
   return (
-    <div class="confirm-screen" role="dialog" aria-label={`Are you sure you are ${name}?`} onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+    <div class="confirm-screen" role="dialog" aria-label={`Are you sure you are ${name}?`} {...outside}>
       <div class={`confirm-box ${pl}`}>
         <h3>Are you sure you are {name}?</h3>
         <p>Your hand will be shown face up.</p>

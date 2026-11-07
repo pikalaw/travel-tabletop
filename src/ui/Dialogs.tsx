@@ -2,6 +2,7 @@
 // ("pikalaw.github.io says") and block the page, so the app draws its own.
 // One dialog shows at a time; later ones wait in a queue.
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useOutsideTap } from './hooks';
 
 interface DialogBase { title: string; body?: string; ok?: string; cancel?: string }
 export interface ConfirmOptions extends DialogBase { danger?: boolean }
@@ -81,12 +82,13 @@ export function Dialogs() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [d?.id]);
+  const outside = useOutsideTap(() => { if (d) settle(d, 'cancel'); });
   if (!d) return null;
   const ok = () => settle(d, 'ok', value);
   const cancel = () => settle(d, 'cancel');
   return (
     <div class="confirm-screen" role="dialog" aria-modal="true" aria-label={d.title}
-      onClick={(e) => { if (e.target === e.currentTarget) cancel(); }}>
+      {...outside}>
       <div class={`confirm-box plain ${d.kind === 'confirm' && d.danger ? 'danger' : ''}`}>
         <h3>{d.title}</h3>
         {d.body ? <p class="dialog-body">{d.body}</p> : null}

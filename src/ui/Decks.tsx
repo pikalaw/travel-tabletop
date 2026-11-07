@@ -1,6 +1,7 @@
 // Deck screens: list, view, import, rename, delete.
 
 import { useState, useEffect } from 'preact/hooks';
+import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
 import { listDecks, deleteDeck, putDeck } from '../storage/db';
 import { loadArt, artUrl, sizeFor, type Art } from '../storage/art';
@@ -315,6 +316,7 @@ export function DeckScreen({ go, id }: { go: Go; id: string }) {
 
 /** Full-screen view of one card in a deck: large image, flip for double-faced cards, previous / next. */
 function CardViewer({ art, order, counts, view, setView }: { art: Map<string, Art>; order: string[]; counts: Map<string, number>; view: CardView; setView: (v: CardView | null) => void }) {
+  const outside = useOutsideTap(() => setView(null));
   const defId = order[view.i]!;
   const a = art.get(defId);
   const step = (d: number) =>
@@ -338,9 +340,7 @@ function CardViewer({ art, order, counts, view, setView }: { art: Map<string, Ar
       class="deck-viewer"
       role="dialog"
       aria-label={a?.name || 'Card'}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) setView(null);
-      }}
+      {...outside}
     >
       <div class="deck-viewer-img" onClick={() => setView(null)}>
         {url ? (
