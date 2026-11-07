@@ -142,3 +142,31 @@ test('make lead: an attached card becomes the group\'s lead card; new attachment
   await expect(bf.locator(`[data-card="${b}"]`)).toHaveAttribute('data-attached-to', handCard!);
   errs.expectNone();
 });
+
+test('full view: a tap on the card taps or untaps it; a tapped card stays upright with a Tapped badge', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page);
+  await playFromHand(page, 'p1.battlefield', 1);
+  const [a] = await idsIn(page, 'p1.battlefield');
+  await longPress(page, page.locator(`[data-card="${a}"]`));
+  const inner = page.locator('.fullcard-inner');
+  const badge = page.locator('.full-badges .badge.tap');
+  await expect(badge).toHaveCount(0);
+  await inner.click();
+  await expect(page.locator(`.board [data-card="${a}"].tapped`)).toHaveCount(1);
+  await expect(badge).toHaveText(/Tapped/);
+  // the picture is not turned: still taller than wide
+  const img = (await page.locator('.fullcard-inner img').boundingBox())!;
+  expect(img.height).toBeGreaterThan(img.width);
+  await inner.click();
+  await expect(page.locator(`.board [data-card="${a}"].tapped`)).toHaveCount(0);
+  await expect(badge).toHaveCount(0);
+  await barButton(page, 'Close');
+  // a hand card has no tapped state: a tap on it changes nothing
+  const h = (await idsIn(page, 'p1.hand'))[0]!;
+  await longPress(page, page.locator(`[data-card="${h}"]`), 0.15, 0.5);
+  await expect(page.locator('.fullcard-meta')).not.toContainText('Tap the card to tap');
+  await page.locator('.fullcard-inner').click();
+  await expect(page.locator('.fullcard-meta')).not.toContainText('tapped');
+  errs.expectNone();
+});

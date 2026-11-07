@@ -46,7 +46,8 @@ From then on it runs offline. Requirements: a current Safari on iOS / iPadOS, or
    - **Long-press** a card, or right-click it on desktop, for the full-screen view: flip, face
      down, reveal, counters. Swipe sideways for the previous or next card or group in the same
      slot; drag the card up to carry its group back to the board and drop it on another slot; swipe
-     down to close. A two-finger spread on a slot also opens the full-screen view.
+     down to close. Tap the card there to tap or untap it. A two-finger spread on a slot also
+     opens the full-screen view.
    - **Coloured left borders** mark cards just changed in play: red for the active player's
      changes, blue for the other player's. The previous turn's borders stay until the active
      player's first change. Only the active player can pass the turn.

@@ -14,7 +14,7 @@ import {
   type FullRow, type LogLine, type MenuItem,
 } from './Overlays';
 import { initialUi, uiReducer, type SheetState } from './gameUi';
-import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone } from '../engine/view';
+import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone, isBattlefieldZone } from '../engine/view';
 import { listDecks, loadLog } from '../storage/db';
 import { loadArt, type Art } from '../storage/art';
 import type { Session } from '../client/session';
@@ -646,7 +646,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
               onCounter={(type, kind, lbl) => send(type, { cardId: full.cardId, from: fullZone, kind, label: lbl })}
               onPick={(id) => dispatch({ type: 'full', full: { cardId: id, zone: findZone(state, id) || fullZone, anchor: full.anchor } })}
               step={fullStep} onStep={(id) => dispatch({ type: 'full', full: { cardId: id, zone: fullZone, anchor: id } })}
-              onDragOut={(e, x0, y0) => dragOutOfFull(full.cardId, fullZone, e, x0, y0)} onClose={closeFull} />
+              onDragOut={(e, x0, y0) => dragOutOfFull(full.cardId, fullZone, e, x0, y0)} onClose={closeFull}
+              onToggleTap={isBattlefieldZone(fullZone) ? () => send('tap', { cardId: full.cardId, from: fullZone }) : null} />
           </div>
         ) : null}
         {sheetEl}

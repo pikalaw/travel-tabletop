@@ -70,7 +70,7 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 
 | Slot | Display | Tap on a card | Tap on the slot |
 | --- | --- | --- | --- |
-| Battlefield, lands | Face up, a row; overlaps when full. A tapped card turns a quarter counterclockwise, so its top (name and art) shows in a crowded row | Tap or untap | Open or close it |
+| Battlefield, lands | Face up, a row; overlaps when full. A tapped card turns a quarter to the right, as in paper Magic | Tap or untap | Open or close it |
 | Hand | Owner sees faces; others see backs; overlaps when full | — | Open or close it |
 | Library | Pile, face down; the top card shows face up only with "Top face up" | — | Library actions in the footer |
 | Graveyard | Pile, face up, top card shown | — | A sheet listing the whole zone |
@@ -96,6 +96,7 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 **Full-screen card view** (long-press)
 
 - Shows the card large on an opaque screen, so the board never shows behind it. Its name, zone and state (tapped, face down, revealed, back face, token, double-faced) are listed beside it.
+- **Tapped cards stay upright here**, so their text can be read; a **↷ Tapped** badge under the card says it is tapped. A tap on a card in play taps or untaps it.
 - Combat marks and counters show in a strip below the card image, never over it, so the card's text stays readable. Counters have − and + buttons. Dragging a counter tag from the footer onto the card adds one; dragging a counter or mark away removes one.
 - **Flip** shows the other face to both players. **Face down** hides the face from everyone but the owner. Both work on any card; the app does not check whether it makes sense.
 - **Reveal** shows a hand card to the opponent once. With two devices, the card pops up full screen on the opponent's device. With one device, the hand is blinded first, then an opaque screen shows only that card; tapping it closes it. A reveal is a logged event, not a lasting state: revealing again shows it again.

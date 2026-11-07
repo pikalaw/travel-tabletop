@@ -129,13 +129,16 @@ export interface FullCardProps {
   onDragOut?: ((e: PointerEvent, x0: number, y0: number) => void) | null;
   /** Swiping the card down: back to the board, the same as Close. */
   onClose?: (() => void) | null;
+  /** A tap on the card taps or untaps it (cards in play only; null elsewhere). */
+  onToggleTap?: (() => void) | null;
 }
 
-/** How far a finger moves before a swipe, a drag up or a swipe down counts. */
+/** How far a finger moves before a swipe, a drag up or a swipe down counts; under TAP_PX it is a tap. */
 const SWIPE_PX = 50;
 const DRAG_OUT_PX = 40;
+const TAP_PX = 8;
 
-export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null }: FullCardProps) {
+export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null, onToggleTap = null }: FullCardProps) {
   const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
   // The arrow keys step through the slot too. One listener for the view's life, reading the
   // latest targets, so a key pressed right after a step never acts on the previous card.
@@ -186,6 +189,10 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
     if (!s0 || e.pointerId !== s0.id) return;
     const dx = e.clientX - s0.x,
       dy = e.clientY - s0.y;
+    if (Math.abs(dx) < TAP_PX && Math.abs(dy) < TAP_PX) {
+      onToggleTap?.();
+      return;
+    }
     if (dy > SWIPE_PX && dy > 1.5 * Math.abs(dx)) {
       onClose?.();
       return;
@@ -194,7 +201,14 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
     const to = dx < 0 ? step.next : step.prev;
     if (to) onStep(to);
   };
+  // The picture stays upright so its text can be read; a tapped card says so in a badge instead.
+  const inPlay = zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands';
   const badges = [
+    card.tapped && inPlay ? (
+      <span class="badge tap big" title="Tapped">
+        ↷ Tapped
+      </span>
+    ) : null,
     card.attacking ? (
       <span class="badge atk big" data-badge="attack" data-card-of={card.id} data-zone={zone}>
         ⚔{card.attacking} attacking
@@ -314,9 +328,10 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
               {row.partners.length ? <span class="thumb-divider" aria-hidden="true" /> : null}
               {row.partners.map((id, i) => thumb(id, i, true))}
             </div>
-            <span class="hint">Swipe the card or tap a thumbnail to move through the row.</span>
+            <span class="hint">Tap a thumbnail to see that card. Swipe the card for the next card or group in the slot.</span>
           </>
         ) : null}
+        {onToggleTap ? <span class="hint">Tap the card to tap or untap it.</span> : null}
         <span class="hint">Drag counters from the bar onto the card. Use − and + to change one.</span>
       </div>
     </div>
