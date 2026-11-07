@@ -50,7 +50,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   const [lines, setLines] = useState<LogLine[]>([]);
   const [pointer, setPointer] = useState<PointerRing | null>(null);
   const seen = useRef<Record<PlayerId, number>>({ p1: 0, p2: 0 });
-  const awayLines = useRef<{ actor: Actor; text: string }[]>([]);
+  // One device: every action, by actor, for the "while you were away" list on unblinding.
+  const awayLines = useRef<{ actor: Actor; text: string; alert: boolean }[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
   const state = session.state;
   // The address bar names this game, so the page can be bookmarked or reopened from history.
@@ -90,9 +91,10 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
       setTick((t) => t + 1);
       if (info?.text) {
         addLine(info.text, info.alert);
-        // Same device: alerts go to the "while you were away" list instead of a toast.
+        // Two devices: the opponent's alerts pop up. One device: every action goes to the "while you
+        // were away" list instead (the ticker's wording, which already hides cards not both could see).
         if (info.alert && !same && info.actor !== session.me) toast(info.text, 'warn');
-        if (same && info.alert && info.actor) awayLines.current.push({ actor: info.actor, text: info.text });
+        if (same && info.actor) awayLines.current.push({ actor: info.actor, text: info.text, alert: !!info.alert });
       }
     });
     const offNotice = session.onNotice((n: Notice) => {
@@ -106,7 +108,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
       else if (n.kind === 'randomPick') { toast(text, 'info', 5000); showPointer(n.actor, n.payload.cardId ?? null, n.payload.zone); }
       else if (n.kind === 'coinFlip' || n.kind === 'rollDie') toast(text, 'big', 5000);
       else if (n.alert && !mine && !same) toast(text, 'warn');
-      if (same && n.alert) awayLines.current.push({ actor: n.actor, text });
+      // Pointing means nothing after the fact, so it stays out of the away list.
+      if (same && text && n.kind !== 'point') awayLines.current.push({ actor: n.actor, text, alert: !!n.alert });
     });
     const offReject = session.onReject((r) => {
       if (r.reason === 'stale') toast('That card had already moved — your action was undone.', 'warn');
@@ -434,7 +437,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   function unblind(pl: PlayerId) { dispatch({ type: 'confirmFor', player: pl }); }
 
   function doUnblind(pl: PlayerId) {
-    const away = awayLines.current.slice(seen.current[pl]).filter((l) => l.actor !== pl).map((l) => l.text);
+    const away = awayLines.current.slice(seen.current[pl]).filter((l) => l.actor !== pl).map((l) => ({ text: l.text, alert: l.alert }));
     seen.current[pl] = awayLines.current.length;
     dispatch({ type: 'unblind', player: pl, away: away.length ? { name: state.players[pl].name, lines: away } : null });
   }

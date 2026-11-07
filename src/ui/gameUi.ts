@@ -19,7 +19,10 @@ export type Mode =
 export type SheetState =
   | CardSheetState
   | { kind: 'counters' | 'log' | 'tokens' | 'dice' | 'menu' | 'pair' }
-  | { kind: 'away'; name: string; lines: string[] };
+  | { kind: 'away'; name: string; lines: AwayLine[] };
+
+/** One action in the "while you were away" list; alerts (library looks, dice, …) are highlighted. */
+export interface AwayLine { text: string; alert: boolean }
 
 /** The full view: the card shown, and the card first opened, whose row stays fixed. */
 export interface FullState { cardId: string; zone: ZoneId; anchor: string }
@@ -56,7 +59,7 @@ export type UiAction =
   | { type: 'confirmFor'; player: PlayerId | null }
   | { type: 'label'; label: string }
   /** Show the board to `player`; `away` is what happened while they were not looking. */
-  | { type: 'unblind'; player: PlayerId; away: { name: string; lines: string[] } | null }
+  | { type: 'unblind'; player: PlayerId; away: { name: string; lines: AwayLine[] } | null }
   /** Hide the hand; private trays close. */
   | { type: 'blind' };
 

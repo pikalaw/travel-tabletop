@@ -25,7 +25,7 @@ describe('game screen state', () => {
     const s = run(initialUi(true, 'p1', 'p1'),
       { type: 'openSlot', zone: 'p1.hand' },
       { type: 'mode', mode: { kind: 'library', zone: 'p1.library', n: 3 } },
-      { type: 'unblind', player: 'p2', away: { name: 'Bo', lines: ['Ann drew 2 cards'] } });
+      { type: 'unblind', player: 'p2', away: { name: 'Bo', lines: [{ text: 'Ann drew 2 cards', alert: false }] } });
     expect(s).toMatchObject({ viewer: 'p2', persp: 'p2', openSlots: [], mode: { kind: 'normal' }, sheet: { kind: 'away', name: 'Bo' } });
   });
   it('blinding closes private trays but keeps other sheets', () => {

@@ -9,6 +9,7 @@ import { zoneKind, zoneOwner, other, canSeeFace, findZone } from '../engine/view
 import { artUrl, sizeFor } from '../storage/art';
 import type { CardInstance, GameState, PlayerId, ZoneId } from '../types/state';
 import type { Deck } from '../types/storage';
+import type { AwayLine } from './gameUi';
 
 /** Send a command or notice through the session. */
 export type Send = (type: string, payload: object) => unknown;
@@ -568,12 +569,12 @@ export function MenuSheet({ items, onClose }: { items: readonly (MenuItem | null
     </Sheet>
   );
 }
-export function AwaySheet({ name, lines, onClose }: { name: string; lines: readonly string[]; onClose: () => void }) {
+export function AwaySheet({ name, lines, onClose }: { name: string; lines: readonly AwayLine[]; onClose: () => void }) {
   return (
     <Sheet title={`While ${name} was away`} onClose={onClose}>
       <ul class="log-list">
         {lines.map((l) => (
-          <li class="alert">{l}</li>
+          <li class={l.alert ? 'alert' : ''}>{l.text}</li>
         ))}
       </ul>
     </Sheet>

@@ -211,7 +211,7 @@ Both players can share one device: the board stays visible to both, and only han
 - Unblinding to a player also switches the board to that player's perspective: their rows move to the bottom and their hand fills (5,2). Switching perspective is only a re-render; state does not change.
 - Blinding keeps the board in the last perspective, so both players can work out blocks on one shared view.
 - Only one hand is ever unblinded at a time.
-- **While you were away.** On unblinding, a sheet lists the alerts raised by anyone else since this player last looked (library peeks, shuffles, dice and so on).
+- **While you were away.** On unblinding, a sheet lists every action anyone else took since this player last looked, in the ticker's wording (which never names a card the player couldn't have seen). Alerts (library looks, shuffles, dice and so on) are highlighted. Pointing is left out.
 
 **Private views.** Peek, search and look-through open only while a hand is unblinded, so private cards never show on a blinded screen.
 
