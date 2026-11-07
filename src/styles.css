@@ -179,7 +179,9 @@ body.dragging .pile[data-layout="library"].drop-hover .drop-hint { display: bloc
 /* Cards */
 .card { position: relative; flex: none; display: flex; align-items: center; justify-content: center; touch-action: inherit; }
 .card-inner { position: relative; transition: transform .14s ease; }
-.card.tapped .card-inner { transform: rotate(90deg); }
+/* Counterclockwise, so the card's top (name and art) faces left: in a crowded row the visible left
+   strip of a tapped card shows its top half, not the rules text. */
+.card.tapped .card-inner { transform: rotate(-90deg); }
 /* Changed this turn or last: a left border in the changer's role colour (see Card). */
 .changed-bar { position: absolute; left: 0; top: 0; height: 100%; width: 4px; border-radius: 2px; z-index: 3; pointer-events: none; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
 .changed-bar.atk { background: var(--hot); }

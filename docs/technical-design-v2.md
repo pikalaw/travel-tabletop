@@ -399,7 +399,7 @@ Row zones are drawn by `Row`, piles by `Pile` (the top card, with a library spli
 
 A card in play with `changed` gets a `.changed-bar` (4 px, `--hot` when `changed.by` is the active player, else `--cool`) at the left of the `.card` frame. The frame never rotates (only `.card-inner` does), so on a tapped card the bar stays on the left, with `top` and `height` set to the turned picture's extent. **Pass turn** (footer and menu) shows only when the actor is the active player or `table`.
 
-**Rows** (`Cards.tsx`). Card height = slot height − 14 px; width = height × 63/88 (a tapped card's box is square, and its image is rotated 90°).
+**Rows** (`Cards.tsx`). Card height = slot height − 14 px; width = height × 63/88 (a tapped card's box is square, and its image is rotated 90° counterclockwise, so its top, the name and art, faces left: in a crowded row a tapped card's visible strip shows its top half, not its rules text).
 
 - **Units.** Groups (a host and its attachments) are units. Inside a group, each later card overlaps the previous by 75% of its width (PEEK 0.25). Between units the gap is 4 px.
 - **Collapsed.** If the natural width exceeds the slot width − 8 px and there is more than one unit, the row collapses, the overlap spread evenly between units, unless the slot is open.

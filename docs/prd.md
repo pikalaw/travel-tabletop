@@ -70,7 +70,7 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 
 | Slot | Display | Tap on a card | Tap on the slot |
 | --- | --- | --- | --- |
-| Battlefield, lands | Face up, a row; overlaps when full | Tap or untap | Open or close it |
+| Battlefield, lands | Face up, a row; overlaps when full. A tapped card turns a quarter counterclockwise, so its top (name and art) shows in a crowded row | Tap or untap | Open or close it |
 | Hand | Owner sees faces; others see backs; overlaps when full | — | Open or close it |
 | Library | Pile, face down; the top card shows face up only with "Top face up" | — | Library actions in the footer |
 | Graveyard | Pile, face up, top card shown | — | A sheet listing the whole zone |
