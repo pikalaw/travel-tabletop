@@ -319,7 +319,7 @@ One IndexedDB database `mtg-tabletop`, version 1. The layout is v1's, unchanged.
 
 ## Deck import
 
-`importDeck({ name, kind, text, extra, tokens })` in `scryfall.ts`. It needs internet; nothing else does.
+`importDeck({ name, kind, text, extra, tokens })` in `scryfall.ts`. It needs internet; nothing else does. (Planned: import also keeps each card's rules text; see Stack and abilities.)
 
 1. **Parse** (`parseDecklist`). Skip blank lines and lines starting with `//` or `#`, and "Name …" lines. Section headers (an optional trailing colon): Commander(s) → commander; Deck / Main / Mainboard / Main deck → main; Sideboard, Maybeboard, Considering, Companion, Tokens, About → that section. A card line matches `^(\d+)\s*x?\s+(name)(\s+\((SET)\)(\s+number)?)?(\s+\*foil-tag\*)*$`, with a SET of 2–6 letters or digits. A line that doesn't match but starts with a letter is one copy of that name; anything else is an error. Main and commander lines are imported (and tokens-section lines for a token deck); the rest are ignored.
 2. **Resolve.** Unique entries (keyed by set and number, or lower-cased name) go to `POST https://api.scryfall.com/cards/collection` in batches of 75. The identifier is { set, collector\_number }, { name, set }, or { name }. A result matches an entry by set and number, or by its name or a face's name (case-insensitive), or by a name starting with "\<name> //". Unmatched entries try `GET /cards/named?fuzzy=<name>`. Requests are 120 ms apart; a 429 retries after 1, 2 and 3 s; a 404 is "not found".
@@ -436,6 +436,28 @@ A card in play with `changed` gets a `.changed-bar` (4 px, `--hot` when `changed
 - **Pointer:** the ring is drawn around the card, or else its slot, for 3 s in the pointer's colour.
 - **Other:** the screen wake lock is requested during play and re-requested when the page becomes visible. A guest that isn't connected is shown greyed.
 - **Sheets** (`Overlays.tsx`) cover the top 36–44% of the board: zone viewer (with Random card), peek, reveal, search and inspect trays, Player counters, Recent actions (with Export log), Tokens, Dice and random, Menu, While you were away, Re-pair.
+
+## Stack and abilities (planned)
+
+Status: designed, not built. The stack becomes a place both players manage: spells and abilities go on it, both players see them in order, and they resolve one at a time. The app stays a playmat: it does not enforce timing or priority, and every default can be overridden or undone.
+
+**Build order.** (1) Card text from Scryfall. (2) Abilities listed in the full view, with Put on stack. (3) Ability items on the stack, and the stack in the full view. Each step ships and is tested on its own.
+
+**1. Card text.** Import also keeps, for each card and each face (`card_faces` for double-faced and split cards): `oracle_text`, `type_line`, `mana_cost`, `power`, `toughness`, `loyalty`, `defense`. They are stored on the card definition beside the images. Existing card data is dropped rather than migrated: a schema bump clears stored definitions, and decks are re-imported (the built-in starter packs download again with one tap). Sample cards have no text. Scryfall has no structured list of abilities: its `oracle_text` is one string whose paragraphs are separated by `\n` (Scryfall: "only the \n character for newlines"), so abilities are derived from it (below).
+
+**2. Abilities in the full view.** A card's abilities are its Oracle paragraphs, for the face currently up, with two joins: a line starting with "•" belongs to the paragraph above it (modal "Choose one —" abilities), and that is all; reminder text stays with its line, and a keyword line ("Flying, vigilance") stays one line. The app does not classify lines (activated, triggered, static): every line is offered, and the player chooses. The full view lists them under the card; a tap on one puts it on the stack. A last line, **Custom…**, asks for any text (a delayed trigger, an effect from elsewhere). Offered only for cards whose face the viewer can see.
+
+**3. Ability items.** An ability on the stack is stored like a card in the `stack` zone, so zone order, numbering, undo, sync and the full view's slot steps all apply unchanged. Its `CardInstance` carries `ability: { text, sourceId, sourceName, sourceDefId }`, with `defId` = the source's picture. The source's name and picture are copied when the ability is put on the stack, so the item still shows where it came from if the source dies in response or was a token that has vanished. Like a token, an ability item is deleted when it leaves the stack. New command `putAbility { sourceId, from, text }` (protocol bump); it is a marking command, so the source gets a changed border. A face-down source is shown as "a face-down card's ability" with the card back, so the item does not reveal it.
+
+**The full view shows a subject, not just a card.** `FullSubject = { kind: 'card'; cardId; zone } | { kind: 'ability'; cardId }`. One function, `fullModel(state, subject, viewer)`, returns what the view needs: picture, title, text lines (an ability's text prominent), badges, stack position, footer actions, and which gestures apply (`dragOut`, `tapToggle`, `step`). `FullCard` and its footer read the model instead of testing kinds. For an ability item: the source picture is shown read-only (no drag up, no tap to tap), swiping still steps through the stack, and the footer's main action is **Resolve** (removes it).
+
+**The stack in the full view.** A tap on the Stack pile opens the full view on its top item (an empty stack does nothing), replacing the stack's card-row sheet. The view's caption shows "Stack 1 of 3 · resolves first". Swipes step down the stack; drag up carries a card to any slot (a countered spell to the graveyard, say); swipe down closes. **Resolve** is offered on every stack item: an ability is removed; a spell goes to its default destination by type line (a permanent to its owner's battlefield, a land to lands, an instant or sorcery to its owner's graveyard), and dragging covers anything else. Only the top item's Resolve is highlighted; resolving another is allowed. Reordering a stack in place is not supported (drag a card back onto the pile to put it on top). On the board, the Stack pile shows an ability item as its source's picture with an "ability" band and the text.
+
+**Resolve together (option).** A house rule some tables use: every spell goes on the stack first, then both players look together and resolve it. A one-device setup option, off by default, blinds the hand whenever something is put on the stack (as starting combat does), so both can look. Lands and mana abilities do not use the stack, as in the rules.
+
+**Tests.** Unit: paragraph splitting and joins on real Oracle texts (modal, keywords, reminder text, double-faced faces); `putAbility` and deletion on leaving the stack; resolve destinations by type; `fullModel` for each subject kind. Browser: put an ability on the stack from the full view; step through a mixed stack; Resolve an ability and a creature; drag up a spell to the graveyard; the face-down case; the Resolve-together option.
+
+**Open decisions.** Whether Resolve for spells uses the type line by default (proposed: yes, with drag as the override). Whether Resolve together is offered on two devices too (proposed: one device only). How the stack position shows when the full view opens on a card from elsewhere (proposed: only for stack items).
 
 ## Testing
 
