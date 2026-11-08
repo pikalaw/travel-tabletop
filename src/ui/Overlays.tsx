@@ -88,6 +88,7 @@ export function CardSheet({ ctx, sheet, onClose, onRandom }: { ctx: BoardCtx; sh
     title = `Revealed: top of ${zoneTitle(st, zone)}`;
   } else {
     ids = lib;
+    if (zone === 'stack' && ids.length) hint = 'Numbered from the top: 1 resolves first. A response goes on top.';
   }
   const trayDrop = layout === 'tray' ? 'tray' : 'row';
   return (
@@ -105,7 +106,7 @@ export function CardSheet({ ctx, sheet, onClose, onRandom }: { ctx: BoardCtx; sh
     >
       {hint ? <div class="sheet-hint">{hint}</div> : null}
       <div class="sheet-row">
-        <Row ctx={ctx} zone={zone} ids={ids} open={true} layout={trayDrop} override={override} emptyText="Empty" />
+        <Row ctx={ctx} zone={zone} ids={ids} open={true} layout={trayDrop} override={override} emptyText="Empty" numbered={zone === 'stack'} />
       </div>
     </Sheet>
   );

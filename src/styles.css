@@ -150,6 +150,7 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .link-bar { position: absolute; top: 50%; height: 8px; margin-top: -4px; border-radius: 4px; background: #c9a65a;
   box-shadow: 0 0 0 1.5px rgba(0,0,0,.55); pointer-events: none; z-index: 1; }
 .mark.att-count { color: #17130a; background: #c9a65a; font-size: 10px; }
+.mark.order { color: #17130a; background: #e8e2d0; font-size: 12px; line-height: 18px; min-width: 18px; text-align: center; border-radius: 9px; }
 .row.open { overflow-x: auto; overflow-y: hidden; touch-action: none; }
 .row.open .row-cards { padding-right: 24px; }
 .row.can-open::after { /* collapsed, or holding tucked attachments that a tap fans out */

@@ -84,7 +84,7 @@ If the last item fails, switch the transport to a Capacitor-wrapped native socke
 - [x] Dice and random pick, pointer, ticker and recent actions, opponent hand count
 - [x] Log export as JSON Lines
 - [x] Added after the original plan: attachments, combat marks, multiple open slots, touch scrolling handled in code, turn label and turn gradient, names coloured by combat role, combat cards in the full view, matchup highlight
-- [x] Added during device testing: group drag and Detach all, Avatar Jumpstart starter pack, pairing diagnostics, Pass turn blinds the hand (one device), slot swipes, drag up and swipe down in the full view, two-finger spread to open it, row heights favouring the battlefields, Make lead and newest attachments on the far left, changed-card borders, Pass turn for the active player only, tap the card in the full view to tap or untap it, every action in the away list, the blinded board faces the active player, starting combat blinds the hand, slots open and close in combat and attach modes
+- [x] Added during device testing: group drag and Detach all, Avatar Jumpstart starter pack, pairing diagnostics, Pass turn blinds the hand (one device), slot swipes, drag up and swipe down in the full view, two-finger spread to open it, row heights favouring the battlefields, Make lead and newest attachments on the far left, changed-card borders, Pass turn for the active player only, tap the card in the full view to tap or untap it, every action in the away list, the blinded board faces the active player, starting combat blinds the hand, slots open and close in combat and attach modes, the stack numbered from the top
 
 ## Rewrite to TypeScript + Vite (v2)
 
