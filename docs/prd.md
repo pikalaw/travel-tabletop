@@ -209,7 +209,7 @@ Both players can share one device: the board stays visible to both, and only han
 - While blinded, the footer shows **Unblind to \<player 1>** and **Unblind to \<player 2>**, filled with each player's colour.
 - Unblinding first asks "Are you sure you are \<name>?" in a dialog filled with that player's colour, with Cancel and "Yes, I'm \<name>". Tapping outside the box cancels. There are no codes: a blinded hand can still be dragged onto the board, so a code would protect nothing; players rely on trust and on the ticker, which shows such moves.
 - Unblinding to a player also switches the board to that player's perspective: their rows move to the bottom and their hand fills (5,2). Switching perspective is only a re-render; state does not change.
-- Blinding keeps the board in the last perspective, so both players can work out blocks on one shared view.
+- While the hands are blinded, the board faces the active player. So passing the turn turns the board to the next player, ready for them before they unblind, and undoing a pass turns it back. Actions taken while blinded count as the active player's.
 - Only one hand is ever unblinded at a time.
 - **While you were away.** On unblinding, a sheet lists every action anyone else took since this player last looked, in the ticker's wording (which never names a card the player couldn't have seen). Alerts (library looks, shuffles, dice and so on) are highlighted. Pointing is left out.
 

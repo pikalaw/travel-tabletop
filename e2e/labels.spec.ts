@@ -29,6 +29,9 @@ test('labels: hand, counters, opponent hand, ticker; whose turn; only the active
   await barButton(page, 'Done');
   await resetBar(page); await barButton(page, 'Pass turn');
   await answerDialog(page, true);
+  // blinded by the pass, the board faces the next player; Player 1 then looks during Player 2's turn
+  await expect(page.locator('.board')).toHaveClass(/\bpersp-p2\b.*\bmy-turn\b|\bmy-turn\b.*\bpersp-p2\b/);
+  await unblind(page, 'Player 1');
   await expect(page.locator('.board')).toHaveClass(/\btheir-turn\b/);
   await expect(page.locator('.counters-cell')).toHaveText(/Turn 2 · Player 2\s*Player 2\s*♥ 20\s*Player 1\s*♥ 20/i);
   errs.expectNone();
@@ -50,6 +53,7 @@ test('the attacking player’s name is hot and the defending player’s cool, an
   expect(p1.filter((s) => !/=(hot|cool)$/.test(s) && !s.startsWith('c51:PLAYER'))).toEqual([]);
   await resetBar(page); await barButton(page, 'Pass turn');
   await answerDialog(page, true);
+  await unblind(page, 'Player 1'); // the pass turned the board to Player 2; look from Player 1's side
   const p2 = await roleColours(page);
   expect(p2).toEqual(expect.arrayContaining(['c12:PLAYER 2=hot', 'c22:PLAYER 2=hot', 'c32:PLAYER 1=cool', 'c42:PLAYER 1=cool', 'c51:TURN 2 · PLAYER 2=hot', 'c52:PLAYER 1=cool']));
 });

@@ -58,9 +58,13 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   // The address bar names this game, so the page can be bookmarked or reopened from history.
   useEffect(() => { setGameLink(state.gameId); return () => setGameLink(null); }, [state.gameId]);
 
-  const P: PlayerId = same ? persp : session.me;
+  // Whose side is at the bottom. One device: the unblinded player's; while blinded, the active
+  // player's, so passing the turn turns the board to the next player (and undoing the pass turns
+  // it back, since this follows the game state). Two devices: always this device's player.
+  const P: PlayerId = same ? (viewer === 'nobody' ? state.activePlayer : persp) : session.me;
   const actor: Actor = same ? (viewer === 'nobody' ? 'table' : viewer) : session.me;
-  const actingPlayer: PlayerId = actor === 'table' ? persp : (actor as PlayerId);
+  // A blinded table acts for the player the board faces.
+  const actingPlayer: PlayerId = actor === 'table' ? P : (actor as PlayerId);
   // Only the active (attacking) player passes the turn; a blinded table may too, so the attacker
   // does not have to unblind just to pass.
   const canPass = actor === 'table' || actor === state.activePlayer;

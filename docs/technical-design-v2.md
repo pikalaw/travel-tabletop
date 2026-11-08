@@ -255,7 +255,7 @@ After every command `fixAttachments` restores these rules:
 
 `visibleTo(state, card, zone)` is the players for whom that holds; the log records it before and after every move. Visibility is enforced only in the UI; both devices hold the full state, which the PRD accepts. The peek, search and inspect trays and the full-screen view of a face-down card you own override it for the viewer.
 
-**Perspective and viewer.** Networked: both are the device's player. One device: unblinding sets both to that player; blinding sets the viewer to `'nobody'` and keeps the perspective. The actor for commands is the viewer, or `'table'` when the viewer is `'nobody'`; the "acting player" is the viewer, or the perspective player when blinded.
+**Perspective and viewer.** Networked: both are the device's player. One device: unblinding sets both to that player; blinding sets the viewer to `'nobody'`, and while blinded the board is drawn from the active player's side (`P = viewer === 'nobody' ? state.activePlayer : persp`), so a pass turns it to the next player and undoing the pass turns it back, with no special case. A blinded table also acts for that player. The actor for commands is the viewer, or `'table'` when the viewer is `'nobody'`; the "acting player" is the viewer, or the perspective player when blinded.
 
 ## Host
 

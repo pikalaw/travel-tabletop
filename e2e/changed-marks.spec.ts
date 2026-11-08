@@ -57,3 +57,16 @@ test('only the active player, or a blinded table, sees Pass turn', async ({ page
   await expect(page.getByText('Pass the turn')).toHaveCount(0);
   errs.expectNone();
 });
+
+test('one device: passing the turn turns the blinded board to the next player; undo turns it back', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page); // Player 1 active and looking
+  const board = page.locator('.board');
+  await expect(board).toHaveClass(/\bpersp-p1\b/);
+  await resetBar(page); await barButton(page, 'Pass turn'); await answerDialog(page, true);
+  await expect(board).toHaveClass(/\bpersp-p2\b/); // blinded, facing Player 2
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.locator('.turn-label')).toContainText('Turn 1', { ignoreCase: true });
+  await expect(board).toHaveClass(/\bpersp-p1\b/);
+  errs.expectNone();
+});
