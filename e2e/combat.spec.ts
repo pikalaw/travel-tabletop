@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { drag, point, startOneDevice, playFromHand, idsIn, tapCard, resetBar, barButton, answerDialog, watchErrors } from './helpers';
+import { OPEN, drag, point, startOneDevice, playFromHand, idsIn, tapCard, resetBar, barButton, answerDialog, watchErrors } from './helpers';
 
 const marks = (page: Page, id: string) => page.locator(`.board [data-card="${id}"] > .marks`);
 const ticker = (page: Page) => page.locator('.ticker-text');
@@ -49,7 +49,7 @@ test('combat mode: attackers, blockers, double block, no tapping; End combat, un
   // outside combat the collapsed row needs a tap to open; then a tap taps, and keeps the marks
   await expect(page.locator('[data-drop="p1.battlefield"]')).toHaveAttribute('data-collapsed', /.+/);
   await tapCard(page, a[0]!);
-  await expect(page.locator('[data-drop="p1.battlefield"]')).toHaveClass(/\bopen\b/);
+  await expect(page.locator('[data-drop="p1.battlefield"]')).toHaveClass(OPEN);
   await tapCard(page, a[0]!);
   await expect(page.locator(`[data-card="${a[0]}"].tapped`)).toHaveCount(1);
   await expect(marks(page, a[0]!)).toContainText('⚔');
@@ -80,7 +80,7 @@ test('combat in open slots: attack chip, mark placement on a tapped card, tap on
     await page.mouse.click(r.x + r.width - 6, r.y + r.height - 4);
     await page.waitForTimeout(250);
   }
-  await expect(me).toHaveClass(/\bopen\b/); await expect(opp).toHaveClass(/\bopen\b/);
+  await expect(me).toHaveClass(OPEN); await expect(opp).toHaveClass(OPEN);
 
   await resetBar(page);
   const chip = page.locator('[data-counter="attack"]');
@@ -97,7 +97,7 @@ test('combat in open slots: attack chip, mark placement on a tapped card, tap on
   await resetBar(page); await barButton(page, 'Combat');
   await tapCard(page, a[1]!); await tapCard(page, d[0]!); await tapCard(page, a[0]!); await tapCard(page, d[1]!); await tapCard(page, a[1]!);
   await expect(marks(page, d[0]!)).toContainText('🛡'); await expect(marks(page, d[1]!)).toContainText('🛡');
-  await expect(me).toHaveClass(/\bopen\b/); await expect(opp).toHaveClass(/\bopen\b/);
+  await expect(me).toHaveClass(OPEN); await expect(opp).toHaveClass(OPEN);
   // a tap on the ⚔ mark counts as a tap on its card
   await tapCard(page, d[2]!);
   await page.locator(`[data-card="${a[0]}"] .mark.atk`).scrollIntoViewIfNeeded();

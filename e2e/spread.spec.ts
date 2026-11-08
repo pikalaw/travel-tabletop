@@ -1,5 +1,5 @@
 import { test, expect, type CDPSession, type Page } from '@playwright/test';
-import { startOneDevice, idsIn, watchErrors } from './helpers';
+import { OPEN, startOneDevice, idsIn, watchErrors } from './helpers';
 
 test.use({ hasTouch: true, isMobile: true, viewport: { width: 412, height: 840 } });
 
@@ -48,7 +48,7 @@ test('spread: on a collapsed slot it opens the first card; on an open slot, the 
   // open the slot with a tap on its "tap to open" strip, then spread on its second card
   const hb = (await handRow.boundingBox())!;
   await page.touchscreen.tap(hb.x + hb.width - 12, hb.y + 4);
-  await expect(handRow).toHaveClass(/\bopen\b/);
+  await expect(handRow).toHaveClass(OPEN);
   const second = await centre(page, `[data-drop="p1.hand"] [data-card="${hand[1]}"]`);
   await spread(cdp, page, second.x, second.y + 20, 6, 60);
   await expect(page.locator('.fullcard-inner')).toHaveAttribute('data-card-target', hand[1]!);

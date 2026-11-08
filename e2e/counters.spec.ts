@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { drag, longPress, point, startOneDevice, playFromHand, resetBar, barButton, unblind, touchSwipe } from './helpers';
+import { OPEN, drag, longPress, point, startOneDevice, playFromHand, resetBar, barButton, unblind, touchSwipe } from './helpers';
 
 async function dragXY(page: Page, a: { x: number; y: number }, b: { x: number; y: number }) {
   await page.mouse.move(a.x, a.y); await page.mouse.down();
@@ -37,7 +37,7 @@ test('counter badges: add by chip, remove by dragging off (other slot, gap, blan
   await playFromHand(page, 'p1.battlefield', 4);
   const bb = (await bf.boundingBox())!;
   await page.mouse.click(bb.x + bb.width - 8, bb.y + bb.height - 6);
-  await expect(bf).toHaveClass(/\bopen\b/);
+  await expect(bf).toHaveClass(OPEN);
   await bf.evaluate((e) => { e.scrollLeft = 0; });
   await resetBar(page);
   for (let i = 0; i < 3; i++) await drag(page, '[data-counter="plus"]', card);

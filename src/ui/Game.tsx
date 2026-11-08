@@ -181,11 +181,25 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
     return isZone(z) ? z : null;
   };
 
+  /**
+   * A tap on a slot itself (its empty part or its "tap to open" / "tap to close" strip) opens or
+   * closes it, in every mode: combat and attach modes act only on cards, so they pass slot taps
+   * here first. Returns true if the tap was a slot tap.
+   */
+  function slotTap(el: HTMLElement): boolean {
+    const slot = el.dataset.slot;
+    if (el.dataset.tap !== 'slot' || !isZone(slot) || el.closest('.sheet')) return false;
+    if (openSlots.includes(slot)) closeSlot(slot);
+    else if (el.dataset.collapsed || el.dataset.groups) openSlot(slot);
+    return true;
+  }
+
   function onTap(el: HTMLElement) {
     // A tap on a counter or combat mark on the board means its card (dragging is what moves the mark).
     if (el.dataset.badge && !el.closest('.full-wrap')) el = el.closest<HTMLElement>('[data-card]') || el;
     // The matchup highlight stays while you tap its cards; a tap anywhere else clears it.
     if (match && !el.dataset.card) dispatch({ type: 'match', cardId: null });
+    if ((attaching || combat) && slotTap(el)) return;
     if (attaching) {
       const targetId = el.dataset.card;
       const zone = zoneAttr(el);
@@ -235,11 +249,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
     }
     const slot = el.dataset.slot;
     if (tap === 'pile' && isZone(slot)) { pileTap(slot); return; }
-    if (tap === 'slot' && isZone(slot)) {
-      if (el.closest('.sheet')) return;
-      if (openSlots.includes(slot)) closeSlot(slot);
-      else if (el.dataset.collapsed || el.dataset.groups) openSlot(slot);
-    }
+    slotTap(el);
   }
 
   /**

@@ -87,9 +87,10 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 2. A row whose cards don't fit is **collapsed**: the cards overlap and "TAP TO OPEN" shows at its top right. The same label shows on a battlefield or lands row holding a card with attachments tucked behind it, since a tap fans the group out. A tap anywhere on it opens it; a tap on a card in a collapsed row only opens the row.
 3. An **open** row lays the cards side by side and scrolls sideways; "TAP TO CLOSE" shows in the same place. A mostly sideways swipe scrolls (with a fling); any other movement on a card drags it. Tapping the empty part of the slot closes it.
 4. A row whose cards fit is always laid out side by side.
-5. Several slots can be open at once; each stays open until tapped again, and **Close slots** closes them all.
-6. **Drop positions.** Dropping into a row inserts the card where it lands. Dropping on a library inserts it on top (upper half) or at the bottom (lower half). Dropping on another pile puts the card on top.
-7. A sideways swipe on the footer bar scrolls it without pressing a button.
+5. In combat and attach modes too, a tap on "TAP TO OPEN" / "TAP TO CLOSE" or a slot's empty part opens or closes it; a tap on a card there still marks or picks that card.
+6. Several slots can be open at once; each stays open until tapped again, and **Close slots** closes them all.
+7. **Drop positions.** Dropping into a row inserts the card where it lands. Dropping on a library inserts it on top (upper half) or at the bottom (lower half). Dropping on another pile puts the card on top.
+8. A sideways swipe on the footer bar scrolls it without pressing a button.
 
 **What a move resets.** A card that changes zone turns face up and loses any revealed mark. A card that leaves the battlefield or lands also untaps, loses its counters and turns back to its front face. A card moving between battlefields stays tapped and keeps its counters. A token that leaves the battlefield, lands or stack disappears.
 

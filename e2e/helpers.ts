@@ -69,6 +69,9 @@ export async function answerDialog(page: Page, ok: boolean) {
   await page.waitForTimeout(200);
 }
 
+/** A row's exact `open` class (a collapsed row has `can-open`, which a word-boundary match would also accept). */
+export const OPEN = /(^|\s)open(\s|$)/;
+
 /** Unblind to a player (same-device mode), answering "Are you sure you are …?". */
 export async function unblind(page: Page, name: string) {
   await page.getByRole('button', { name: `Unblind to ${name}` }).click();

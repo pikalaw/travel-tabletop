@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startOneDevice, playFromHand, idsIn, drag, tapCard, barButton, resetBar, answerDialog, unblind, watchErrors } from './helpers';
+import { OPEN, point, startOneDevice, playFromHand, idsIn, drag, tapCard, barButton, resetBar, answerDialog, unblind, watchErrors } from './helpers';
 
 test('changed marks: a left border in the changer\'s role colour, cleared by the next player\'s first change', async ({ page }) => {
   const errs = watchErrors(page);
@@ -80,5 +80,38 @@ test('one device: starting combat blinds the hand, so both players can look at t
   await expect(page.locator('.board')).toHaveClass(/\bpersp-p1\b/); // still the active player's side
   await barButton(page, 'Done');
   await expect(page.getByRole('button', { name: 'Unblind to Player 1' })).toBeVisible();
+  errs.expectNone();
+});
+
+test('combat and attach modes: the "tap to open" strip opens and closes a collapsed slot; card taps still act on cards', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page);
+  await playFromHand(page, 'p1.battlefield', 3);
+  const row = page.locator('[data-drop="p1.battlefield"]');
+  await expect(row).toHaveAttribute('data-collapsed', /.+/);
+  const ids = await idsIn(page, 'p1.battlefield');
+  const strip = async () => { const rb = (await row.boundingBox())!; await page.mouse.click(rb.x + rb.width - 10, rb.y + 4); };
+
+  await resetBar(page); await barButton(page, 'Combat');
+  // a tap on a card's visible strip marks it, as before
+  const p0 = await point(page, `.board [data-card="${ids[0]}"]`, 0.1, 0.6);
+  await page.mouse.click(p0.x, p0.y);
+  await expect(page.locator(`[data-card="${ids[0]}"] .mark.atk`)).toHaveCount(1);
+  // the strip opens the slot, then closes it, still in combat
+  await strip();
+  await expect(row).toHaveClass(OPEN);
+  await strip();
+  await expect(row).not.toHaveClass(OPEN);
+  await expect(page.locator('.bar.combat')).toHaveCount(1);
+  await barButton(page, 'Done');
+
+  // attach mode: the strip opens the slot instead of asking for a card
+  await unblind(page, 'Player 1');
+  const handCard = (await idsIn(page, 'p1.hand'))[0]!;
+  await page.locator(`[data-card="${handCard}"]`).first().click({ button: 'right' });
+  await barButton(page, 'Attach');
+  await strip();
+  await expect(row).toHaveClass(OPEN);
+  await expect(page.locator('.bar').first()).toContainText('tap the card to attach it to');
   errs.expectNone();
 });
