@@ -70,3 +70,15 @@ test('one device: passing the turn turns the blinded board to the next player; u
   await expect(board).toHaveClass(/\bpersp-p1\b/);
   errs.expectNone();
 });
+
+test('one device: starting combat blinds the hand, so both players can look at the board', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page); // Player 1 is looking, hand face up
+  await expect(page.locator('.board')).not.toContainText('hand (hidden)');
+  await resetBar(page); await barButton(page, 'Combat');
+  await expect(page.locator('.board')).toContainText('hand (hidden)');
+  await expect(page.locator('.board')).toHaveClass(/\bpersp-p1\b/); // still the active player's side
+  await barButton(page, 'Done');
+  await expect(page.getByRole('button', { name: 'Unblind to Player 1' })).toBeVisible();
+  errs.expectNone();
+});

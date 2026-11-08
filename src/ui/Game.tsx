@@ -461,6 +461,15 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
     }
   }
 
+  /**
+   * Enter combat mode (optionally with a blocker picked). One device: the hand is blinded first, so
+   * both players can look at the board together while attackers and blockers are marked.
+   */
+  function startCombat(blocker: { cardId: string; zone: ZoneId } | null) {
+    if (same && viewer !== 'nobody') blind();
+    dispatch({ type: 'mode', mode: { kind: 'combat', blocker } });
+  }
+
   function blind() {
     if (viewer !== 'nobody') seen.current[viewer] = awayLines.current.length;
     dispatch({ type: 'blind' });
@@ -541,7 +550,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
         {field && zoneOwner(fullZone) === state.activePlayer
           ? <button class="btn" onClick={() => send('attack', { cardId: card.id, from: fullZone })}>{card.attacking ? 'Stop attacking' : 'Attack'}</button> : null}
         {field && zoneOwner(fullZone) !== state.activePlayer
-          ? <button class="btn" onClick={() => { dispatch({ type: 'mode', mode: { kind: 'combat', blocker: { cardId: card.id, zone: fullZone } } }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Block</button> : null}
+          ? <button class="btn" onClick={() => { startCombat({ cardId: card.id, zone: fullZone }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Block</button> : null}
         {card.attachedTo
           ? <button class="btn" onClick={() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button>
           : k !== 'library' ? <button class="btn" onClick={() => { dispatch({ type: 'mode', mode: { kind: 'attach', cardId: card.id, zone: fullZone } }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Attach</button> : null}
@@ -598,7 +607,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
         <button class="btn" onClick={() => send('undo', {})} title="Undo the last action">Undo</button>
         <button class="btn" onClick={() => send('untapAll', { player: actingPlayer })}>Untap all</button>
         {canPass ? <button class="btn" onClick={passTurn}>Pass turn</button> : null}
-        <button class="btn" onClick={() => dispatch({ type: 'mode', mode: { kind: 'combat', blocker: null } })}>Combat</button>
+        <button class="btn" onClick={() => startCombat(null)}>Combat</button>
         {hasCombatMarks ? <button class="btn warn" onClick={endCombat}>End combat</button> : null}
         {matchSet?.size ? <button class="btn on" onClick={() => dispatch({ type: 'match', cardId: null })}>Clear highlight</button> : null}
         <CounterChips label={label} attack={showAttack} />
