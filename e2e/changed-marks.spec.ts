@@ -83,7 +83,7 @@ test('one device: starting combat blinds the hand, so both players can look at t
   errs.expectNone();
 });
 
-test('combat and attach modes: the "tap to open" strip opens and closes a collapsed slot; card taps still act on cards', async ({ page }) => {
+test('combat and attach modes: a crowded slot opens first, from its strip or from a card; then taps act on cards', async ({ page }) => {
   const errs = watchErrors(page);
   await startOneDevice(page);
   await playFromHand(page, 'p1.battlefield', 3);
@@ -93,19 +93,24 @@ test('combat and attach modes: the "tap to open" strip opens and closes a collap
   const strip = async () => { const rb = (await row.boundingBox())!; await page.mouse.click(rb.x + rb.width - 10, rb.y + 4); };
 
   await resetBar(page); await barButton(page, 'Combat');
-  // a tap on a card's visible strip marks it, as before
+  // a tap on a card of the crowded row opens the row and marks nothing
   const p0 = await point(page, `.board [data-card="${ids[0]}"]`, 0.1, 0.6);
   await page.mouse.click(p0.x, p0.y);
-  await expect(page.locator(`[data-card="${ids[0]}"] .mark.atk`)).toHaveCount(1);
-  // the strip opens the slot, then closes it, still in combat
-  await strip();
   await expect(row).toHaveClass(OPEN);
+  await expect(page.locator('[data-drop="p1.battlefield"] .mark.atk')).toHaveCount(0);
+  // now a tap marks the card it lands on
+  await tapCard(page, ids[1]!);
+  await expect(page.locator(`[data-card="${ids[1]}"] .mark.atk`)).toHaveCount(1);
+  // the strip closes it, then opens it again, still in combat
   await strip();
   await expect(row).not.toHaveClass(OPEN);
+  await strip();
+  await expect(row).toHaveClass(OPEN);
   await expect(page.locator('.bar.combat')).toHaveCount(1);
+  await strip();
   await barButton(page, 'Done');
 
-  // attach mode: the strip opens the slot instead of asking for a card
+  // attach mode: the strip opens the crowded slot instead of asking for a card
   await unblind(page, 'Player 1');
   const handCard = (await idsIn(page, 'p1.hand'))[0]!;
   await page.locator(`[data-card="${handCard}"]`).first().click({ button: 'right' });

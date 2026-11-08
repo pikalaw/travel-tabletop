@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { point, longPress, startOneDevice, playFromHand, idsIn, barButton, answerDialog, watchErrors } from './helpers';
+import { inOpenRow, point, longPress, startOneDevice, playFromHand, idsIn, barButton, answerDialog, watchErrors } from './helpers';
 
 /** Swipe across the full view's card: dx < 0 goes to the next card or group, dx > 0 to the previous one. */
 async function swipe(page: Page, dx: number) {
@@ -18,8 +18,10 @@ test('full view: swipes step through the slot, one stop per group; arrows are si
   // attach a hand card to the first card, so the slot holds: [a + attachment], b, c
   await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first());
   await barButton(page, 'Attach');
-  const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
-  await page.mouse.click(pa.x, pa.y);
+  await inOpenRow(page, 'p1.battlefield', async () => {
+      const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
+      await page.mouse.click(pa.x, pa.y);
+  });
   await expect(page.locator('[data-drop="p1.battlefield"] .card.tucked')).toHaveCount(1);
 
   const shown = page.locator('.fullcard-inner');
@@ -68,8 +70,10 @@ test('full view: dragging the card up carries its whole group back to the board;
   const [a] = await idsIn(page, 'p1.battlefield');
   await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first());
   await barButton(page, 'Attach');
-  const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
-  await page.mouse.click(pa.x, pa.y);
+  await inOpenRow(page, 'p1.battlefield', async () => {
+      const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
+      await page.mouse.click(pa.x, pa.y);
+  });
   const group = await idsIn(page, 'p1.battlefield');
   const attached = await page.locator(`[data-drop="p1.battlefield"] [data-attached-to="${a}"]`).getAttribute('data-card');
 
@@ -119,12 +123,16 @@ test('make lead: an attached card becomes the group\'s lead card; new attachment
   // attach b onto a, then a hand card onto a: the newest goes farthest left
   await longPress(page, page.locator(`[data-card="${b}"]`), 0.7, 0.3);
   await barButton(page, 'Attach');
-  const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
-  await page.mouse.click(pa.x, pa.y);
+  await inOpenRow(page, 'p1.battlefield', async () => {
+      const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
+      await page.mouse.click(pa.x, pa.y);
+  });
   await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first(), 0.15, 0.5);
   await barButton(page, 'Attach');
-  const pa2 = await point(page, `.board [data-card="${a}"]`, 0.5, 0.5);
-  await page.mouse.click(pa2.x, pa2.y);
+  await inOpenRow(page, 'p1.battlefield', async () => {
+      const pa2 = await point(page, `.board [data-card="${a}"]`, 0.5, 0.5);
+      await page.mouse.click(pa2.x, pa2.y);
+  });
   await expect.poll(async () => (await idsIn(page, 'p1.battlefield')).length).toBe(3);
   const [handCard, ...rest] = await idsIn(page, 'p1.battlefield');
   expect(rest).toEqual([b, a]);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { longPress, startOneDevice, playFromHand, idsIn, barButton, answerDialog, watchErrors } from './helpers';
+import { inOpenRow, longPress, startOneDevice, playFromHand, idsIn, barButton, answerDialog, watchErrors } from './helpers';
 
 test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follow the host, undo', async ({ page }) => {
   const errs = watchErrors(page);
@@ -14,16 +14,22 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
   await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first());
   await barButton(page, 'Attach');
   await expect(page.locator('.bar').first()).toContainText('tap the card to attach it to');
-  await page.locator(`[data-card="${host}"]`).click();
+  await inOpenRow(page, 'p1.battlefield', async () => {
+      await page.locator(`[data-card="${host}"]`).click();
+  });
   await expect(ticker).toContainText(/Player 1 attached .+ to .+/);
   await expect(bf.locator('.card.tucked')).toHaveCount(1);
   await expect(bf.locator('.att-count')).toHaveText(['+1']);
 
-  // attaching onto a tucked strip goes to its host
+  // attaching onto an attached card goes to its host (the crowded row opens first, fanning the group)
   await longPress(page, page.locator(`[data-card="${second}"]`));
   await barButton(page, 'Attach');
-  const strip = (await bf.locator('.card.tucked').first().boundingBox())!;
-  await page.mouse.click(strip.x + 6, strip.y + strip.height / 2);
+  await inOpenRow(page, 'p1.battlefield', async () => {
+    const attached = bf.locator(`[data-attached-to="${host}"]`).first();
+    await attached.scrollIntoViewIfNeeded();
+    const ab = (await attached.boundingBox())!;
+    await page.mouse.click(ab.x + ab.width / 2, ab.y + ab.height / 2);
+  });
   await expect(bf.locator('.att-count')).toHaveText(['+2']);
   await expect(bf.locator('.card.tucked')).toHaveCount(2);
 

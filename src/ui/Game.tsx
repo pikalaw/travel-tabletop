@@ -182,16 +182,23 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   };
 
   /**
-   * A tap on a slot itself (its empty part or its "tap to open" / "tap to close" strip) opens or
-   * closes it, in every mode: combat and attach modes act only on cards, so they pass slot taps
-   * here first. Returns true if the tap was a slot tap.
+   * Opening and closing slots works the same in every mode: a tap on a slot itself (its empty part
+   * or its "tap to open" / "tap to close" strip) opens or closes it, and a tap on a card in a
+   * crowded (collapsed) slot only opens it, so the next tap lands on the card meant. Returns true
+   * if the tap was used for that.
    */
   function slotTap(el: HTMLElement): boolean {
+    if (el.closest('.sheet')) return false;
     const slot = el.dataset.slot;
-    if (el.dataset.tap !== 'slot' || !isZone(slot) || el.closest('.sheet')) return false;
-    if (openSlots.includes(slot)) closeSlot(slot);
-    else if (el.dataset.collapsed || el.dataset.groups) openSlot(slot);
-    return true;
+    if (el.dataset.tap === 'slot' && isZone(slot)) {
+      if (openSlots.includes(slot)) closeSlot(slot);
+      else if (el.dataset.collapsed || el.dataset.groups) openSlot(slot);
+      return true;
+    }
+    const row = el.dataset.card && !el.closest('.pile') ? el.closest<HTMLElement>('[data-drop]') : null;
+    const zone = row?.dataset.drop;
+    if (row?.dataset.collapsed && isZone(zone)) { openSlot(zone); return true; }
+    return false;
   }
 
   function onTap(el: HTMLElement) {
@@ -238,8 +245,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
       const inSheet = !!el.closest('.sheet');
       if (inSheet) return;
       if (el.closest('.pile')) { pileTap(zone); return; }
+      if (slotTap(el)) return;
       const row = el.closest<HTMLElement>('[data-drop]');
-      if (row?.dataset.collapsed) { openSlot(zone); return; }
       const k = zoneKind(zone);
       // A tucked attachment is a thin strip: a tap on it is meant for the card it is attached to.
       const c = state.cards[el.dataset.card];

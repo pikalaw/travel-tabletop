@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { OPEN, drag, point, startOneDevice, playFromHand, idsIn, tapCard, resetBar, barButton, answerDialog, watchErrors } from './helpers';
+import { inOpenRow, OPEN, drag, point, startOneDevice, playFromHand, idsIn, tapCard, resetBar, barButton, answerDialog, watchErrors } from './helpers';
 
 const marks = (page: Page, id: string) => page.locator(`.board [data-card="${id}"] > .marks`);
 const ticker = (page: Page) => page.locator('.ticker-text');
@@ -26,16 +26,20 @@ test('combat mode: attackers, blockers, double block, no tapping; End combat, un
   await startOneDevice(page);
   const { a, d } = await deal(page, 2, 2);
   await resetBar(page); await barButton(page, 'Combat');
-  await tapCard(page, a[0]!); await tapCard(page, a[1]!);
-  await expect(marks(page, a[0]!)).toContainText('⚔');
-  await expect(marks(page, a[1]!)).toContainText('⚔');
-  await tapCard(page, d[0]!);
-  await expect(page.locator(`[data-card="${d[0]}"].selected`)).toHaveCount(1);
-  await expect(page.locator('.attach-hint')).toBeVisible();
-  await tapCard(page, a[0]!);
-  await expect(marks(page, d[0]!)).toContainText('🛡');
-  await tapCard(page, d[1]!); await tapCard(page, a[0]!); await tapCard(page, d[1]!); await tapCard(page, a[1]!);
-  await expect(marks(page, d[1]!).locator('.mark.blk')).toHaveCount(2);
+  await inOpenRow(page, 'p1.battlefield', async () => {
+    await inOpenRow(page, 'p2.battlefield', async () => {
+        await tapCard(page, a[0]!); await tapCard(page, a[1]!);
+        await expect(marks(page, a[0]!)).toContainText('⚔');
+        await expect(marks(page, a[1]!)).toContainText('⚔');
+        await tapCard(page, d[0]!);
+        await expect(page.locator(`[data-card="${d[0]}"].selected`)).toHaveCount(1);
+        await expect(page.locator('.attach-hint')).toBeVisible();
+        await tapCard(page, a[0]!);
+        await expect(marks(page, d[0]!)).toContainText('🛡');
+        await tapCard(page, d[1]!); await tapCard(page, a[0]!); await tapCard(page, d[1]!); await tapCard(page, a[1]!);
+        await expect(marks(page, d[1]!).locator('.mark.blk')).toHaveCount(2);
+    });
+  });
   await expect(page.locator('.card.tapped')).toHaveCount(0);
   // both combat-bar buttons fit on screen
   const vw = await page.evaluate(() => innerWidth);
@@ -130,10 +134,16 @@ test('matchup: the full view row, blocker as main, the board highlight, opponent
   // d1 attaches to d0
   await holdOn(page, d[1]!);
   await barButton(page, 'Attach');
-  await tapCard(page, d[0]!);
+  await inOpenRow(page, 'p2.battlefield', async () => {
+      await tapCard(page, d[0]!);
+  });
   expect(await page.locator(`.board [data-card="${d[1]}"]`).getAttribute('data-attached-to')).toBe(d[0]);
   await resetBar(page); await barButton(page, 'Combat');
-  await tapCard(page, a[0]!); await tapCard(page, d[0]!); await tapCard(page, a[0]!);
+  await inOpenRow(page, 'p1.battlefield', async () => {
+    await inOpenRow(page, 'p2.battlefield', async () => {
+      await tapCard(page, a[0]!); await tapCard(page, d[0]!); await tapCard(page, a[0]!);
+    });
+  });
   await barButton(page, 'Done');
 
   // attacker full view: the row is the attacker, a divider, then its blocker (whose attachment shows as +1)
@@ -177,7 +187,11 @@ test('End combat asks first, from combat mode and from the footer', async ({ pag
   const { a, d } = await deal(page, 2, 1);
   const count = () => page.locator('.board .mark.atk, .board .mark.blk').count();
   await resetBar(page); await barButton(page, 'Combat');
-  await tapCard(page, a[0]!); await tapCard(page, a[1]!); await tapCard(page, d[0]!); await tapCard(page, a[0]!);
+  await inOpenRow(page, 'p1.battlefield', async () => {
+    await inOpenRow(page, 'p2.battlefield', async () => {
+        await tapCard(page, a[0]!); await tapCard(page, a[1]!); await tapCard(page, d[0]!); await tapCard(page, a[0]!);
+    });
+  });
   expect(await count()).toBe(3);
   await barButton(page, 'End combat');
   await expect(page.locator('.confirm-box.plain')).toContainText('This clears 2 attackers and 1 block.');
@@ -190,7 +204,9 @@ test('End combat asks first, from combat mode and from the footer', async ({ pag
   await expect(page.locator('.bar.combat')).toHaveCount(0);
   await expect(ticker(page)).toContainText(/combat/i);
 
-  await resetBar(page); await barButton(page, 'Combat'); await tapCard(page, a[0]!); await barButton(page, 'Done');
+  await resetBar(page); await barButton(page, 'Combat');
+  await inOpenRow(page, 'p1.battlefield', async () => { await tapCard(page, a[0]!); });
+  await barButton(page, 'Done');
   await resetBar(page); await barButton(page, 'End combat');
   await expect(page.locator('.confirm-box.plain')).toContainText('This clears 1 attacker.');
   await answerDialog(page, false);

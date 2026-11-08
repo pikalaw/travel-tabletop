@@ -72,6 +72,21 @@ export async function answerDialog(page: Page, ok: boolean) {
 /** A row's exact `open` class (a collapsed row has `can-open`, which a word-boundary match would also accept). */
 export const OPEN = /(^|\s)open(\s|$)/;
 
+/**
+ * Act on a card in a crowded (collapsed) row the way a player does now: tap the row's "tap to open"
+ * strip, act, then tap the strip again to close it, so the row returns to its crowded layout. (In
+ * every mode, a tap on a card in a crowded row only opens the row.) A row that is not crowded is
+ * left as it is.
+ */
+export async function inOpenRow(page: Page, zone: string, act: () => Promise<void>) {
+  const row = page.locator(`[data-drop="${zone}"]`);
+  const crowded = !!(await row.getAttribute('data-collapsed'));
+  const strip = async () => { const b = (await row.boundingBox())!; await page.mouse.click(b.x + b.width - 10, b.y + 4); };
+  if (crowded) { await strip(); await expect(row).not.toHaveAttribute('data-collapsed', /.+/); }
+  await act();
+  if (crowded) { await strip(); await expect(row).not.toHaveClass(/(^|\s)open(\s|$)/); }
+}
+
 /** Unblind to a player (same-device mode), answering "Are you sure you are …?". */
 export async function unblind(page: Page, name: string) {
   await page.getByRole('button', { name: `Unblind to ${name}` }).click();
