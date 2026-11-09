@@ -101,7 +101,7 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
       const p = pts.get(a)!, q = pts.get(b)!;
       const mid = document.elementFromPoint((p.x + q.x) / 2, (p.y + q.y) / 2) as HTMLElement | null;
       const first = g?.el?.dataset.card ? g.el : null;
-      const card = first || mid?.closest<HTMLElement>('[data-card]') || null;
+      const card = first || mid?.closest<HTMLElement>('[data-card],[data-token-def]') || null;
       const row = (card || mid)?.closest<HTMLElement>('[data-drop]') || null;
       if (g) { for (const el of [g.el, ...g.group]) el?.classList.remove('drag-source'); clear(); }
       spread = { a, b, d0: Math.max(1, dist(a, b)), card: card && root.contains(card) ? card : null, row: row && root.contains(row) ? row : null, fired: false };
@@ -118,7 +118,8 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
     if (g) clear();
     g = { el, sc, sl0: sc ? sc.scrollLeft : 0, id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
           dragging: false, panning: false, long: false, ghost: null, hover: null, timer: undefined, v: 0, t: e.timeStamp, gw: 0, gh: 0, ox: 0, oy: 0, group: [] };
-    if (el?.dataset.card) {
+    // A card, or a token in the Tokens sheet, opens full screen on a long-press.
+    if (el?.dataset.card || el?.dataset.tokenDef) {
       g.timer = setTimeout(() => {
         if (g && !g.dragging) { g.long = true; navigator.vibrate?.(15); h.onLongPress(el!); }
       }, LONG_MS);

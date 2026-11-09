@@ -6,7 +6,7 @@ import type { ComponentChildren, JSX } from 'preact';
 import { promptBox } from './Dialogs';
 import { Row, cardImage, BACK_URL, type BoardCtx } from './Cards';
 import { zoneKind, zoneOwner, other, canSeeFace, findZone } from '../engine/view';
-import { artUrl, sizeFor } from '../storage/art';
+import { artUrl, sizeFor, type Art } from '../storage/art';
 import { abilitiesOf } from './abilities';
 import type { FullModel } from './fullModel';
 import { getRulings } from '../storage/db';
@@ -593,49 +593,38 @@ export function LogSheet({ lines, onClose, onExport }: { lines: readonly LogLine
     </Sheet>
   );
 }
-export function TokensSheet({ ctx, tokenDecks, onClose }: { ctx: BoardCtx; tokenDecks: readonly Deck[]; onClose: () => void }) {
-  // Token decks made for the decks in this game come first.
-  const inPlay = new Set(
-    Object.values(ctx.state.cards)
-      .map((c) => c.deckId)
-      .filter(Boolean),
-  );
-  const forGame = (d: Deck) => (d.forDecks || []).some((id) => inPlay.has(id));
-  const sorted = [...tokenDecks].sort((a, b) => Number(forGame(b)) - Number(forGame(a)));
+/**
+ * The tokens the Tokens sheet offers, as card definition ids sorted by name: those of every token
+ * deck made for a deck in this game (its `forDecks`), each token once.
+ */
+export function gameTokens(state: GameState, tokenDecks: readonly Deck[], art: ReadonlyMap<string, Art>): string[] {
+  const inPlay = new Set(Object.values(state.cards).map((c) => c.deckId).filter(Boolean));
+  const ids = new Set(tokenDecks.filter((d) => (d.forDecks || []).some((id) => inPlay.has(id))).flatMap((d) => d.cards));
+  const name = (id: string) => art.get(id)?.name || '';
+  return [...ids].sort((x, y) => name(x).localeCompare(name(y)) || x.localeCompare(y));
+}
+
+/** One list of the game's tokens: drag one onto a battlefield, tap to add it to yours, long-press or spread to see it full screen. */
+export function TokensSheet({ ctx, tokens, onClose }: { ctx: BoardCtx; tokens: readonly string[]; onClose: () => void }) {
   return (
     <Sheet title="Tokens · drag onto a battlefield, or tap to add to yours" onClose={onClose} tall>
-      {tokenDecks.length === 0 ? <p>No token decks. Import one under Decks.</p> : null}
-      {sorted.map((d) => (
-        <div class="token-deck">
-          <div class="token-deck-name">
-            {d.name}
-            {forGame(d) ? (
-              <>
-                {' '}
-                <span class="for-game">· for this game</span>
-              </>
-            ) : (
-              ''
-            )}
-          </div>
-          <div class="token-grid">
-            {[...new Set(d.cards)].map((defId) => {
-              const art = ctx.art.get(defId);
-              return (
-                <div class="token-item" data-token-def={defId} data-token-name={art?.name || 'Token'}>
-                  {art?.front ? (
-                    <img src={artUrl(art, 'front', sizeFor(110)) ?? undefined} alt={art.name} draggable={false} />
-                  ) : (
-                    <div class="card-face missing">
-                      <span>{art?.name || defId}</span>
-                    </div>
-                  )}
+      {tokens.length === 0 ? <p>No tokens for the decks in this game.</p> : null}
+      <div class="token-grid">
+        {tokens.map((defId) => {
+          const art = ctx.art.get(defId);
+          return (
+            <div class="token-item" data-token-def={defId} data-token-name={art?.name || 'Token'}>
+              {art?.front ? (
+                <img src={artUrl(art, 'front', sizeFor(110)) ?? undefined} alt={art.name} draggable={false} />
+              ) : (
+                <div class="card-face missing">
+                  <span>{art?.name || defId}</span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+              )}
+            </div>
+          );
+        })}
+      </div>
     </Sheet>
   );
 }

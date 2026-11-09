@@ -18,7 +18,7 @@ export interface Face {
   back?: Face;
 }
 
-const FIXTURE_VERSION = 2;
+const FIXTURE_VERSION = 3; // 3: the basic tokens are made for the two sample decks (forDecks)
 
 const PALETTE: Record<Color, { frame: string; bg: string; art: [string, string] }> = {
   red: { frame: '#b8432c', bg: '#f3ddd3', art: ['#e8794a', '#7a2414'] },
@@ -130,16 +130,15 @@ async function makeDef(face: Face): Promise<string> {
   return id;
 }
 
-async function makeDeck(id: string, name: string, kind: 'deck' | 'token', entries: [number, Face][]): Promise<void> {
+async function makeDeck(id: string, name: string, kind: 'deck' | 'token', entries: [number, Face][], forDecks?: string[]): Promise<void> {
   const cards: string[] = [];
   for (const [count, face] of entries) {
     const defId = await makeDef(face);
     for (let i = 0; i < count; i++) cards.push(defId);
   }
-  await putDeck({ id, name, kind, cards, builtin: true, createdAt: 0 });
+  await putDeck({ id, name, kind, cards, builtin: true, createdAt: 0, ...(forDecks ? { forDecks } : {}) });
 }
 
-/** Create the sample decks and tokens once per fixture version. */
 /** Build the sample decks if this device has none or an older set; old sample cards are swept. */
 export function ensureFixtures(): Promise<boolean> {
   return holdSweep(async () => {
@@ -153,7 +152,8 @@ async function makeFixtures(): Promise<boolean> {
   if ((await getMeta('fixtures')) === FIXTURE_VERSION) return false;
   await makeDeck('sample-ember', 'Sample: Ember (red)', 'deck', EMBER);
   await makeDeck('sample-grove', 'Sample: Grove (green)', 'deck', GROVE);
-  await makeDeck('builtin-tokens', 'Basic tokens', 'token', TOKENS.map((t): [number, Face] => [1, t]));
+  // The basic tokens belong to the sample decks, so the Tokens sheet offers them in a sample game.
+  await makeDeck('builtin-tokens', 'Basic tokens', 'token', TOKENS.map((t): [number, Face] => [1, t]), ['sample-ember', 'sample-grove']);
   await setMeta('fixtures', FIXTURE_VERSION);
   return true;
 }

@@ -11,11 +11,12 @@ import { saveFile } from './files';
 import { attachGestures, type Drop, type GestureHandlers, type Gestures } from './gestures';
 import { setGameLink } from './link';
 import {
-  CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, AwaySheet, Sheet, zoneTitle,
+  CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, AwaySheet, Sheet, zoneTitle, gameTokens,
   type FullRow, type LogLine, type MenuItem,
 } from './Overlays';
 import { initialUi, uiReducer, type SheetState } from './gameUi';
 import { fullModel } from './fullModel';
+import { CardViewer, type CardView } from './CardViewer';
 import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone } from '../engine/view';
 import { listDecks, loadLog } from '../storage/db';
 import { loadArt, type Art } from '../storage/art';
@@ -80,6 +81,9 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   useEffect(() => {
     listDecks().then((ds) => setTokenDecks(ds.filter((d) => d.kind === 'token')));
   }, []);
+  // The Tokens sheet's list, and the token shown full screen from it (long-press or spread).
+  const tokens = useMemo(() => gameTokens(state, tokenDecks, art), [state, tokenDecks, art]);
+  const [tokenView, setTokenView] = useState<CardView | null>(null);
   const defIds = useMemo(() => {
     const ids = new Set(Object.values(state.cards).map((c) => c.defId));
     for (const d of tokenDecks) d.cards.forEach((id) => ids.add(id));
@@ -320,6 +324,12 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   }
 
   function onLongPress(el: HTMLElement) {
+    const token = el.dataset.tokenDef;
+    if (token) {
+      const i = tokens.indexOf(token);
+      if (i >= 0) setTokenView({ i, back: false });
+      return;
+    }
     const cardId = el.dataset.card;
     const zone = zoneAttr(el);
     if (!cardId || !zone) return;
@@ -349,6 +359,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
    * the slot's first card (the lead of its first group); otherwise the card under the fingers.
    */
   function onSpread(cardEl: HTMLElement | null, rowEl: HTMLElement | null) {
+    if (cardEl?.dataset.tokenDef) { onLongPress(cardEl); return; }
     if (full || sheet) return;
     const zone = rowEl?.dataset.drop;
     if (rowEl?.dataset.collapsed && isZone(zone)) {
@@ -660,7 +671,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
         sheetEl = <CardSheet ctx={ctx} sheet={sheet} onClose={close} onRandom={(z) => send('randomPick', { zone: z })} />; break;
       case 'counters': sheetEl = <CountersSheet ctx={ctx} P={P} send={send} onClose={close} />; break;
       case 'log': sheetEl = <LogSheet lines={lines} onClose={close} onExport={() => void exportLog()} />; break;
-      case 'tokens': sheetEl = <TokensSheet ctx={ctx} tokenDecks={tokenDecks} onClose={close} />; break;
+      case 'tokens': sheetEl = <TokensSheet ctx={ctx} tokens={tokens} onClose={close} />; break;
       case 'dice': sheetEl = <DiceSheet ctx={ctx} P={P} send={send} onClose={close} />; break;
       case 'menu': sheetEl = <MenuSheet items={menuItems} onClose={close} />; break;
       case 'away': sheetEl = <AwaySheet name={sheet.name} lines={sheet.lines} onClose={close} />; break;
@@ -697,6 +708,9 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
           </div>
         ) : null}
         {sheetEl}
+        {tokenView && tokens.length ? (
+          <CardViewer art={art} order={tokens} counts={NO_COUNTS} view={{ ...tokenView, i: Math.min(tokenView.i, tokens.length - 1) }} setView={setTokenView} />
+        ) : null}
         {state.result ? (
           <div class="result-banner">
             {state.result.winner ? `${state.players[state.result.winner].name} wins` : 'Game over'}{state.result.reason === 'concede' ? ' (concession)' : ''} — undo to continue, or use the menu.
@@ -772,6 +786,8 @@ function CounterChips({ label, attack = true }: { label: string; attack?: boolea
     </span>
   );
 }
+
+const NO_COUNTS: ReadonlyMap<string, number> = new Map();
 
 /** The host card of a group: the card itself, or the card it is attached to. */
 function hostOf(state: GameState, id: string): string {

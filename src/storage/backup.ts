@@ -15,10 +15,10 @@ const TYPE: Record<string, string> = Object.fromEntries(Object.entries(EXT).map(
 
 const NOT_A_BACKUP = 'That file is not a deck backup from this app.';
 
-/** Token decks that belong with the chosen decks. */
+/** Token decks that belong with the chosen decks (not built-in ones: every device has those). */
 export function companionTokenDecks(allDecks: readonly Deck[], deckIds: readonly string[]): Deck[] {
   const chosen = new Set(deckIds);
-  return allDecks.filter((d) => d.kind === 'token' && !chosen.has(d.id) && (d.forDecks || []).some((id) => chosen.has(id)));
+  return allDecks.filter((d) => d.kind === 'token' && !d.builtin && !chosen.has(d.id) && (d.forDecks || []).some((id) => chosen.has(id)));
 }
 
 /** Build a backup of `deckIds` (their token decks are added automatically). */

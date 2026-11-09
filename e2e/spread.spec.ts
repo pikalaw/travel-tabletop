@@ -69,3 +69,17 @@ test('touch: a dialog opened by a tap stays open; a tap outside it still cancels
   await expect(page.locator('.dialog-input')).toHaveCount(0);
   errs.expectNone();
 });
+
+test('spread on a token in the Tokens sheet shows it full screen', async ({ page, context }) => {
+  const errs = watchErrors(page);
+  const cdp = await context.newCDPSession(page);
+  await startOneDevice(page);
+  await page.locator('.bar').first().getByRole('button', { name: 'Tokens' }).click();
+  const first = page.locator('.sheet .token-item').first();
+  const name = await first.getAttribute('data-token-name');
+  const c = await centre(page, '.sheet .token-item');
+  await spread(cdp, page, c.x, c.y, 6, 40);
+  await expect(page.locator('.deck-viewer')).toBeVisible();
+  await expect(page.locator('.deck-viewer-name')).toContainText(name!);
+  errs.expectNone();
+});
