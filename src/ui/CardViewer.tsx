@@ -2,16 +2,26 @@
 
 import { useEffect } from 'preact/hooks';
 import { useOutsideTap } from './hooks';
+import { useCardGestures } from './cardGestures';
 import { artUrl, type Art } from '../storage/art';
 
 export interface CardView { i: number; back: boolean }
 
 /**
  * Full-screen view of one stored card (a deck's card, or a token in the Tokens sheet): large image,
- * flip for double-faced cards, previous / next through `order`, close by tapping the picture,
- * outside, or Escape. `counts` shows "3×" for repeated cards.
+ * flip for double-faced cards, previous / next through `order` (the buttons, the arrow keys, or a
+ * sideways swipe, as in the game's full view), close by a swipe down, a tap on the picture, a tap
+ * outside, or Escape. With `onDragOut`, a drag up hands the card to a board drag (a token, to drop
+ * on a slot). `counts` shows "3×" for repeated cards.
  */
-export function CardViewer({ art, order, counts, view, setView }: { art: ReadonlyMap<string, Art>; order: readonly string[]; counts: ReadonlyMap<string, number>; view: CardView; setView: (v: CardView | null) => void }) {
+export function CardViewer({ art, order, counts, view, setView, onDragOut = null }: {
+  art: ReadonlyMap<string, Art>;
+  order: readonly string[];
+  counts: ReadonlyMap<string, number>;
+  view: CardView;
+  setView: (v: CardView | null) => void;
+  onDragOut?: ((defId: string, e: PointerEvent, x0: number, y0: number) => void) | null;
+}) {
   const outside = useOutsideTap(() => setView(null));
   const defId = order[view.i]!;
   const a = art.get(defId);
@@ -29,6 +39,14 @@ export function CardViewer({ art, order, counts, view, setView }: { art: Readonl
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, [view.i]);
+  const many = order.length > 1;
+  const swipes = useCardGestures({
+    onTap: () => setView(null),
+    onPrev: many ? () => step(-1) : null,
+    onNext: many ? () => step(1) : null,
+    onDragOut: onDragOut ? (e, x0, y0) => onDragOut(defId, e, x0, y0) : null,
+    onClose: () => setView(null),
+  });
   const url = a ? artUrl(a, view.back && a.back ? 'back' : 'front', 'large') : null;
   const n = counts.get(defId) || 1;
   return (
@@ -38,7 +56,7 @@ export function CardViewer({ art, order, counts, view, setView }: { art: Readonl
       aria-label={a?.name || 'Card'}
       {...outside}
     >
-      <div class="deck-viewer-img" onClick={() => setView(null)}>
+      <div class="deck-viewer-img" {...swipes}>
         {url ? (
           <img src={url} alt={a!.name} />
         ) : (

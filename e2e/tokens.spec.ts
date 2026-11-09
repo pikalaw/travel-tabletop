@@ -1,7 +1,20 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { mockScryfall, importDeck, pickDecks, unblind, longPress, barButton, drag, startOneDevice, watchErrors } from './helpers';
 
 test.use({ viewport: { width: 844, height: 390 } });
+
+/** A mouse gesture on the viewer's picture, from its centre by (dx, dy); `to` continues to a slot. */
+async function gesture(page: Page, dx: number, dy: number, to?: string) {
+  const r = (await page.locator('.deck-viewer-img').boundingBox())!;
+  const x = r.x + r.width / 2, y = r.y + r.height / 2;
+  await page.mouse.move(x, y); await page.mouse.down();
+  await page.mouse.move(x + dx, y + dy, { steps: 6 });
+  if (to) {
+    const b = (await page.locator(`[data-drop="${to}"]`).boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 });
+  }
+  await page.mouse.up();
+}
 
 test('the Tokens sheet: one list of the tokens for the decks in play, sorted by name; long-press shows one full screen', async ({ page }) => {
   const errs = watchErrors(page);
@@ -35,6 +48,21 @@ test('the Tokens sheet: one list of the tokens for the decks in play, sorted by 
   await page.keyboard.press('Escape');
   await expect(viewer).toHaveCount(0);
   await expect(page.locator('.sheet .token-item')).toHaveCount(2);
+
+  // the full view's gestures: swipe left for the next token, right for the previous, down to close
+  await longPress(page, items.nth(0));
+  await gesture(page, -120, 0);
+  await expect(page.locator('.deck-viewer-name')).toContainText('Spirit');
+  await gesture(page, 120, 0);
+  await expect(page.locator('.deck-viewer-name')).toContainText('Ally');
+  await gesture(page, 0, 120);
+  await expect(viewer).toHaveCount(0);
+  // drag up: back to the board with the token, dropped on a slot it is created there
+  await longPress(page, items.nth(1));
+  await gesture(page, 0, -80, 'p1.lands');
+  await expect(viewer).toHaveCount(0);
+  await expect(page.locator('[data-drop="p1.lands"] [data-card]')).toHaveCount(1);
+  await expect(page.locator('.ticker-text')).toContainText('created Spirit');
   // a tap creates nothing (it says to drag); a drag onto a battlefield creates the token there
   await items.nth(0).click();
   await expect(page.locator('.toast')).toContainText('Drag a token onto a battlefield');

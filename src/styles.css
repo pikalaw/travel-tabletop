@@ -377,7 +377,7 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 /* Deck page: full-screen card */
 .deck-card { cursor: pointer; }
 .deck-viewer { position: fixed; inset: 0; z-index: 1400; background: #050a08; display: flex; flex-direction: column; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); gap: 10px; }
-.deck-viewer-img { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.deck-viewer-img { flex: 1; min-height: 0; touch-action: none; display: flex; align-items: center; justify-content: center; }
 .deck-viewer-img img { max-height: 100%; max-width: 100%; object-fit: contain; border-radius: 4.5%/3.2%; box-shadow: 0 10px 40px rgba(0,0,0,.7); }
 .deck-viewer-bar { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
 .deck-viewer-name { min-width: 0; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50vw; }

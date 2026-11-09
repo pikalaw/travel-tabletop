@@ -173,7 +173,7 @@ Card counters, tokens, player counters and randomness are all manual tools; the 
 
 **Card counters.** Three footer tags: +1/+1, −1/−1, and a labeled counter (default "loyalty"; tap it to rename, e.g. lore, charge, time, shield). Drag one onto a card to add it. Counters show as small tags at the bottom of the card; drag one off the card to remove one. +1/+1 and −1/−1 are kept separately and never cancel each other. In the full-screen view the counters sit below the card, each with − and + buttons, and any drag of a counter removes one.
 
-**Tokens.** The footer **Tokens** button opens the token picker: one list, sorted by name, of the tokens made for the decks in this game (each token once, from every token deck made for a deck in play; the built-in basic tokens belong to the sample decks). Long-press a token, or spread two fingers on it, to see it full screen (the same viewer as the deck page, with previous and next). Drag a token onto any battlefield or slot to create it there; a tap only shows that hint, so a token is never created by mistake. Dragging a token onto the Tokens button removes it. A token that leaves the battlefield disappears. Only tokens can be removed this way.
+**Tokens.** The footer **Tokens** button opens the token picker: one list, sorted by name, of the tokens made for the decks in this game (each token once, from every token deck made for a deck in play; the built-in basic tokens belong to the sample decks). Long-press a token, or spread two fingers on it, to see it full screen (the same viewer as the deck page). There it takes the full view's gestures: swipe sideways for the previous or next token, swipe down to close, and drag it up to go back to the board with the token under your finger and drop it on a slot. Drag a token onto any battlefield or slot to create it there; a tap only shows that hint, so a token is never created by mistake. Dragging a token onto the Tokens button removes it. A token that leaves the battlefield disappears. Only tokens can be removed this way.
 
 **Player counters.** Cell (5,1) holds two key:value lists, one per player, under the "Turn N · name" label; the player whose turn it is is listed first. Tapping the cell opens Player counters.
 
@@ -240,7 +240,7 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 
 **Delete all decks.** At the bottom of the Decks screen, one button deletes every deck except the built-in ones (the sample decks and basic tokens), after a confirmation that names how many go, for a clean start before re-importing. Cards a saved game still uses stay until that game is deleted.
 
-**Deck page.** Shows the deck's cards as a grid with counts (commanders first), with Rename and Delete. Tapping a card shows it full screen in the large size, with previous and next buttons, a flip button for double-faced cards, and the card's count in the deck. Tapping the card or Close returns to the deck.
+**Deck page.** Shows the deck's cards as a grid with counts (commanders first), with Rename and Delete. Tapping a card shows it full screen in the large size, with previous and next buttons, a flip button for double-faced cards, and the card's count in the deck. As in the game's full view, a sideways swipe goes to the previous or next card and a swipe down closes; tapping the card or Close also returns to the deck.
 
 **Back up and restore.** Any set of decks can be saved to one backup file, with their token decks and every image size, and restored on any device and browser without internet.
 

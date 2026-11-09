@@ -707,7 +707,15 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
         ) : null}
         {sheetEl}
         {tokenView && tokens.length ? (
-          <CardViewer art={art} order={tokens} counts={NO_COUNTS} view={{ ...tokenView, i: Math.min(tokenView.i, tokens.length - 1) }} setView={setTokenView} />
+          <CardViewer art={art} order={tokens} counts={NO_COUNTS} view={{ ...tokenView, i: Math.min(tokenView.i, tokens.length - 1) }} setView={setTokenView}
+            onDragOut={(defId, e, x0, y0) => {
+              // As from the full view: back to the board with the token under the finger, to drop
+              // on a slot. The sheet's own element for the token is what drags.
+              const el = rootRef.current?.querySelector<HTMLElement>(`.sheet [data-token-def="${CSS.escape(defId)}"]`);
+              if (!el || !gestures.current) return;
+              setTokenView(null);
+              gestures.current.adopt(el, e.pointerId, x0, y0, e.clientX, e.clientY);
+            }} />
         ) : null}
         {state.result ? (
           <div class="result-banner">

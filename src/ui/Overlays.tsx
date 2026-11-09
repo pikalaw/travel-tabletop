@@ -9,6 +9,7 @@ import { zoneKind, zoneOwner, other, canSeeFace, findZone } from '../engine/view
 import { artUrl, sizeFor, type Art } from '../storage/art';
 import { abilitiesOf } from './abilities';
 import type { FullModel } from './fullModel';
+import { useCardGestures, SWIPE_PX, DRAG_OUT_PX } from './cardGestures';
 import { getRulings } from '../storage/db';
 import type { CardInstance, GameState, PlayerId, ZoneId } from '../types/state';
 import type { CardText, Deck, Ruling } from '../types/storage';
@@ -204,13 +205,8 @@ function RulingsPanel({ title, text, rulings, onClose }: { title: string; text: 
   );
 }
 
-/** How far a finger moves before a swipe, a drag up or a swipe down counts; under TAP_PX it is a tap. */
-const SWIPE_PX = 50;
-const DRAG_OUT_PX = 40;
-const TAP_PX = 8;
 
 export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null, onToggleTap = null, onAbility = null, onAbilityDrag = null }: FullCardProps) {
-  const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
   // The arrow keys step through the slot too. One listener for the view's life, reading the
   // latest targets, so a key pressed right after a step never acts on the previous card.
   const latest = useRef({ step, onStep });
@@ -244,38 +240,13 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
   // On the card: a sideways swipe goes to the previous or next card or group in the slot;
   // dragging up goes back to the board carrying the card's group, to drop on any slot; a swipe
   // down just closes the view.
-  const down = (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
-    swipe.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
-  };
-  const move = (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-    const s0 = swipe.current;
-    if (!s0 || !onDragOut || e.pointerId !== s0.id) return;
-    const dx = e.clientX - s0.x,
-      dy = e.clientY - s0.y;
-    if (-dy > DRAG_OUT_PX && -dy > 1.5 * Math.abs(dx)) {
-      swipe.current = null;
-      onDragOut(e, s0.x, s0.y);
-    }
-  };
-  const up = (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
-    const s0 = swipe.current;
-    swipe.current = null;
-    if (!s0 || e.pointerId !== s0.id) return;
-    const dx = e.clientX - s0.x,
-      dy = e.clientY - s0.y;
-    if (Math.abs(dx) < TAP_PX && Math.abs(dy) < TAP_PX) {
-      if (model.tapToggle) onToggleTap?.();
-      return;
-    }
-    if (dy > SWIPE_PX && dy > 1.5 * Math.abs(dx)) {
-      onClose?.();
-      return;
-    }
-    if (!step || Math.abs(dx) < SWIPE_PX || Math.abs(dx) < Math.abs(dy)) return;
-    const to = dx < 0 ? step.next : step.prev;
-    if (to) onStep(to);
-  };
+  const swipes = useCardGestures({
+    onTap: model.tapToggle ? onToggleTap : null,
+    onPrev: step?.prev ? () => onStep(step.prev!) : null,
+    onNext: step?.next ? () => onStep(step.next!) : null,
+    onDragOut,
+    onClose,
+  });
   // The picture stays upright so its text can be read; a tapped card says so in a badge instead.
   const inPlay = zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands';
   const badges = [
@@ -398,7 +369,7 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
             <span class={`full-step next ${step.next ? '' : 'off'}`} aria-hidden="true">→</span>
           </>
         ) : null}
-        <div class="fullcard-inner" data-card-target={card.id} data-zone={zone} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { swipe.current = null; }}>
+        <div class="fullcard-inner" data-card-target={card.id} data-zone={zone} {...swipes}>
           {img.url ? (
             <img src={img.url} alt={card.name} draggable={false} />
           ) : (
