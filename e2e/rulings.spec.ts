@@ -81,3 +81,24 @@ test('Delete all decks: removes every deck but the built-in ones, and their card
   await expect(page.getByRole('button', { name: 'Delete all decks' })).toHaveCount(0);
   errs.expectNone();
 });
+
+test('the deck page viewer links to the rulings too; Escape closes the panel, then the viewer', async ({ page }) => {
+  const errs = watchErrors(page);
+  await mockScryfall(page, { oracle: { 'Elf Test': '{T}: Add {G}.' }, rulings: { 'Elf Test': RULINGS } });
+  await importDeck(page, 'Elves', '20 Elf Test');
+  await expect(page.getByText('Imported')).toBeVisible({ timeout: 20_000 });
+  await page.getByText('← Decks').click();
+  await page.locator('.deck-row', { hasText: 'Elves' }).first().click();
+  await page.locator('.deck-card').first().click();
+  const viewer = page.locator('.deck-viewer');
+  await viewer.locator('.rulings-link').click();
+  const panel = viewer.locator('.rulings-panel');
+  await expect(panel.locator('.rulings-head b')).toHaveText('Rulings: Elf Test');
+  await expect(panel.locator('.rulings-list li')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+  await expect(viewer).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(viewer).toHaveCount(0);
+  errs.expectNone();
+});
