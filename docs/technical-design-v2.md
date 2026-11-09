@@ -457,7 +457,7 @@ Status: designed, not built. The stack becomes a place both players manage: spel
 
 **Tests.** Unit: paragraph splitting and joins on real Oracle texts (modal, keywords, reminder text, double-faced faces); `putAbility` and deletion on leaving the stack; an ability item deleted when moved off the stack; `fullModel` for each subject kind. Browser: put an ability on the stack from the full view; step through a mixed stack; drag up an ability off the stack (removed, its source unmoved) and a creature onto the battlefield; drag up a spell to the graveyard; the face-down case.
 
-**Decided.** No Resolve button and no moves by type line: resolving is done by dragging. No automatic blind on stack additions. **Open.** How the stack position shows when the full view opens on a card from elsewhere (proposed: only for stack items).
+**Decided.** No Resolve button and no moves by type line: resolving is done by dragging. No automatic blind on stack additions. The "Stack 1 of 3" caption shows only for stack items, so it also signals that the players are looking at the stack.
 
 ## Testing
 
