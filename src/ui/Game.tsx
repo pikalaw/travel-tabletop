@@ -231,10 +231,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
       toNormal();
       return;
     }
-    if (el.dataset.tokenDef) {
-      send('createToken', { defId: el.dataset.tokenDef, name: el.dataset.tokenName, to: `${actingPlayer}.battlefield`, owner: actingPlayer });
-      return;
-    }
+    // A token is created only by dragging it onto a slot, never by a tap.
+    if (el.dataset.tokenDef) { toast('Drag a token onto a battlefield to create it.', 'info'); return; }
     if (el.dataset.counter === 'attack') { toast('Drag ⚔ Attack onto a creature to mark it attacking; drag the mark off to remove it.', 'info'); return; }
     if (el.dataset.counter === 'label') {
       void promptBox({ title: 'Labeled counter', body: 'Name for the labeled counter tag, e.g. loyalty, lore, charge, time.', value: label, ok: 'Use' })

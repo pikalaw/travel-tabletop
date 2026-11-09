@@ -604,10 +604,10 @@ export function gameTokens(state: GameState, tokenDecks: readonly Deck[], art: R
   return [...ids].sort((x, y) => name(x).localeCompare(name(y)) || x.localeCompare(y));
 }
 
-/** One list of the game's tokens: drag one onto a battlefield, tap to add it to yours, long-press or spread to see it full screen. */
+/** One list of the game's tokens: drag one onto a battlefield to create it; long-press or spread to see it full screen. */
 export function TokensSheet({ ctx, tokens, onClose }: { ctx: BoardCtx; tokens: readonly string[]; onClose: () => void }) {
   return (
-    <Sheet title="Tokens · drag onto a battlefield, or tap to add to yours" onClose={onClose} tall>
+    <Sheet title="Tokens · drag one onto a battlefield" onClose={onClose} tall>
       {tokens.length === 0 ? <p>No tokens for the decks in this game.</p> : null}
       <div class="token-grid">
         {tokens.map((defId) => {

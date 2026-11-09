@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockScryfall, importDeck, pickDecks, unblind, longPress, barButton, startOneDevice, watchErrors } from './helpers';
+import { mockScryfall, importDeck, pickDecks, unblind, longPress, barButton, drag, startOneDevice, watchErrors } from './helpers';
 
 test.use({ viewport: { width: 844, height: 390 } });
 
@@ -35,8 +35,11 @@ test('the Tokens sheet: one list of the tokens for the decks in play, sorted by 
   await page.keyboard.press('Escape');
   await expect(viewer).toHaveCount(0);
   await expect(page.locator('.sheet .token-item')).toHaveCount(2);
-  // a tap still adds the token to the player's battlefield
+  // a tap creates nothing (it says to drag); a drag onto a battlefield creates the token there
   await items.nth(0).click();
+  await expect(page.locator('.toast')).toContainText('Drag a token onto a battlefield');
+  await expect(page.locator('[data-drop="p1.battlefield"] [data-card]')).toHaveCount(0);
+  await drag(page, items.nth(0), page.locator('[data-drop="p1.battlefield"]'));
   await expect(page.locator('[data-drop="p1.battlefield"] [data-card]')).toHaveCount(1);
   errs.expectNone();
 });
