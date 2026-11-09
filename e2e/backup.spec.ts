@@ -37,16 +37,19 @@ test('back up a deck with its tokens, restore it offline on another device, play
   await B.locator('button', { hasText: 'Restore 2' }).click();
   await expect(B.getByText('Restored')).toBeVisible({ timeout: 30_000 });
 
-  // restoring the same file again: everything is already here, nothing selected
+  // restoring the same file again: every deck is already here, selected to update in place
   await B.getByText('Go to decks').click();
   await B.getByRole('button', { name: 'Restore', exact: true }).click();
   await B.setInputFiles('input[type=file]', path);
   await expect(B.locator('.status-tag').first()).toBeVisible();
-  for (const t of await B.locator('.status-tag').allInnerTexts()) expect(t).toBe('Already here');
-  await expect(B.locator('.deck-check.on')).toHaveCount(0);
+  for (const t of await B.locator('.status-tag').allInnerTexts()) expect(t).toBe('Will update');
+  await expect(B.locator('.deck-check.on')).toHaveCount(2);
+  await B.locator('button', { hasText: 'Restore 2' }).click();
+  await expect(B.getByText('0 added, 2 updated')).toBeVisible({ timeout: 30_000 });
+  await B.getByText('Go to decks').click();
+  await expect(B.locator('.deck-row', { hasText: 'My Aang' })).toHaveCount(2); // the deck and its tokens, no copies
 
   // play an offline game with the restored deck; its images load
-  await B.getByText('← Decks').click();
   await B.getByText('← Home').click();
   await B.getByRole('button', { name: 'New game' }).click();
   await pickDecks(B, [['My Aang'], ['My Aang']]);

@@ -373,7 +373,7 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .file-btn { position: relative; overflow: hidden; }
 .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .status-tag { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--btn); white-space: nowrap; }
-.status-tag.new { color: var(--good); } .status-tag.same { color: var(--ink-3); } .status-tag.similar { color: var(--warn); }
+.status-tag.new { color: var(--good); } .status-tag.same { color: var(--p2); } .status-tag.builtin { color: var(--ink-3); } .status-tag.similar { color: var(--warn); }
 
 /* Deck page: full-screen card */
 .deck-card { cursor: pointer; }

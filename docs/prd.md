@@ -245,7 +245,7 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 **Back up and restore.** Any set of decks can be saved to one backup file, with their token decks, every image size, each card's rules text and its rulings, and restored on any device and browser without internet.
 
 - On the Backup screen, built-in decks are greyed out ("built in · on every device"), and token decks made for other decks follow those decks ("included with its decks").
-- Before restoring, each deck in the file is shown as New, Already here, or Possible duplicate (same name or cards as a deck on the device); only new decks are selected by default. A deck that already exists is added as a renamed copy.
+- Before restoring, each deck in the file is shown as New, Will update (the same deck is on the device), Built in here, or Possible duplicate (same name or cards as a deck on the device, under another id). New and Will update decks are selected by default. Restoring a deck that is already here replaces it with the backup's: its name, cards, rules text and rulings (whichever rulings were fetched more recently are kept). A token deck is merged instead, keeping the tokens and decks this device's copy already has, since one token deck serves many decks. Built-in decks are never changed. A possible duplicate is added as a separate deck only if selected. Saved games are not affected.
 - After decks are added, the app asks the browser to keep its storage rather than clear it when space runs low. The Decks screen shows whether it agreed and how much space is used.
 
 **Decks**

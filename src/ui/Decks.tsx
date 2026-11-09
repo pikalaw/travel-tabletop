@@ -554,7 +554,8 @@ export function BackupScreen({ go }: { go: Go }) {
 }
 const STATUS = {
   new: 'New',
-  same: 'Already here',
+  same: 'Will update',
+  builtin: 'Built in here',
   similar: 'Possible duplicate',
 };
 export function RestoreScreen({ go }: { go: Go }) {
@@ -573,7 +574,7 @@ export function RestoreScreen({ go }: { go: Go }) {
     try {
       const r = await readBackup(file);
       setRead(r);
-      setSel(new Set(r.rows.filter((x) => x.status === 'new').map((x) => x.deck.id)));
+      setSel(new Set(r.rows.filter((x) => x.status === 'new' || x.status === 'same').map((x) => x.deck.id)));
     } catch (err) {
       setError(errText(err));
     }
@@ -590,8 +591,9 @@ export function RestoreScreen({ go }: { go: Go }) {
     try {
       const r = await restoreBackup(read!, [...sel], setMsg);
       requestPersistence();
+      const added = r.decks - r.updated;
       setMsg(
-        `Restored ${r.decks} deck${r.decks === 1 ? '' : 's'} (${r.cards} cards).${r.skipped.length ? ` Skipped ${r.skipped.length} card(s) with damaged images: ${r.skipped.join(', ')}.` : ''}`,
+        `Restored ${r.decks} deck${r.decks === 1 ? '' : 's'}${r.updated ? ` (${added} added, ${r.updated} updated)` : ''}, ${r.cards} cards.${r.skipped.length ? ` Skipped ${r.skipped.length} card(s) with damaged images: ${r.skipped.join(', ')}.` : ''}`,
       );
       setRead(null);
     } catch (err) {
@@ -617,13 +619,14 @@ export function RestoreScreen({ go }: { go: Go }) {
       {read ? (
         <>
           <p class="muted small">
-            Made {new Date(read.manifest.exportedAt).toLocaleString()}. New decks are selected. Decks already here, or that look like one
-            you have, are not; select them to add a copy.
+            Made {new Date(read.manifest.exportedAt).toLocaleString()}. New decks are selected, and so are decks already here: restoring
+            one replaces it with the backup's (name, cards, rules text and rulings; a token deck keeps its tokens too). Decks that only look
+            like one you have are not selected; select them to add them as well. Built-in decks are never changed.
           </p>
           <div class="deck-pick tall">
             {read.rows.map(({ deck, status, like }) => (
-              <label class={`deck-check ${sel.has(deck.id) ? 'on' : ''}`}>
-                <input type="checkbox" checked={sel.has(deck.id)} onChange={() => toggle(deck.id)} />
+              <label class={`deck-check ${sel.has(deck.id) ? 'on' : ''} ${status === 'builtin' ? 'locked' : ''}`}>
+                <input type="checkbox" checked={sel.has(deck.id)} disabled={status === 'builtin'} onChange={() => toggle(deck.id)} />
                 <span>
                   {deck.name}
                   {deck.kind === 'token' ? (

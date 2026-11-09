@@ -247,15 +247,15 @@ describe('backups', () => {
     const read = await readBackup(file);
     expect(read.rows.map((r) => [r.deck.id, r.status])).toEqual([['sample-ember', 'new'], ['sample-grove', 'new'], ['builtin-tokens', 'new']]);
     const res = await restoreBackup(read, read.rows.map((r) => r.deck.id));
-    expect(res).toEqual({ decks: 3, cards: 30, skipped: [] });
+    expect(res).toEqual({ decks: 3, updated: 0, cards: 30, skipped: [] });
     const defs = await getDefs(records.defs.map((d) => d.id));
     expect(defs).toHaveLength(30);
     for (const d of defs) expect(await getImage(d.front)).toBeTruthy();
-    // restoring again reports them as already here, and a copy gets a new id
+    // restoring again: each deck is already here, so it is replaced in place, never copied
     const again = await readBackup(file);
     expect(again.rows.every((r) => r.status === 'same')).toBe(true);
-    await restoreBackup(again, ['sample-ember']);
-    expect((await listDecks()).filter((d) => d.name === 'Sample: Ember (red) (copy)')).toHaveLength(1);
+    expect(await restoreBackup(again, ['sample-ember'])).toMatchObject({ decks: 1, updated: 1 });
+    expect((await listDecks()).filter((d) => d.name.startsWith('Sample: Ember'))).toHaveLength(1);
   });
 
   it('an exported backup restores on a fresh device', async () => {
@@ -295,6 +295,36 @@ describe('backups', () => {
     expect(() => checkManifest({ ...read.manifest, rulings: [{ oracleId: 1 }] })).toThrow('damaged');
   });
 
+  it('restoring a deck already here replaces it; a token deck merges; a built-in deck is left alone', async () => {
+    const image = await sha256('img');
+    const d = await db();
+    await d.put('images', { hash: image, blob: new Blob(['img'], { type: 'image/png' }), type: 'image/png' });
+    for (const id of ['a1', 'a2', 't1', 't2']) await d.put('defs', { id, name: id, front: image, back: null });
+    // the backup's side: deck A (a1, a2) and its token deck T (t1), made for A only
+    await putDeck({ id: 'A', name: 'Aang', kind: 'deck', cards: ['a1', 'a2'], createdAt: 1 });
+    await putDeck({ id: 'T', name: 'Tokens', kind: 'token', cards: ['t1'], forDecks: ['A'], createdAt: 1 });
+    const out = await exportBackup(['A']);
+    // this device: A renamed with one card, and T also serving its own deck X with token t2
+    await putDeck({ id: 'A', name: 'Renamed', kind: 'deck', cards: ['a1'], createdAt: 2 });
+    await putDeck({ id: 'X', name: 'Other', kind: 'deck', cards: ['a1'], createdAt: 2 });
+    await putDeck({ id: 'T', name: 'Tokens', kind: 'token', cards: ['t2'], forDecks: ['X'], createdAt: 2 });
+    await putDeck({ id: 'builtin-tokens', name: 'Basic tokens', kind: 'token', cards: ['t2'], builtin: true, createdAt: 0 });
+    const read = await readBackup(out.blob);
+    expect(read.rows.map((r) => [r.deck.id, r.status])).toEqual([['A', 'same'], ['T', 'same']]);
+    expect(await restoreBackup(read, ['A', 'T'])).toMatchObject({ decks: 2, updated: 2 });
+    const decks = new Map((await listDecks()).map((x) => [x.id, x]));
+    expect(decks.get('A')).toMatchObject({ name: 'Aang', cards: ['a1', 'a2'] }); // the file's
+    expect(decks.get('T')).toMatchObject({ cards: ['t2', 't1'], forDecks: ['X', 'A'] }); // both
+    expect([...decks.keys()].sort()).toEqual(['A', 'T', 'X', 'builtin-tokens']); // no copies
+    // a built-in deck in a file is shown as such and never restored over the device's
+    const withBuiltin = { ...read.manifest, decks: [...read.manifest.decks, { id: 'builtin-tokens', name: 'Basic tokens', kind: 'token' as const, cards: ['t1'], createdAt: 0 }] };
+    const zipped = new Blob([zipSync({ ...unzipSync(new Uint8Array(await out.blob.arrayBuffer())), 'manifest.json': strToU8(JSON.stringify(withBuiltin)) })]);
+    const r2 = await readBackup(zipped);
+    expect(r2.rows.find((r) => r.deck.id === 'builtin-tokens')?.status).toBe('builtin');
+    await restoreBackup(r2, ['builtin-tokens']);
+    expect((await listDecks()).find((x) => x.id === 'builtin-tokens')).toMatchObject({ builtin: true, cards: ['t2'] });
+  });
+
   it('refuses files that are not backups, newer backups and damaged images', async () => {
     await expect(readBackup(new Blob(['not a zip']))).rejects.toThrow('not a deck backup');
     const zip = (m: unknown, extra: Record<string, Uint8Array> = {}) => new Blob([zipSync({ 'manifest.json': strToU8(JSON.stringify(m)), ...extra })]);
@@ -305,7 +335,7 @@ describe('backups', () => {
     const h = await sha256(strToU8('different'));
     const def: CardDef = { id: 'd', name: 'Bad Image', front: h, back: null };
     const read = await readBackup(zip({ format: 'travel-tabletop-decks', version: 1, exportedAt: '', decks: [{ id: 'k', name: 'K', kind: 'deck', cards: ['d'], createdAt: 0 }], defs: [def], images: { [h]: 'jpg' } }, { [`images/${h}.jpg`]: bytes }));
-    expect(await restoreBackup(read, ['k'])).toEqual({ decks: 1, cards: 0, skipped: ['Bad Image'] });
+    expect(await restoreBackup(read, ['k'])).toEqual({ decks: 1, updated: 0, cards: 0, skipped: ['Bad Image'] });
   });
 });
 

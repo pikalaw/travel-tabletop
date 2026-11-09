@@ -56,7 +56,12 @@ export async function exportBackup(deckIds: readonly string[], onProgress: (text
   return { blob: new Blob([zip as Uint8Array<ArrayBuffer>], { type: 'application/zip' }), decks: decks.length, cards: defs.length, images: Object.keys(images).length };
 }
 
-export type BackupRowStatus = 'new' | 'same' | 'similar';
+/**
+ * How a deck in a backup relates to this device: `new`; `same` id (restoring updates it from the
+ * file); `builtin` here (never touched); or `similar` (same name, cards or starter deck under
+ * another id, which may be a different deck).
+ */
+export type BackupRowStatus = 'new' | 'same' | 'builtin' | 'similar';
 export interface BackupRow { deck: Deck; status: BackupRowStatus; like?: string }
 export interface ReadBackup { manifest: BackupManifest; files: Record<string, Uint8Array>; rows: BackupRow[] }
 
@@ -86,7 +91,8 @@ export async function readBackup(file: Blob): Promise<ReadBackup> {
   const manifest = checkManifest(parsed);
   const here = await listDecks();
   const rows = manifest.decks.map((deck): BackupRow => {
-    if (here.some((d) => d.id === deck.id)) return { deck, status: 'same' };
+    const mine = here.find((d) => d.id === deck.id);
+    if (mine) return { deck, status: mine.builtin ? 'builtin' : 'same' };
     const twin = here.find((d) => d.kind === deck.kind &&
       (d.name.toLowerCase() === deck.name.toLowerCase() || (d.signature && d.signature === deck.signature) ||
        (d.starterId && d.starterId === deck.starterId)));
@@ -96,17 +102,19 @@ export async function readBackup(file: Blob): Promise<ReadBackup> {
 }
 
 /**
- * Restore chosen decks from a read backup. Decks that already exist by id are imported as
- * copies with new ids. Images are verified against their hashes; cards with a bad image are skipped.
+ * Restore chosen decks from a read backup. A deck that already exists by id is replaced by the
+ * file's (its name, cards, rules text and images); a token deck is merged instead, since one token
+ * deck serves many decks and this device may have decks the file lacks. Built-in decks here are
+ * never touched. Images are verified against their hashes; cards with a bad image are skipped.
  * Cards are stored before their decks, so the cleanup sweep waits until the restore is done.
  */
 export const restoreBackup = (...a: Parameters<typeof restoreChosen>) =>
   holdSweep(async () => { try { return await restoreChosen(...a); } finally { void sweep(); } });
 
 async function restoreChosen({ manifest, files }: Pick<ReadBackup, 'manifest' | 'files'>, chosenIds: readonly string[], onProgress: (text: string) => void = () => {}):
-  Promise<{ decks: number; cards: number; skipped: string[] }> {
-  const here = new Set((await listDecks()).map((d) => d.id));
-  const chosen = manifest.decks.filter((d) => chosenIds.includes(d.id));
+  Promise<{ decks: number; updated: number; cards: number; skipped: string[] }> {
+  const here = new Map((await listDecks()).map((d) => [d.id, d]));
+  const chosen = manifest.decks.filter((d) => chosenIds.includes(d.id) && !here.get(d.id)?.builtin);
   const neededDefs = new Set(chosen.flatMap((d) => [...d.cards, ...(d.commanders || [])]));
   const defs = manifest.defs.filter((d) => neededDefs.has(d.id));
   const d = await db();
@@ -133,26 +141,23 @@ async function restoreChosen({ manifest, files }: Pick<ReadBackup, 'manifest' | 
     const mine = await getRulings(rec.oracleId);
     if (!mine || mine.fetchedAt < rec.fetchedAt) await putRulings(rec);
   }
-  // New ids for decks that already exist here, so a copy never overwrites the original.
-  const idMap = new Map<string, string>();
+  let updated = 0;
   for (const deck of chosen) {
-    idMap.set(deck.id, here.has(deck.id) ? `${deck.id}-copy-${Math.random().toString(36).slice(2, 7)}` : deck.id);
-  }
-  for (const deck of chosen) {
-    const copy = here.has(deck.id);
+    const mine = here.get(deck.id);
     const out: Deck = {
       ...deck,
-      id: idMap.get(deck.id)!,
-      name: copy ? `${deck.name} (copy)` : deck.name,
       cards: deck.cards.filter((id) => goodDefs.has(id)),
       commanders: (deck.commanders || []).filter((id) => goodDefs.has(id)),
       builtin: false,
     };
-    if (deck.forDecks) out.forDecks = deck.forDecks.map((id) => idMap.get(id) || id);
-    if (copy) delete out.starterId;
+    if (mine?.kind === 'token' && deck.kind === 'token') {
+      out.cards = [...new Set([...mine.cards, ...out.cards])];
+      out.forDecks = [...new Set([...(mine.forDecks || []), ...(deck.forDecks || [])])];
+    }
+    if (mine) updated++;
     await putDeck(out);
   }
-  return { decks: chosen.length, cards: goodDefs.size, skipped: [...new Set(skipped)] };
+  return { decks: chosen.length, updated, cards: goodDefs.size, skipped: [...new Set(skipped)] };
 }
 
 /** Ask the browser not to clear this app's storage under pressure. Safe to call repeatedly. */
