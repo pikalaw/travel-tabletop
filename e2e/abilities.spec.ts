@@ -1,11 +1,24 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import { mockScryfall, importDeck, pickDecks, unblind, longPress, barButton, drag, idsIn, playFromHand, watchErrors } from './helpers';
 
 test.use({ viewport: { width: 844, height: 390 } });
 
+/** Pull an ability line sideways out of the full view, then drop it on a slot. */
+async function dragAbility(page: Page, line: Locator, zone: string) {
+  const r = (await line.boundingBox())!;
+  const x = r.x + r.width / 2, y = r.y + r.height / 2;
+  await page.mouse.move(x, y); await page.mouse.down();
+  await page.mouse.move(x - 90, y + 5, { steps: 6 });
+  await expect(page.locator('.fullcard')).toHaveCount(0); // back to the board, the line under the finger
+  await expect(page.locator('.drag-ghost')).toHaveCount(1);
+  const to = (await page.locator(`[data-drop="${zone}"]`).boundingBox())!;
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+  await page.mouse.up();
+}
+
 const ELF = '{T}: Add {G}.\nWhen this creature enters, choose one —\n• Draw a card.\n• Scry 2.';
 
-test('abilities: the full view lists them; a tap or Custom… puts one on the stack; dragging it off removes it', async ({ page }) => {
+test('abilities: the full view lists them; one dragged sideways onto the Stack goes there, a tap or another drop does nothing; Custom…; dragging it off removes it', async ({ page }) => {
   const errs = watchErrors(page);
   await mockScryfall(page, { oracle: { 'Elf Test': ELF } });
   await importDeck(page, 'Elves', '20 Elf Test');
@@ -22,17 +35,28 @@ test('abilities: the full view lists them; a tap or Custom… puts one on the st
   // the pile draws only its top card; its label counts them all
   const stackCount = page.locator('[data-drop="stack"] .slot-label b');
 
-  // one button per Oracle paragraph (the modes join their line), then Custom…
-  await longPress(page, page.locator(`.board [data-card="${elf}"]`));
+  // one line per Oracle paragraph (the modes join their line), then Custom…
+  const open = () => longPress(page, page.locator(`.board [data-card="${elf}"]`));
+  await open();
   const list = page.locator('.abilities .ability');
   await expect(list).toHaveText(['{T}: Add {G}.', 'When this creature enters, choose one —\n• Draw a card.\n• Scry 2.', 'Custom…']);
+  // a tap adds nothing; nor does a drag dropped anywhere but the Stack
   await list.nth(1).click();
+  await page.waitForTimeout(300);
+  await expect(stackCount).toHaveText('0');
+  await dragAbility(page, list.nth(1), 'p1.graveyard');
+  await expect(stackCount).toHaveText('0');
+  await expect(page.locator('.drag-ghost')).toHaveCount(0);
+  // dropped on the Stack, it goes on top
+  await open();
+  await dragAbility(page, list.nth(1), 'stack');
   await expect(page.locator('.ticker-text')).toContainText('put an ability of Elf Test on the stack');
   await expect(stackCount).toHaveText('1');
   // the source card in play is marked as changed
   await expect(page.locator(`.board [data-card="${elf}"] .changed-bar`)).toHaveCount(1);
 
   // Custom… asks for any text
+  await open();
   await page.locator('.abilities .ability.custom').click();
   await page.locator('.dialog-input').fill('Draw a card at the next end step');
   await page.locator('.confirm-box .btn.yes').click();
@@ -77,8 +101,7 @@ test('a card with no rules text offers only Custom…; an ability item shows its
   await barButton(page, 'Close');
   // an ability from a card in hand (cycling, say)
   await longPress(page, hand.nth(elf));
-  await page.locator('.abilities .ability').first().click();
-  await barButton(page, 'Close');
+  await dragAbility(page, page.locator('.abilities .ability').first(), 'stack');
   await page.locator('[data-drop="stack"]').click(); // the stack opens in the full view
   await expect(page.locator('.fullcard-meta b')).toHaveText('Ability of Elf Test');
   await expect(page.locator('.fullcard-meta .ability-text')).toHaveText('{T}: Add {G}.');

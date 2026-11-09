@@ -29,7 +29,7 @@ export interface FullModel {
   abilityText: string | null;
   /** "Stack 2 of 3" for anything on the stack. */
   caption: string | null;
-  /** List the card's abilities, to put one on the stack. */
+  /** List the card's abilities, to put one on the stack (not for a card already on the stack). */
   offersAbilities: boolean;
   /** A tap on the picture taps or untaps the card. */
   tapToggle: boolean;
@@ -55,7 +55,7 @@ export function fullModel(state: GameState, cardId: string, zone: ZoneId, viewer
     title: card.ability ? `Ability of ${name ?? 'a face-down card'}` : (name ?? 'Hidden card'),
     abilityText: card.ability?.text ?? null,
     caption: pos ? `Stack ${pos} of ${state.zones.stack.length}${pos === 1 ? ' · resolves first' : ''}` : null,
-    offersAbilities: isCard && visible,
+    offersAbilities: isCard && visible && zone !== 'stack',
     tapToggle: field,
     actions: {
       flip: isCard,

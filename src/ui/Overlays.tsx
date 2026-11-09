@@ -133,8 +133,14 @@ export interface FullCardProps {
   onClose?: (() => void) | null;
   /** A tap on the card taps or untaps it (when the model allows). */
   onToggleTap?: (() => void) | null;
-  /** Put one of the card's abilities (or any text, from Custom…) on the stack (when the model offers them). */
+  /** Put typed text (Custom…) on the stack as an ability (when the model offers abilities). */
   onAbility?: ((text: string) => void) | null;
+  /**
+   * An ability line dragged sideways out of the list: hand the moving pointer (down at x0, y0) and
+   * the line's element to a board drag. Dropped on the Stack pile it goes on the stack; anywhere
+   * else nothing happens.
+   */
+  onAbilityDrag?: ((el: HTMLElement, e: PointerEvent, x0: number, y0: number) => void) | null;
 }
 
 /** A card's rulings from storage (none until loaded, or for a card without an oracle id). */
@@ -203,7 +209,7 @@ const SWIPE_PX = 50;
 const DRAG_OUT_PX = 40;
 const TAP_PX = 8;
 
-export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null, onToggleTap = null, onAbility = null }: FullCardProps) {
+export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null, onToggleTap = null, onAbility = null, onAbilityDrag = null }: FullCardProps) {
   const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
   // The arrow keys step through the slot too. One listener for the view's life, reading the
   // latest targets, so a key pressed right after a step never acts on the previous card.
@@ -332,6 +338,26 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
   // The card's abilities, for a face the viewer can see; an ability item shows its own text instead.
   const offer = model.offersAbilities && onAbility ? onAbility : null;
   const abilities = offer ? abilitiesOf(art?.text, card.face, !!art?.back) : [];
+  // An ability line is picked up by a sideways drag, so a tap never adds one by mistake and an
+  // up or down swipe still scrolls the list.
+  const lineDown = useRef<{ x: number; y: number; id: number } | null>(null);
+  const linePointer = {
+    onPointerDown: (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      lineDown.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    },
+    onPointerMove: (e: JSX.TargetedPointerEvent<HTMLDivElement>) => {
+      const s0 = lineDown.current;
+      if (!s0 || !onAbilityDrag || e.pointerId !== s0.id) return;
+      const dx = e.clientX - s0.x, dy = e.clientY - s0.y;
+      if (Math.abs(dx) > DRAG_OUT_PX && Math.abs(dx) > 1.5 * Math.abs(dy)) {
+        lineDown.current = null;
+        onAbilityDrag(e.currentTarget, e, s0.x, s0.y);
+      }
+    },
+    onPointerUp: () => { lineDown.current = null; },
+    onPointerCancel: () => { lineDown.current = null; },
+  };
   const custom = () =>
     void promptBox({ title: 'Put an ability on the stack', body: `Any text: a delayed trigger, an effect from elsewhere. It goes on the stack with ${card.name}’s picture.`, placeholder: 'e.g. Draw a card at the next end step', ok: 'Put on stack' })
       .then((t) => { if (t?.trim()) offer?.(t.trim()); });
@@ -416,14 +442,14 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
         ) : null}
         {offer ? (
           <div class="abilities" role="group" aria-label="Abilities">
-            <span class="hint">Tap an ability to put it on the stack.</span>
+            {abilities.length ? <span class="hint">Drag an ability sideways out, onto the Stack, to put it there.</span> : null}
             {abilities.map((g) => (
               <>
                 {g.face ? <span class="ability-face">{g.face}</span> : null}
                 {g.lines.map((line) => (
-                  <button class="ability" onClick={() => offer(line)}>
+                  <div class="ability line" data-ability-of={cardId} data-zone={zone} data-ability-text={line} {...linePointer}>
                     {line}
-                  </button>
+                  </div>
                 ))}
               </>
             ))}

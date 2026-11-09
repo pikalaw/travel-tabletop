@@ -31,7 +31,8 @@ describe('fullModel', () => {
     expect(top).toMatchObject({ title: `Ability of ${h.state.cards[a].name}`, abilityText: 'Draw a card.', caption: 'Stack 1 of 2 · resolves first', offersAbilities: false, tapToggle: false });
     expect(Object.entries(top.actions).filter(([, v]) => v).map(([k]) => k)).toEqual([]);
     const spell = fullModel(h.state, b, 'stack', 'p1')!;
-    expect(spell).toMatchObject({ caption: 'Stack 2 of 2', offersAbilities: true, tapToggle: false });
+    // a card already on the stack offers no abilities to put there
+    expect(spell).toMatchObject({ caption: 'Stack 2 of 2', offersAbilities: false, tapToggle: false });
     expect(spell.actions).toMatchObject({ flip: true, attach: true, tap: false, attack: false, block: false });
   });
 

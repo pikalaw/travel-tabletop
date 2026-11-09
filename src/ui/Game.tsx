@@ -386,6 +386,11 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
       send('removeCounter', { cardId, from: src.dataset.zone, kind: src.dataset.badge, label: src.dataset.label });
       return;
     }
+    // An ability line from the full view: onto the Stack it goes on top; anywhere else, nothing.
+    if (src.dataset.abilityOf) {
+      if (dz === 'stack') send('putAbility', { cardId: src.dataset.abilityOf, from: src.dataset.zone, text: src.dataset.abilityText });
+      return;
+    }
     if ('nowhere' in d) return;
     // A counter from the footer onto a card.
     if (src.dataset.counter) {
@@ -683,7 +688,12 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
               step={fullStep} onStep={(id) => dispatch({ type: 'full', full: { cardId: id, zone: fullZone, anchor: id } })}
               onDragOut={(e, x0, y0) => dragOutOfFull(full.cardId, fullZone, e, x0, y0)} onClose={closeFull}
               onToggleTap={() => send('tap', { cardId: full.cardId, from: fullZone })}
-              onAbility={(text) => send('putAbility', { cardId: full.cardId, from: fullZone, text })} />
+              onAbility={(text) => send('putAbility', { cardId: full.cardId, from: fullZone, text })}
+              onAbilityDrag={(el, e, x0, y0) => {
+                if (!gestures.current) return;
+                closeFull();
+                gestures.current.adopt(el, e.pointerId, x0, y0, e.clientX, e.clientY);
+              }} />
           </div>
         ) : null}
         {sheetEl}

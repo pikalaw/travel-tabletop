@@ -464,3 +464,4 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .rulings-list p { margin: 2px 0 0; color: var(--ink); }
 .ruling-meta { font-size: 12px; color: var(--ink-3); }
 .ruling-unofficial { color: var(--warn); }
+.ability.line { touch-action: pan-y; cursor: grab; -webkit-user-select: none; user-select: none; }
