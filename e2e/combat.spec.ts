@@ -152,7 +152,7 @@ test('matchup: the full view row, blocker as main, the board highlight, opponent
   await expect(page.locator('.full-thumbs .thumb')).toHaveCount(2);
   await expect(page.locator('.full-thumbs .thumb-divider')).toHaveCount(1);
   await expect(page.locator('.full-thumbs .thumb').nth(1)).toContainText('+1');
-  const img = (await page.locator('.fullcard-inner img').boundingBox())!;
+  const img = (await page.locator('.card-frame-pic img').boundingBox())!;
   const badges = (await page.locator('.full-badges').boundingBox())!;
   expect(badges.y).toBeGreaterThanOrEqual(img.y + img.height - 1);
   // tapping the blocker's thumb makes it the main card; the row stays the same

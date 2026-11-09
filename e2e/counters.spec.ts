@@ -68,7 +68,7 @@ test('counter badges in the full view by touch: drag off, + and − buttons', as
   await touchSwipe(cdp, page, c.x, c.y, c.x, c.y, { steps: 1, holdBefore: 700 });
   await expect(page.locator('.fullcard')).toHaveCount(1);
   await page.locator('.bar').first().evaluate((e) => { e.scrollLeft = e.scrollWidth; });
-  const fi = page.locator('.fullcard-inner');
+  const fi = page.locator('.card-frame-pic');
   for (let i = 0; i < 2; i++) await tdrag('[data-counter="minus"]', fi);
   const mb = page.locator('.full-badges .badge.minus');
   await expect(mb).toHaveText('−1/−1 × 2');
@@ -111,7 +111,7 @@ for (const [name, vp] of [['portrait', { width: 412, height: 840 }], ['landscape
     const c = await point(page, card);
     await page.mouse.click(c.x, c.y, { button: 'right' });
     await expect(page.locator('.fullcard')).toHaveCount(1);
-    const img = (await page.locator('.fullcard-inner img').boundingBox())!;
+    const img = (await page.locator('.card-frame-pic img').boundingBox())!;
     const badges = (await page.locator('.full-badges').boundingBox())!;
     expect(badges.y).toBeGreaterThanOrEqual(img.y + img.height);
     expect(badges.y + badges.height).toBeLessThanOrEqual(vp.height);

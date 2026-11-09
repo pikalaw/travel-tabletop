@@ -3,7 +3,7 @@ import { startOneDevice, playFromHand, idsIn, drag, longPress, barButton, watchE
 
 /** Swipe across the full view's card: dx < 0 goes further down the stack. */
 async function swipe(page: Page, dx: number) {
-  const r = (await page.locator('.fullcard-inner').boundingBox())!;
+  const r = (await page.locator('.card-frame-pic').boundingBox())!;
   const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
   await page.mouse.move(cx, cy); await page.mouse.down();
   await page.mouse.move(cx + dx, cy, { steps: 6 }); await page.mouse.up();
@@ -11,7 +11,7 @@ async function swipe(page: Page, dx: number) {
 
 /** Drag the full view's card up and drop it on a slot. */
 async function dragUpTo(page: Page, zone: string) {
-  const r = (await page.locator('.fullcard-inner').boundingBox())!;
+  const r = (await page.locator('.card-frame-pic').boundingBox())!;
   const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
   await page.mouse.move(cx, cy); await page.mouse.down();
   await page.mouse.move(cx, cy - 80, { steps: 6 });
@@ -25,7 +25,7 @@ test('the stack in the full view: top first, swipes step down it, any item can b
   const errs = watchErrors(page);
   await startOneDevice(page);
   const caption = page.locator('.full-caption');
-  const shown = page.locator('.fullcard-inner');
+  const shown = page.locator('.card-frame-pic');
 
   // an empty stack does nothing
   await page.locator('[data-drop="stack"]').click();
@@ -64,7 +64,7 @@ test('the stack in the full view: top first, swipes step down it, any item can b
   await swipe(page, -120);
   await swipe(page, -120);
   await expect(caption).toHaveText('Stack 4 of 4');
-  await expect(page.locator('.full-step.next')).toHaveClass(/off/);
+  await expect(page.locator('.card-frame-step.next')).toHaveClass(/off/);
   await swipe(page, 120);
   await expect(caption).toHaveText('Stack 3 of 4');
 

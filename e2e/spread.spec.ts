@@ -34,9 +34,9 @@ test('spread: on a collapsed slot it opens the first card; on an open slot, the 
   // collapsed: wherever the fingers are, the slot's first card opens
   const c = await centre(page, '[data-drop="p1.hand"]');
   await spread(cdp, page, c.x + 40, c.y);
-  await expect(page.locator('.fullcard-inner')).toHaveAttribute('data-card-target', hand[0]!);
+  await expect(page.locator('.card-frame-pic')).toHaveAttribute('data-card-target', hand[0]!);
   // a swipe down closes it
-  const r = (await page.locator('.fullcard-inner').boundingBox())!;
+  const r = (await page.locator('.card-frame-pic').boundingBox())!;
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: r.x + r.width / 2, y: r.y + r.height / 3 }] });
   for (let i = 1; i <= 8; i++) {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: r.x + r.width / 2, y: r.y + r.height / 3 + 12 * i }] });
@@ -51,7 +51,7 @@ test('spread: on a collapsed slot it opens the first card; on an open slot, the 
   await expect(handRow).toHaveClass(OPEN);
   const second = await centre(page, `[data-drop="p1.hand"] [data-card="${hand[1]}"]`);
   await spread(cdp, page, second.x, second.y + 20, 6, 60);
-  await expect(page.locator('.fullcard-inner')).toHaveAttribute('data-card-target', hand[1]!);
+  await expect(page.locator('.card-frame-pic')).toHaveAttribute('data-card-target', hand[1]!);
   errs.expectNone();
 });
 

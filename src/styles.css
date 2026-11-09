@@ -314,16 +314,17 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 /* Full-screen card */
 .full-wrap { position: absolute; inset: 0; z-index: 30; background: #050a08; display: flex; align-items: center; justify-content: center; padding: 10px; }
 .fullcard { display: flex; gap: 16px; align-items: center; justify-content: center; height: 100%; width: 100%; flex-wrap: nowrap; }
-.fullcard-main { flex: 0 1 auto; min-width: 0; max-width: 62%; }
+.fullcard > .card-frame { flex: 0 1 auto; min-width: 0; max-width: 62%; }
 .fullcard-meta { flex: 0 1 280px; min-width: 0; }
-.fullcard-main { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; min-height: 0; }
-.fullcard-inner { position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
-.fullcard-inner img { height: 100%; max-height: 100%; max-width: 92vw; object-fit: contain; border-radius: 4.5%/3.2%; box-shadow: 0 10px 40px rgba(0,0,0,.7); }
+/* The shared frame of a full-screen card (CardFrame): the game's full view and the card viewer */
+.card-frame { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; min-height: 0; }
+.card-frame-pic { position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; touch-action: none; }
+.card-frame-pic img { height: 100%; max-height: 100%; max-width: 92vw; object-fit: contain; border-radius: 4.5%/3.2%; box-shadow: 0 10px 40px rgba(0,0,0,.7); }
 .full-badges { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 92vw; }
 .fullcard-meta { display: grid; gap: 4px; max-width: 280px; font-size: 13px; color: var(--ink-2); }
 .fullcard-meta b { color: var(--ink); font-size: 16px; }
 .fullcard-meta .hint { font-size: 12px; color: var(--ink-3); }
-@media (orientation: portrait) { .fullcard { flex-direction: column; gap: 10px; } .fullcard-main { height: 78%; max-width: 100%; } .fullcard-meta { flex: 0 0 auto; } .fullcard-meta { max-width: 92vw; text-align: center; } }
+@media (orientation: portrait) { .fullcard { flex-direction: column; gap: 10px; } .fullcard > .card-frame { height: 78%; max-width: 100%; } .fullcard-meta { flex: 0 0 auto; } .fullcard-meta { max-width: 92vw; text-align: center; } }
 
 .result-banner { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 25; background: rgba(0,0,0,.85); border: 1px solid #c9a65a; padding: 12px 18px; border-radius: 12px; font-weight: 600; text-align: center; pointer-events: none; max-width: 90%; }
 
@@ -377,10 +378,9 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 /* Deck page: full-screen card */
 .deck-card { cursor: pointer; }
 .deck-viewer { position: fixed; inset: 0; z-index: 1400; background: #050a08; display: flex; flex-direction: column; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); gap: 10px; }
-.deck-viewer-img { flex: 1; min-height: 0; touch-action: none; display: flex; align-items: center; justify-content: center; }
-.deck-viewer-img img { max-height: 100%; max-width: 100%; object-fit: contain; border-radius: 4.5%/3.2%; box-shadow: 0 10px 40px rgba(0,0,0,.7); }
-.deck-viewer-bar { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
-.deck-viewer-name { min-width: 0; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50vw; }
+.deck-viewer > .card-frame { flex: 1; }
+.deck-viewer-caption { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; min-height: 40px; }
+.deck-viewer-name { min-width: 0; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
 
 .deck-check.locked { opacity: .55; cursor: default; }
 .deck-check.locked.on { opacity: .75; border-color: rgba(201,166,90,.45); }
@@ -402,7 +402,7 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .thumb-ctr { position: absolute; right: -4px; top: -4px; min-width: 16px; padding: 0 3px; border-radius: 8px; font-size: 10px; font-weight: 700; background: #2f6b46; color: #fff; }
 .attach-hint { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
 .attach-hint b { color: var(--warn); }
-@media (orientation: portrait) { .fullcard.grouped .fullcard-main { height: 66%; } }
+@media (orientation: portrait) { .fullcard.grouped > .card-frame { height: 66%; } }
 
 .ctr-group { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 20px; background: rgba(0,0,0,.6); }
 .ctr-step { min-width: 34px; min-height: 34px; padding: 0; font-size: 18px; line-height: 1; }
@@ -428,13 +428,11 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .starter-pick .deck-check { padding: 6px 8px; }
 .reach.warn { color: var(--warn); }
 
-/* Full view: step to the previous or next card or group in the same slot */
-.full-step { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 18px; color: var(--ink); background: rgba(20,30,26,.7); pointer-events: none; }
-.full-step.prev { left: 6px; }
-.full-step.next { right: 6px; }
-.full-step.off { opacity: 0; }
-/* The full view's card handles its own swipes and drag up. */
-.fullcard-inner { touch-action: none; }
+/* CardFrame's signs: a swipe leads to the previous or next card */
+.card-frame-step { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 18px; color: var(--ink); background: rgba(20,30,26,.7); pointer-events: none; }
+.card-frame-step.prev { left: 6px; }
+.card-frame-step.next { right: 6px; }
+.card-frame-step.off { opacity: 0; }
 
 /* Abilities: the full view's list, an ability item's text, and the band on an ability item */
 .fullcard-meta { max-height: 100%; overflow-y: auto; align-content: start; }

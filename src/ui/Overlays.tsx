@@ -9,7 +9,8 @@ import { zoneKind, zoneOwner, other, canSeeFace, findZone } from '../engine/view
 import { artUrl, sizeFor, type Art } from '../storage/art';
 import { abilitiesOf } from './abilities';
 import type { FullModel } from './fullModel';
-import { useCardGestures, SWIPE_PX, DRAG_OUT_PX } from './cardGestures';
+import { SWIPE_PX, DRAG_OUT_PX } from './cardGestures';
+import { CardFrame } from './CardFrame';
 import { getRulings } from '../storage/db';
 import type { CardInstance, GameState, PlayerId, ZoneId } from '../types/state';
 import type { CardText, Deck, Ruling } from '../types/storage';
@@ -207,22 +208,6 @@ function RulingsPanel({ title, text, rulings, onClose }: { title: string; text: 
 
 
 export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null, onToggleTap = null, onAbility = null, onAbilityDrag = null }: FullCardProps) {
-  // The arrow keys step through the slot too. One listener for the view's life, reading the
-  // latest targets, so a key pressed right after a step never acts on the previous card.
-  const latest = useRef({ step, onStep });
-  latest.current = { step, onStep };
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      const { step: st, onStep: go } = latest.current;
-      const to = e.key === 'ArrowLeft' ? st?.prev : e.key === 'ArrowRight' ? st?.next : null;
-      if (to) {
-        e.preventDefault();
-        go(to);
-      }
-    };
-    addEventListener('keydown', key);
-    return () => removeEventListener('keydown', key);
-  }, []);
   const st = ctx.state;
   const { card, zone } = model;
   const cardId = card.id;
@@ -237,16 +222,16 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
   const zoneOfId = (id: string): ZoneId => findZone(st, id) || zone;
   const seen = (x: CardInstance) => canSeeFace(st, x, zoneOfId(x.id), ctx.viewer) || (x.faceDown && ctx.viewer === x.owner);
   const nameOf = (x: CardInstance) => (seen(x) ? x.name : 'a hidden card');
-  // On the card: a sideways swipe goes to the previous or next card or group in the slot;
-  // dragging up goes back to the board carrying the card's group, to drop on any slot; a swipe
-  // down just closes the view.
-  const swipes = useCardGestures({
+  // On the card: a sideways swipe (or arrow key) goes to the previous or next card or group in the
+  // slot; dragging up goes back to the board carrying the card's group, to drop on any slot; a
+  // swipe down just closes the view; a tap taps or untaps a card in play.
+  const gestures = {
     onTap: model.tapToggle ? onToggleTap : null,
     onPrev: step?.prev ? () => onStep(step.prev!) : null,
     onNext: step?.next ? () => onStep(step.next!) : null,
     onDragOut,
     onClose,
-  });
+  };
   // The picture stays upright so its text can be read; a tapped card says so in a badge instead.
   const inPlay = zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands';
   const badges = [
@@ -361,25 +346,9 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
   };
   return (
     <div class={`fullcard ${row ? 'grouped' : ''}`}>
-      <div class="fullcard-main">
-        {/* Signs only: they show that a swipe leads somewhere; the swipe itself does the moving. */}
-        {step ? (
-          <>
-            <span class={`full-step prev ${step.prev ? '' : 'off'}`} aria-hidden="true">←</span>
-            <span class={`full-step next ${step.next ? '' : 'off'}`} aria-hidden="true">→</span>
-          </>
-        ) : null}
-        <div class="fullcard-inner" data-card-target={card.id} data-zone={zone} {...swipes}>
-          {img.url ? (
-            <img src={img.url} alt={card.name} draggable={false} />
-          ) : (
-            <div class="card-face missing big">
-              <span>{card.name}</span>
-            </div>
-          )}
-        </div>
+      <CardFrame url={img.url} name={card.name} gestures={gestures} target={{ cardId: card.id, zone }}>
         {badges.length ? <div class="full-badges">{badges}</div> : null}
-      </div>
+      </CardFrame>
       <div class="fullcard-meta">
         {model.caption ? <span class="full-caption">{model.caption}</span> : null}
         <b>{model.title}</b>

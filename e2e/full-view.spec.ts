@@ -3,7 +3,7 @@ import { inOpenRow, point, longPress, startOneDevice, playFromHand, idsIn, barBu
 
 /** Swipe across the full view's card: dx < 0 goes to the next card or group, dx > 0 to the previous one. */
 async function swipe(page: Page, dx: number) {
-  const r = (await page.locator('.fullcard-inner').boundingBox())!;
+  const r = (await page.locator('.card-frame-pic').boundingBox())!;
   const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
   await page.mouse.move(cx, cy); await page.mouse.down();
   await page.mouse.move(cx + dx, cy, { steps: 6 }); await page.mouse.up();
@@ -24,8 +24,8 @@ test('full view: swipes step through the slot, one stop per group; arrows are si
   });
   await expect(page.locator('[data-drop="p1.battlefield"] .card.tucked')).toHaveCount(1);
 
-  const shown = page.locator('.fullcard-inner');
-  const prev = page.locator('.full-step.prev'), next = page.locator('.full-step.next');
+  const shown = page.locator('.card-frame-pic');
+  const prev = page.locator('.card-frame-step.prev'), next = page.locator('.card-frame-step.next');
 
   await longPress(page, page.locator(`[data-card="${c}"]`));
   await expect(shown).toHaveAttribute('data-card-target', c!);
@@ -80,7 +80,7 @@ test('full view: dragging the card up carries its whole group back to the board;
   // open the attachment, drag up off the card, then onto the lands row
   await longPress(page, page.locator(`[data-card="${a}"]`));
   await page.locator('.full-thumbs .thumb').nth(1).click();
-  const r = (await page.locator('.fullcard-inner').boundingBox())!;
+  const r = (await page.locator('.card-frame-pic').boundingBox())!;
   const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
   await page.mouse.move(cx, cy); await page.mouse.down();
   await page.mouse.move(cx, cy - 80, { steps: 6 });
@@ -95,7 +95,7 @@ test('full view: dragging the card up carries its whole group back to the board;
   // a swipe down only closes the view: nothing moves
   const [rest] = await idsIn(page, 'p1.battlefield');
   await longPress(page, page.locator(`[data-card="${rest}"]`));
-  const r2 = (await page.locator('.fullcard-inner').boundingBox())!;
+  const r2 = (await page.locator('.card-frame-pic').boundingBox())!;
   await page.mouse.move(r2.x + r2.width / 2, r2.y + r2.height / 3); await page.mouse.down();
   await page.mouse.move(r2.x + r2.width / 2, r2.y + r2.height / 3 + 90, { steps: 6 }); await page.mouse.up();
   await expect(page.locator('.fullcard')).toHaveCount(0);
@@ -157,14 +157,14 @@ test('full view: a tap on the card taps or untaps it; a tapped card stays uprigh
   await playFromHand(page, 'p1.battlefield', 1);
   const [a] = await idsIn(page, 'p1.battlefield');
   await longPress(page, page.locator(`[data-card="${a}"]`));
-  const inner = page.locator('.fullcard-inner');
+  const inner = page.locator('.card-frame-pic');
   const badge = page.locator('.full-badges .badge.tap');
   await expect(badge).toHaveCount(0);
   await inner.click();
   await expect(page.locator(`.board [data-card="${a}"].tapped`)).toHaveCount(1);
   await expect(badge).toHaveText(/Tapped/);
   // the picture is not turned: still taller than wide
-  const img = (await page.locator('.fullcard-inner img').boundingBox())!;
+  const img = (await page.locator('.card-frame-pic img').boundingBox())!;
   expect(img.height).toBeGreaterThan(img.width);
   await inner.click();
   await expect(page.locator(`.board [data-card="${a}"].tapped`)).toHaveCount(0);
@@ -174,7 +174,7 @@ test('full view: a tap on the card taps or untaps it; a tapped card stays uprigh
   const h = (await idsIn(page, 'p1.hand'))[0]!;
   await longPress(page, page.locator(`[data-card="${h}"]`), 0.15, 0.5);
   await expect(page.locator('.fullcard-meta')).not.toContainText('Tap the card to tap');
-  await page.locator('.fullcard-inner').click();
+  await page.locator('.card-frame-pic').click();
   await expect(page.locator('.fullcard-meta')).not.toContainText('tapped');
   errs.expectNone();
 });

@@ -33,6 +33,9 @@ export function useCardGestures(g: CardGestures): { onPointerDown: Handler; onPo
     onPointerDown: (e) => {
       if (e.button !== 0 && e.pointerType === 'mouse') return;
       start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      // Keep the pointer's events here until it is released, so a swipe that ends past the card's
+      // edge still counts (a finger is captured this way already; a mouse is not).
+      e.currentTarget.setPointerCapture?.(e.pointerId);
     },
     onPointerMove: (e) => {
       const s0 = start.current;
@@ -40,6 +43,8 @@ export function useCardGestures(g: CardGestures): { onPointerDown: Handler; onPo
       const dx = e.clientX - s0.x, dy = e.clientY - s0.y;
       if (-dy > DRAG_OUT_PX && -dy > 1.5 * Math.abs(dx)) {
         start.current = null;
+        // The board takes the pointer from here.
+        if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
         g.onDragOut(e, s0.x, s0.y);
       }
     },

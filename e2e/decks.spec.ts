@@ -121,16 +121,16 @@ test('the deck page viewer: next card, flip a double-faced card, close', async (
   await page.locator('.deck-card').first().click();
   await expect(page.locator('.deck-viewer')).toBeVisible();
   const first = await page.locator('.deck-viewer-name').innerText();
-  await page.locator('[aria-label="Next card"]').click();
+  await page.keyboard.press('ArrowRight');
   await expect(page.locator('.deck-viewer-name')).not.toHaveText(first);
-  for (let i = 0; i < 12 && !(await page.locator('.deck-viewer-bar').getByText('Flip').count()); i++) await page.locator('[aria-label="Next card"]').click();
+  for (let i = 0; i < 12 && !(await page.locator('.deck-viewer-caption').getByText('Flip').count()); i++) await page.keyboard.press('ArrowRight');
   const src1 = await page.locator('.deck-viewer img').getAttribute('src');
-  await page.locator('.deck-viewer-bar').getByText('Flip').click();
+  await page.locator('.deck-viewer-caption').getByText('Flip').click();
   expect(await page.locator('.deck-viewer img').getAttribute('src')).not.toBe(src1);
   await page.keyboard.press('Escape');
   await expect(page.locator('.deck-viewer')).toHaveCount(0);
   await page.locator('.deck-card').nth(2).click();
-  await page.locator('.deck-viewer-img').click();
+  await page.locator('.deck-viewer .card-frame-pic').click();
   await expect(page.locator('.deck-viewer')).toHaveCount(0);
 });
 

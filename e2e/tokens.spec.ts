@@ -5,7 +5,7 @@ test.use({ viewport: { width: 844, height: 390 } });
 
 /** A mouse gesture on the viewer's picture, from its centre by (dx, dy); `to` continues to a slot. */
 async function gesture(page: Page, dx: number, dy: number, to?: string) {
-  const r = (await page.locator('.deck-viewer-img').boundingBox())!;
+  const r = (await page.locator('.deck-viewer .card-frame-pic').boundingBox())!;
   const x = r.x + r.width / 2, y = r.y + r.height / 2;
   await page.mouse.move(x, y); await page.mouse.down();
   await page.mouse.move(x + dx, y + dy, { steps: 6 });
@@ -43,7 +43,14 @@ test('the Tokens sheet: one list of the tokens for the decks in play, sorted by 
   const viewer = page.locator('.deck-viewer');
   await expect(viewer).toBeVisible();
   await expect(page.locator('.deck-viewer-name')).toContainText('Ally');
-  await page.locator('[aria-label="Next card"]').click();
+  // the same frame as the full view: side signs where a swipe leads, none past the ends
+  const prev = page.locator('.deck-viewer .card-frame-step.prev'), next = page.locator('.deck-viewer .card-frame-step.next');
+  await expect(prev).toHaveClass(/off/);
+  await expect(next).not.toHaveClass(/off/);
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.deck-viewer-name')).toContainText('Spirit');
+  await expect(next).toHaveClass(/off/);
+  await page.keyboard.press('ArrowRight'); // the end of the list: no wrap
   await expect(page.locator('.deck-viewer-name')).toContainText('Spirit');
   await page.keyboard.press('Escape');
   await expect(viewer).toHaveCount(0);
