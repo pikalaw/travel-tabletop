@@ -325,7 +325,7 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
               <>
                 {g.face ? <span class="ability-face">{g.face}</span> : null}
                 {g.lines.map((line) => (
-                  <div class="ability line" data-ability-of={cardId} data-zone={zone} data-ability-text={line} {...linePointer}>
+                  <div class="ability line" data-ability-of={cardId} data-zone={zone} data-ability-text={line} data-drag-text={line} {...linePointer}>
                     {line}
                   </div>
                 ))}

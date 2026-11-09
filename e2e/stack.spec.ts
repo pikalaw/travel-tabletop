@@ -9,13 +9,15 @@ async function swipe(page: Page, dx: number) {
   await page.mouse.move(cx + dx, cy, { steps: 6 }); await page.mouse.up();
 }
 
-/** Drag the full view's card up and drop it on a slot. */
-async function dragUpTo(page: Page, zone: string) {
+/** Drag the full view's card up and drop it on a slot; `ghost` checks the text an ability drags as. */
+async function dragUpTo(page: Page, zone: string, ghost?: string) {
   const r = (await page.locator('.card-frame-pic').boundingBox())!;
   const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
   await page.mouse.move(cx, cy); await page.mouse.down();
   await page.mouse.move(cx, cy - 80, { steps: 6 });
   await expect(page.locator('.fullcard')).toHaveCount(0);
+  if (ghost) await expect(page.locator('.drag-ghost.text')).toHaveText(ghost);
+  else await expect(page.locator('.drag-ghost.text')).toHaveCount(0);
   const to = (await page.locator(`[data-drop="${zone}"]`).boundingBox())!;
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
   await page.mouse.up();
@@ -75,7 +77,7 @@ test('the stack in the full view: top first, swipes step down it, any item can b
 
   // resolve the ability: drag it off the stack, and it is gone
   await page.locator('[data-drop="stack"]').click();
-  await dragUpTo(page, 'p1.battlefield');
+  await dragUpTo(page, 'p1.battlefield', 'Scry 1'); // it drags as its text
   await expect.poll(() => idsIn(page, 'stack')).toEqual([spells[0], spells[2]]);
   expect(await idsIn(page, 'p1.battlefield')).toEqual([src]);
   errs.expectNone();

@@ -5,12 +5,13 @@ test.use({ viewport: { width: 844, height: 390 } });
 
 /** Pull an ability line sideways out of the full view, then drop it on a slot. */
 async function dragAbility(page: Page, line: Locator, zone: string) {
+  const text = (await line.innerText()).trim();
   const r = (await line.boundingBox())!;
   const x = r.x + r.width / 2, y = r.y + r.height / 2;
   await page.mouse.move(x, y); await page.mouse.down();
   await page.mouse.move(x - 90, y + 5, { steps: 6 });
   await expect(page.locator('.fullcard')).toHaveCount(0); // back to the board, the line under the finger
-  await expect(page.locator('.drag-ghost')).toHaveCount(1);
+  await expect(page.locator('.drag-ghost.text')).toHaveText(text); // the line's text, not a picture
   const to = (await page.locator(`[data-drop="${zone}"]`).boundingBox())!;
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
   await page.mouse.up();

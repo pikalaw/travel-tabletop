@@ -155,6 +155,7 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
       data-zone={zone}
       data-card-target={card.id}
       data-attached-to={card.attachedTo || null}
+      data-drag-text={card.ability?.text || null}
       style={`width:${boxW}px;height:${h}px;${style}`}
     >
       {linkLeft ? <span class="link-bar" aria-hidden="true" style={`left:${-linkLeft - 8}px;width:${linkLeft + 16}px`} /> : null}

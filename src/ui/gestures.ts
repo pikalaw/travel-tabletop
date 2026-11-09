@@ -18,6 +18,8 @@ const SPREAD_PX = 30;
 /** How much of each attached card shows to the left of its card in a dragged group (as on the board). */
 const GROUP_PEEK = 0.25;
 const LONG_MS = 480;
+/** Width of the text box an ability drags as. */
+const TEXT_GHOST_W = 220;
 
 const SOURCE_SEL = '[data-card],[data-counter],[data-badge],[data-token-def],[data-tap]';
 const SCROLL_SEL = '.bar, .row.open';
@@ -143,7 +145,15 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
     const id = g.el.dataset.card;
     g.group = id && row ? [...row.querySelectorAll<HTMLElement>(`[data-attached-to="${CSS.escape(id)}"]`)] : [];
     let ghost: HTMLElement;
-    if (g.group.length) {
+    // An element that names its drag text (an ability) drags as a box of that text, not a picture.
+    const text = g.el.dataset.dragText;
+    if (text) {
+      ghost = document.createElement('div');
+      ghost.className = 'drag-ghost text';
+      ghost.textContent = text;
+      g.gw = TEXT_GHOST_W;
+      g.ox = TEXT_GHOST_W / 2;
+    } else if (g.group.length) {
       const peek = Math.round(w * GROUP_PEEK);
       ghost = document.createElement('div');
       ghost.className = 'drag-ghost group';
@@ -161,10 +171,13 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
       g.gw = w;
       g.ox = w / 2;
     }
-    g.gh = hgt;
-    g.oy = hgt / 2;
-    Object.assign(ghost.style, { width: `${g.gw}px`, height: `${hgt}px`, left: `${g.x - g.ox}px`, top: `${g.y - g.oy}px` });
+    Object.assign(ghost.style, { width: `${g.gw}px`, left: `${g.x - g.ox}px` });
+    if (!text) ghost.style.height = `${hgt}px`;
     document.body.appendChild(ghost);
+    // A text box is as tall as its text; the finger holds it by the middle either way.
+    g.gh = text ? ghost.offsetHeight : hgt;
+    g.oy = g.gh / 2;
+    ghost.style.top = `${g.y - g.oy}px`;
     document.body.classList.add('dragging');
     g.ghost = ghost;
     for (const el of [g.el, ...g.group]) el.classList.add('drag-source');

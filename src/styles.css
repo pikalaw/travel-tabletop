@@ -211,6 +211,7 @@ body.dragging .pile[data-layout="library"].drop-hover .drop-hint { display: bloc
 .drag-ghost { position: fixed; z-index: 1000; pointer-events: none; opacity: .9; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.6); transform: scale(1.06); }
 .drag-source { opacity: .35; }
 .drag-ghost.group { border-radius: 0; box-shadow: none; opacity: 1; }
+.drag-ghost.text { background: var(--panel); color: var(--ink); border: 1px solid var(--p2); border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.3; white-space: pre-line; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6; -webkit-box-orient: vertical; }
 .drag-ghost.group > * { box-shadow: 0 10px 30px rgba(0,0,0,.6); opacity: .9; }
 body.dragging [data-drop].drop-hover, body.dragging [data-trash].drop-hover { outline: 2px solid #c9a65a; outline-offset: -2px; background: rgba(201,166,90,.10); }
 body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); border-radius: 6px; }
@@ -377,8 +378,7 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 
 /* Deck page: full-screen card */
 .deck-card { cursor: pointer; }
-.deck-viewer { position: fixed; inset: 0; z-index: 1400; background: #050a08; display: flex; flex-direction: column; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); gap: 10px; }
-.deck-viewer > .card-frame { flex: 1; }
+.deck-viewer { position: fixed; inset: 0; z-index: 1400; background: #050a08; display: flex; flex-direction: column; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); gap: 6px; }
 .deck-viewer-caption { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; min-height: 40px; }
 .deck-viewer-name { min-width: 0; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
 
@@ -461,3 +461,11 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .ruling-meta { font-size: 12px; color: var(--ink-3); }
 .ruling-unofficial { color: var(--warn); }
 .ability.line { touch-action: pan-y; cursor: grab; -webkit-user-select: none; user-select: none; }
+.deck-viewer-rulings { align-self: center; justify-self: auto; padding: 0; }
+/* The viewer is centred as a column, and its picture is as large as the card itself (not the space
+   around it), so the rulings link and the caption sit right under the card. The game's full view
+   is not affected: these rules are the viewer's own. */
+.deck-viewer { justify-content: center; }
+.deck-viewer > .card-frame { flex: 0 1 auto; height: auto; }
+.deck-viewer .card-frame-pic { flex: 0 1 auto; }
+.deck-viewer .card-frame-pic img { height: auto; width: auto; max-width: 100%; max-height: calc(100dvh - 150px); }

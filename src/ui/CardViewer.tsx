@@ -13,8 +13,8 @@ export interface CardView { i: number; back: boolean }
  * frame as the game's full view: a sideways swipe or arrow key goes to the previous or next card
  * in `order`, a swipe down, a tap on the picture, a tap outside or Escape closes, and with
  * `onDragOut` a drag up hands the card to a board drag (a token, to drop on a slot). Under it, a
- * caption: the name (with "3×" from `counts` for repeated cards), the position, Flip for a
- * double-faced card, and "Rulings (n)" for a card with rulings, which opens the rulings panel.
+ * "Rulings (n)" for a card with rulings (opening the rulings panel), then a caption: the name
+ * (with "3×" from `counts` for repeated cards), the position, and Flip for a double-faced card.
  */
 export function CardViewer({ art, order, counts, view, setView, onDragOut = null }: {
   art: ReadonlyMap<string, Art>;
@@ -56,6 +56,12 @@ export function CardViewer({ art, order, counts, view, setView, onDragOut = null
           onClose: close,
         }}
       />
+      {/* Centred right under the card, on its own line. */}
+      {rulings.length ? (
+        <button class="rulings-link deck-viewer-rulings" onClick={() => setRulingsFor(defId)}>
+          Rulings ({rulings.length})
+        </button>
+      ) : null}
       <div class="deck-viewer-caption">
         <b class="deck-viewer-name">
           {n > 1 ? `${n}× ` : ''}
@@ -67,11 +73,6 @@ export function CardViewer({ art, order, counts, view, setView, onDragOut = null
         {a?.back ? (
           <button class="btn" onClick={() => setView({ ...view, back: !view.back })}>
             Flip
-          </button>
-        ) : null}
-        {rulings.length ? (
-          <button class="rulings-link" onClick={() => setRulingsFor(defId)}>
-            Rulings ({rulings.length})
           </button>
         ) : null}
       </div>
