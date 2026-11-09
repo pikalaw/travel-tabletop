@@ -299,7 +299,7 @@ Persistence is serialized through one promise chain; each commit is one IndexedD
 
 ## Storage
 
-One IndexedDB database `mtg-tabletop`, version 2. Version 1 is v1's layout; version 2 adds the `rulings` store and card text. The upgrade deletes nothing. Cards imported before version 2 have no text; at startup the app names the imported decks that hold such cards (`staleDecks`) and asks the user to delete and re-import them.
+One IndexedDB database `mtg-tabletop`, version 2. Version 1 is v1's layout; version 2 adds the `rulings` store and card text. The upgrade deletes nothing. Cards imported before version 2 have no text; at startup the app names the imported decks that hold such cards (`staleDecks`) and asks the user to delete and re-import them: a lasting notice on the home screen, like the update notice, and a "needs re-import" tag on each such deck in the deck list. Both go away once those decks are deleted.
 
 | Store | Key | Contents |
 | --- | --- | --- |
@@ -316,6 +316,7 @@ One IndexedDB database `mtg-tabletop`, version 2. Version 1 is v1's layout; vers
 - **Images.** `front` and `back` are the normal-size hashes; `sizes.front` and `sizes.back` hold the small and large hashes. Single-faced cards have `back: null` and are drawn with the bundled `back.svg`. Missing sizes fall back to normal.
 - **Choosing a size.** `sizeFor(cssHeight)`: with px = cssHeight × devicePixelRatio, small up to 230 px, normal up to 720 px, large above. The full-screen views always use large.
 - **Games.** `games.over` is set when `state.result` is. Deleting a game deletes its snapshots and logs. Resuming loads the record, its snapshots (sorted by key) and the last log seq.
+- **Cleanup sweep.** A card is stored once and shared by every deck and game that uses it, so deleting a deck or a game never deletes cards directly. `sweep()` runs after every import, restore, sample-deck rebuild, deck delete and game delete. In one transaction it collects the card ids used by any deck, saved game or undo snapshot, then deletes every other card, every image no remaining card refers to (`hashesOf`: front, back and their sizes), and every rulings record no remaining card's oracle id names. A deck that is in a saved game can be deleted; its cards stay until the game is deleted too. Imports, restores and the sample decks store cards before the deck that uses them, so they run under `holdSweep`; a sweep asked for meanwhile waits until the last of them ends. If any record fails its type guard, the sweep deletes nothing.
 - **Persistence request.** `navigator.storage.persist()` after decks are added; `persisted()` and `estimate()` feed the Decks screen's status line.
 
 ## Deck import

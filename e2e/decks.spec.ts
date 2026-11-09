@@ -133,3 +133,40 @@ test('the deck page viewer: next card, flip a double-faced card, close', async (
   await page.locator('.deck-viewer-img').click();
   await expect(page.locator('.deck-viewer')).toHaveCount(0);
 });
+
+test('a deck saved without card text is flagged until deleted; deleting it removes its cards', async ({ page }) => {
+  const errs = watchErrors(page);
+  await mockScryfall(page);
+  await importDeck(page, 'Old Import', '1 Badgermole\n10 Plains');
+  await expect(page.getByText('Imported')).toBeVisible({ timeout: 20_000 });
+  // make it look like a version 1 import: Scryfall cards without text
+  const count = (store: string) => page.evaluate((s) => new Promise<number>((res) => {
+    const r = indexedDB.open('mtg-tabletop');
+    r.onsuccess = () => { const q = r.result.transaction(s).objectStore(s).count(); q.onsuccess = () => { r.result.close(); res(q.result); }; };
+  }), store);
+  await page.evaluate(() => new Promise<void>((res) => {
+    const r = indexedDB.open('mtg-tabletop');
+    r.onsuccess = () => {
+      const tx = r.result.transaction('defs', 'readwrite');
+      const st = tx.objectStore('defs');
+      const all = st.getAll();
+      all.onsuccess = () => { for (const d of all.result) if (d.scryfallId) { delete d.text; st.put(d); } };
+      tx.oncomplete = () => { r.result.close(); res(); };
+    };
+  }));
+  const defsBefore = await count('defs');
+  await page.goto('./');
+  await expect(page.locator('.notice.warn')).toContainText('1 deck was imported before card text was saved: Old Import');
+  await page.locator('.notice.warn').getByRole('button', { name: 'Decks' }).click();
+  const row = page.locator('.deck-row', { hasText: 'Old Import' }).first();
+  await expect(row.locator('.reimport-tag')).toHaveText('needs re-import');
+  await expect(page.locator('.deck-row', { hasText: 'Sample' }).locator('.reimport-tag')).toHaveCount(0);
+  await row.click();
+  await page.locator('.page').getByRole('button', { name: 'Delete' }).click();
+  await answerDialog(page, true);
+  await expect(page.locator('.deck-row', { hasText: 'Old Import' })).toHaveCount(0);
+  expect(await count('defs')).toBeLessThan(defsBefore);
+  await page.getByText('← Home').click();
+  await expect(page.locator('.notice.warn')).toHaveCount(0);
+  errs.expectNone();
+});

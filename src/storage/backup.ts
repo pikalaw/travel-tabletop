@@ -5,8 +5,8 @@
 // A backup file comes from outside the app, so its manifest passes a guard before use.
 
 import { zipSync, unzipSync, strToU8, strFromU8, type Zippable } from 'fflate';
-import { db, sha256, listDecks, getDefs, putDef, putDeck, isCardDef, isDeck } from './db';
-import { BACKUP_FORMAT, BACKUP_VERSION, type BackupManifest, type CardDef, type Deck } from '../types/storage';
+import { db, sha256, listDecks, getDefs, putDef, putDeck, isCardDef, isDeck, holdSweep, sweep, hashesOf } from './db';
+import { BACKUP_FORMAT, BACKUP_VERSION, type BackupManifest, type Deck } from '../types/storage';
 
 export { BACKUP_FORMAT, BACKUP_VERSION };
 
@@ -14,12 +14,6 @@ const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', '
 const TYPE: Record<string, string> = Object.fromEntries(Object.entries(EXT).map(([t, e]) => [e, t]));
 
 const NOT_A_BACKUP = 'That file is not a deck backup from this app.';
-
-/** Every image hash a card definition refers to. */
-function hashesOf(def: CardDef): string[] {
-  return [def.front, def.back, def.sizes?.front.small, def.sizes?.front.large, def.sizes?.back?.small, def.sizes?.back?.large]
-    .filter((h): h is string => !!h);
-}
 
 /** Token decks that belong with the chosen decks. */
 export function companionTokenDecks(allDecks: readonly Deck[], deckIds: readonly string[]): Deck[] {
@@ -97,8 +91,12 @@ export async function readBackup(file: Blob): Promise<ReadBackup> {
 /**
  * Restore chosen decks from a read backup. Decks that already exist by id are imported as
  * copies with new ids. Images are verified against their hashes; cards with a bad image are skipped.
+ * Cards are stored before their decks, so the cleanup sweep waits until the restore is done.
  */
-export async function restoreBackup({ manifest, files }: Pick<ReadBackup, 'manifest' | 'files'>, chosenIds: readonly string[], onProgress: (text: string) => void = () => {}):
+export const restoreBackup = (...a: Parameters<typeof restoreChosen>) =>
+  holdSweep(async () => { try { return await restoreChosen(...a); } finally { void sweep(); } });
+
+async function restoreChosen({ manifest, files }: Pick<ReadBackup, 'manifest' | 'files'>, chosenIds: readonly string[], onProgress: (text: string) => void = () => {}):
   Promise<{ decks: number; cards: number; skipped: string[] }> {
   const here = new Set((await listDecks()).map((d) => d.id));
   const chosen = manifest.decks.filter((d) => chosenIds.includes(d.id));

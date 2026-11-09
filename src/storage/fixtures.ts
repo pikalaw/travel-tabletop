@@ -1,7 +1,7 @@
 // Built-in sample decks and tokens, drawn as SVG so the app is playable before any import.
 // All names, art and rules text here are original placeholders.
 
-import { putImage, putDef, putDeck, defIdFor, getMeta, setMeta } from './db';
+import { putImage, putDef, putDeck, defIdFor, getMeta, setMeta, holdSweep, sweep } from './db';
 
 type Color = 'red' | 'green' | 'gray' | 'gold';
 type ArtKind = 'peak' | 'grove' | 'beast' | 'flame' | 'bolt' | 'sprout' | 'tower' | 'sigil' | 'coin' | 'wing';
@@ -140,7 +140,16 @@ async function makeDeck(id: string, name: string, kind: 'deck' | 'token', entrie
 }
 
 /** Create the sample decks and tokens once per fixture version. */
-export async function ensureFixtures(): Promise<boolean> {
+/** Build the sample decks if this device has none or an older set; old sample cards are swept. */
+export function ensureFixtures(): Promise<boolean> {
+  return holdSweep(async () => {
+    const made = await makeFixtures();
+    if (made) void sweep();
+    return made;
+  });
+}
+
+async function makeFixtures(): Promise<boolean> {
   if ((await getMeta('fixtures')) === FIXTURE_VERSION) return false;
   await makeDeck('sample-ember', 'Sample: Ember (red)', 'deck', EMBER);
   await makeDeck('sample-grove', 'Sample: Grove (green)', 'deck', GROVE);

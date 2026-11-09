@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
-import { listDecks, deleteDeck, putDeck } from '../storage/db';
+import { listDecks, deleteDeck, putDeck, staleDecks } from '../storage/db';
 import { loadArt, artUrl, sizeFor, type Art } from '../storage/art';
 import { importCache, importDeck, listSignature, type ImportResult } from '../storage/scryfall';
 import { STARTER_PACKS, type StarterPack as Pack, type StarterDeck } from '../storage/starters';
@@ -154,7 +154,11 @@ function StarterPack({ pack, decks, refresh }: { pack: Pack; decks: Deck[]; refr
 }
 export function DecksScreen({ go }: { go: Go }) {
   const [decks, setDecks] = useState<Deck[] | null>(null);
-  const refresh = () => listDecks().then(setDecks);
+  const [stale, setStale] = useState<ReadonlySet<string>>(new Set());
+  const refresh = () => Promise.all([listDecks(), staleDecks()]).then(([ds, st]) => {
+    setDecks(ds);
+    setStale(new Set(st.map((d) => d.id)));
+  });
   useEffect(() => {
     refresh();
   }, []);
@@ -196,6 +200,7 @@ export function DecksScreen({ go }: { go: Go }) {
                 {d.kind === 'token' ? 'Tokens' : 'Deck'} · {d.cards.length + (d.commanders?.length || 0)} cards
                 {d.builtin ? ' · built in' : ''}
               </span>
+              {stale.has(d.id) ? <span class="reimport-tag">needs re-import</span> : null}
             </button>
           </li>
         ))}
@@ -247,7 +252,7 @@ export function DeckScreen({ go, id }: { go: Go; id: string }) {
     const users = deck.kind === 'token' && deck.forDecks?.length ? (await listDecks()).filter((d) => deck.forDecks!.includes(d.id)) : [];
     const body = users.length
       ? `These decks use its tokens:\n${users.map((d) => `• ${d.name}`).join('\n')}\n\nTheir tokens will no longer appear in the Tokens picker.`
-      : 'Card images stay stored for other decks.';
+      : 'Cards that no other deck or saved game uses are removed from this device.';
     if (
       !(await confirmBox({
         title: `Delete “${deck.name}”?`,

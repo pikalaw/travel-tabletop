@@ -14,7 +14,7 @@ import { Host } from '../host/host';
 import { LocalSession, GuestSession, type Session } from '../client/session';
 import { deckSpec, buildHello, guestHandshake, hostHandshake } from '../client/net';
 import { ensureFixtures } from '../storage/fixtures';
-import { listDecks, gamePersistence, getGame, loadSnapshots, loadLog, getMeta, setMeta, staleDecks } from '../storage/db';
+import { listDecks, gamePersistence, getGame, loadSnapshots, loadLog, getMeta, setMeta } from '../storage/db';
 import type { Deck, GameRecord, GameSetup, GuestGameMeta } from '../types/storage';
 import type { GameMode, GameState } from '../types/state';
 import type { DeckSpec } from '../types/protocol';
@@ -38,11 +38,6 @@ export function App({ update = null }: AppProps) {
 
   useEffect(() => {
     void ensureFixtures().catch((e: unknown) => toast(`Could not set up sample decks: ${errText(e)}`, 'warn')).finally(() => void openLink(location.hash));
-    void staleDecks().then((decks) => {
-      if (!decks.length) return;
-      const names = decks.map((d) => d.name).join(', ');
-      toast(`Imported before card text was saved: ${names}. Delete and re-import ${decks.length === 1 ? 'it' : 'them'} to get rules text and rulings.`, 'warn', 15000);
-    }).catch((e: unknown) => console.error(e));
   }, []);
 
   // A game link (#game=<id>) reopens that game if this device has it.

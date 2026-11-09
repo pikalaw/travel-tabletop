@@ -8,7 +8,8 @@ import { parseDecklist, listSignature, importDeck, importCache, textOf } from '.
 import { ensureFixtures } from '../src/storage/fixtures';
 import { STARTER_PACKS } from '../src/storage/starters';
 import { checkManifest, exportBackup, readBackup, restoreBackup } from '../src/storage/backup';
-import { closeDb, db, getDefs, getImage, getRulings, listDecks, putDeck, sha256, staleDecks } from '../src/storage/db';
+import { closeDb, db, deleteDeck, deleteGame, getDefs, getImage, getRulings, holdSweep, listDecks, putDeck, sha256, staleDecks, sweep } from '../src/storage/db';
+import { emptyState } from '../src/engine/engine';
 import type { CardDef, Deck } from '../src/types/storage';
 
 const fixture = (f: string) => readFileSync(new URL(`./fixtures/v1/${f}`, import.meta.url));
@@ -284,5 +285,70 @@ describe('backups', () => {
     const def: CardDef = { id: 'd', name: 'Bad Image', front: h, back: null };
     const read = await readBackup(zip({ format: 'travel-tabletop-decks', version: 1, exportedAt: '', decks: [{ id: 'k', name: 'K', kind: 'deck', cards: ['d'], createdAt: 0 }], defs: [def], images: { [h]: 'jpg' } }, { [`images/${h}.jpg`]: bytes }));
     expect(await restoreBackup(read, ['k'])).toEqual({ decks: 1, cards: 0, skipped: ['Bad Image'] });
+  });
+});
+
+describe('cleanup sweep', () => {
+  const def = (id: string, front: string, oracleId?: string): CardDef =>
+    ({ id, name: id, front, back: null, ...(oracleId ? { text: { oracleId, faces: [{ name: id, typeLine: 'Instant', oracleText: '' }], record: {} } } : {}) });
+  const deck = (id: string, cards: string[]): Deck => ({ id, name: id, kind: 'deck', cards, createdAt: 1 });
+  const stateWith = (gameId: string, defIds: string[]) => {
+    const s = emptyState();
+    s.gameId = gameId;
+    for (const [i, defId] of defIds.entries()) (s.cards as Record<string, unknown>)[`c${i}`] = { id: `c${i}`, defId, name: defId };
+    return s;
+  };
+  async function seed() {
+    const d = await db();
+    for (const x of [def('a', 'ia', 'oa'), def('shared', 'is', 'os'), def('b', 'ib', 'ob'), def('g', 'ig'), def('snap', 'isnap'), def('orphan', 'io', 'oo')]) await d.put('defs', x);
+    for (const h of ['ia', 'is', 'ib', 'ig', 'isnap', 'io', 'loose']) await d.put('images', { hash: h, blob: new Blob(['x']), type: 'image/png' });
+    for (const o of ['oa', 'os', 'ob', 'oo']) await d.put('rulings', { oracleId: o, rulings: [], fetchedAt: 1 });
+    await putDeck(deck('A', ['a', 'shared']));
+    await putDeck(deck('B', ['b', 'shared']));
+    await d.put('games', { id: 'G', mode: 'same-device', role: 'host', setup: {}, state: stateWith('G', ['g']), updatedAt: 1, over: false });
+    await d.put('snapshots', { gameId: 'G', key: 1, state: stateWith('G', ['g', 'snap']) });
+  }
+  const keys = async () => {
+    const d = await db();
+    return { defs: (await d.getAllKeys('defs')).sort(), images: (await d.getAllKeys('images')).sort(), rulings: (await d.getAllKeys('rulings')).sort() };
+  };
+
+  it('keeps what a deck, a saved game or an undo snapshot uses, and deletes the rest', async () => {
+    await seed();
+    expect(await sweep()).toEqual({ defs: 1, images: 2, rulings: 1 });
+    expect(await keys()).toEqual({
+      defs: ['a', 'b', 'g', 'shared', 'snap'], images: ['ia', 'ib', 'ig', 'is', 'isnap'], rulings: ['oa', 'ob', 'os'],
+    });
+    // deleting a deck sweeps: its own card goes, the shared one stays
+    await deleteDeck('A');
+    expect(await keys()).toEqual({ defs: ['b', 'g', 'shared', 'snap'], images: ['ib', 'ig', 'is', 'isnap'], rulings: ['ob', 'os'] });
+    // deleting the game drops its cards, including the one only its undo history used
+    await deleteGame('G');
+    expect(await keys()).toEqual({ defs: ['b', 'shared'], images: ['ib', 'is'], rulings: ['ob', 'os'] });
+  });
+
+  it('waits while cards are being stored before their deck', async () => {
+    await seed();
+    let release!: () => void;
+    const held = holdSweep(async () => {
+      await (await db()).put('defs', def('incoming', 'ia'));
+      await new Promise<void>((r) => { release = r; });
+      await putDeck(deck('C', ['incoming']));
+    });
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+    expect(await sweep()).toBeNull();
+    expect((await keys()).defs).toContain('incoming');
+    release();
+    await held;
+    // the deferred sweep runs once the hold ends: the orphan goes, the new deck's card stays
+    await vi.waitFor(async () => expect((await keys()).defs).not.toContain('orphan'));
+    expect((await keys()).defs).toContain('incoming');
+  });
+
+  it('deletes nothing when a record cannot be read', async () => {
+    await seed();
+    await (await db()).put('games', { id: 'broken' } as never);
+    expect(await sweep()).toBeNull();
+    expect((await keys()).defs).toContain('orphan');
   });
 });

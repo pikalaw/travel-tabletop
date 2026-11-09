@@ -6,7 +6,7 @@
 // Scryfall's responses are checked by type guards before use: a card without a usable shape is
 // treated as not found.
 
-import { putImage, putDef, putDeck, defIdFor, db, getRulings, putRulings } from './db';
+import { putImage, putDef, putDeck, defIdFor, db, getRulings, putRulings, holdSweep, sweep } from './db';
 import type { CardText, Deck, FaceText, Ruling } from '../types/storage';
 
 const API = 'https://api.scryfall.com';
@@ -207,7 +207,14 @@ export interface ImportResult {
 }
 
 /** Import a deck. onProgress(text) is called as work proceeds. */
-export async function importDeck({ name, kind = 'deck', text, onProgress = () => {}, extra = {}, tokens = null, cache = importCache() }: ImportOptions): Promise<ImportResult> {
+/** Import one deck, then clear out cards nothing uses any more (for instance after a failed import). */
+export function importDeck(o: ImportOptions): Promise<ImportResult> {
+  return holdSweep(async () => {
+    try { return await importOne(o); } finally { void sweep(); }
+  });
+}
+
+async function importOne({ name, kind = 'deck', text, onProgress = () => {}, extra = {}, tokens = null, cache = importCache() }: ImportOptions): Promise<ImportResult> {
   const { entries, errors } = parseDecklist(text);
   const wanted = entries.filter((e) => e.section === 'main' || e.section === 'commander' || (kind === 'token' && e.section === 'tokens'));
   if (!wanted.length) throw new Error('No cards found in that list.');

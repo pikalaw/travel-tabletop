@@ -11,8 +11,8 @@ import type { CardDef, CardText, Deck, GameRecord, ImageRecord, LogEntry, MetaRe
 
 export const DB_NAME = 'mtg-tabletop';
 /**
- * 1: the first release. 2: card definitions gain rules text, and rulings get their own store;
- * card data from version 1 is dropped (decks are re-imported), with no migration.
+ * 1: the first release. 2: card definitions gain rules text, and rulings get their own store.
+ * Version 1 cards are kept as they are; staleDecks names the decks to re-import.
  */
 export const DB_VERSION = 2;
 
@@ -85,6 +85,12 @@ export function isCardDef(x: unknown): x is CardDef {
     && optional(x.scryfallId, isStr)
     && (x.sizes === undefined || (isObj(x.sizes) && isSizes(x.sizes.front) && (x.sizes.back === null || isSizes(x.sizes.back))))
     && optional(x.text, isCardText);
+}
+
+/** Every image hash a card definition refers to. */
+export function hashesOf(def: CardDef): string[] {
+  return [def.front, def.back, def.sizes?.front.small, def.sizes?.front.large, def.sizes?.back?.small, def.sizes?.back?.large]
+    .filter((h): h is string => !!h);
 }
 
 export function isRulingsRecord(x: unknown): x is RulingsRecord {
@@ -215,7 +221,10 @@ export async function getDeck(id: string): Promise<Deck | undefined> {
   return keep('deck', isDeck)(d) ? d : undefined;
 }
 
-export async function deleteDeck(id: string): Promise<void> { await (await db()).delete('decks', id); }
+export async function deleteDeck(id: string): Promise<void> {
+  await (await db()).delete('decks', id);
+  await sweep();
+}
 
 // ---------- Meta ----------
 
@@ -252,6 +261,62 @@ export async function deleteGame(id: string): Promise<void> {
     while (cur) { void cur.delete(); cur = await cur.continue(); }
   }
   await tx.done;
+  await sweep();
+}
+
+// ---------- Cleanup ----------
+// A card is stored once and shared by every deck and saved game that uses it, so deleting a
+// deck or a game cannot delete its cards directly. The sweep works out from scratch what is
+// still used: cards in any deck, saved game or undo snapshot; the images and rulings of those
+// cards. Everything else is deleted. Imports, restores and the sample decks store cards before
+// the deck that uses them, so they run under holdSweep and any sweep waits until they finish.
+
+export interface SweepResult { defs: number; images: number; rulings: number }
+
+let holds = 0;
+let pending = false;
+
+/** Run work that stores cards before their deck; a sweep asked for meanwhile runs afterwards. */
+export async function holdSweep<T>(work: () => Promise<T>): Promise<T> {
+  holds++;
+  try { return await work(); } finally {
+    holds--;
+    if (!holds && pending) { pending = false; void sweep().catch((e: unknown) => console.error('cleanup failed', e)); }
+  }
+}
+
+/** Delete unused cards, images and rulings. Null when it was deferred or skipped. */
+export async function sweep(): Promise<SweepResult | null> {
+  if (holds) { pending = true; return null; }
+  const tx = (await db()).transaction(['decks', 'games', 'snapshots', 'defs', 'images', 'rulings'], 'readwrite');
+  const decks = await tx.objectStore('decks').getAll();
+  const games = await tx.objectStore('games').getAll();
+  const snaps = await tx.objectStore('snapshots').getAll();
+  const defs = await tx.objectStore('defs').getAll();
+  const used = new Set<string>();
+  const readable = decks.every(isDeck) && games.every(isGameRecord) && snaps.every(isSnapshotRecord);
+  if (readable) {
+    for (const d of decks) for (const id of [...d.cards, ...(d.commanders || [])]) used.add(id);
+    for (const s of [...games, ...snaps]) for (const c of Object.values(s.state.cards)) used.add(c.defId);
+  }
+  // A record this version cannot read might use any card or image: delete nothing.
+  if (!readable || !defs.every((d) => !used.has(d.id) || isCardDef(d))) {
+    console.warn('Cleanup skipped: a record this version cannot read.');
+    tx.abort();
+    await tx.done.catch(() => {});
+    return null;
+  }
+  const images = new Set<string>(), oracles = new Set<string>();
+  const out: SweepResult = { defs: 0, images: 0, rulings: 0 };
+  for (const def of defs) {
+    if (!used.has(def.id)) { void tx.objectStore('defs').delete(def.id); out.defs++; continue; }
+    for (const h of hashesOf(def)) images.add(h);
+    if (def.text?.oracleId) oracles.add(def.text.oracleId);
+  }
+  for (const h of await tx.objectStore('images').getAllKeys()) if (!images.has(h)) { void tx.objectStore('images').delete(h); out.images++; }
+  for (const o of await tx.objectStore('rulings').getAllKeys()) if (!oracles.has(o)) { void tx.objectStore('rulings').delete(o); out.rulings++; }
+  await tx.done;
+  return out;
 }
 
 export async function loadSnapshots(gameId: string): Promise<{ key: number; state: GameState }[]> {

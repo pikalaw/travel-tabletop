@@ -69,6 +69,7 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .deck-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .deck-row { width: 100%; display: flex; justify-content: space-between; gap: 10px; text-align: left; background: var(--panel); border: 1px solid var(--cell-line); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; flex-wrap: wrap; }
 .deck-name { font-weight: 600; }
+.reimport-tag { color: var(--warn); font-size: 13px; }
 .deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
 .deck-card { margin: 0; }
 .deck-card img, .deck-card .card-face { width: 100%; aspect-ratio: 63 / 88; border-radius: 6px; display: block; object-fit: cover; }

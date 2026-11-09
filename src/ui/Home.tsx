@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { confirmBox } from './Dialogs';
-import { listGames, deleteGame, getMeta, setMeta } from '../storage/db';
+import { listGames, deleteGame, getMeta, setMeta, staleDecks } from '../storage/db';
 import { APP_VERSION, BUILD_ID } from '../version';
-import type { GameRecord, GuestGameMeta } from '../types/storage';
+import type { Deck, GameRecord, GuestGameMeta } from '../types/storage';
 import type { Go } from './routes';
 
 function isGuestGame(x: unknown): x is GuestGameMeta {
@@ -24,7 +24,9 @@ export interface HomeProps {
 export function Home({ go, resume, rejoin, update, notice }: HomeProps) {
   const [games, setGames] = useState<GameRecord[]>([]);
   const [guestGame, setGuestGame] = useState<GuestGameMeta | null>(null);
+  const [stale, setStale] = useState<Deck[]>([]);
   const refresh = () => {
+    void staleDecks().then(setStale);
     void listGames().then((gs) => setGames(gs.filter((g) => !g.over && g.state.turn > 0)));
     void getMeta('guestGame').then((g) => setGuestGame(isGuestGame(g) ? g : null));
   };
@@ -37,6 +39,12 @@ export function Home({ go, resume, rejoin, update, notice }: HomeProps) {
       </div>
       {notice ? <div class="notice warn">{notice}</div> : null}
       {update ? <div class="notice">A new version is ready. <button class="btn primary" onClick={update}>Update now</button></div> : null}
+      {stale.length ? (
+        <div class="notice warn">
+          {stale.length === 1 ? '1 deck was' : `${stale.length} decks were`} imported before card text was saved: {stale.map((d) => d.name).join(', ')}.
+          Delete and re-import {stale.length === 1 ? 'it' : 'them'} to get rules text and rulings. <button class="btn" onClick={() => go('decks')}>Decks</button>
+        </div>
+      ) : null}
       <div class="home-actions">
         <button class="btn primary big" onClick={() => go('setup')}>New game</button>
         <button class="btn big" onClick={() => go('decks')}>Decks</button>
