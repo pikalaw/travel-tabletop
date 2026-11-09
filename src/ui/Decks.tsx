@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
-import { listDecks, deleteDeck, putDeck, staleDecks } from '../storage/db';
+import { listDecks, deleteDeck, deleteDecks, putDeck, staleDecks } from '../storage/db';
 import { loadArt, artUrl, sizeFor, type Art } from '../storage/art';
 import { importCache, importDeck, listSignature, type ImportResult } from '../storage/scryfall';
 import { STARTER_PACKS, type StarterPack as Pack, type StarterDeck } from '../storage/starters';
@@ -152,6 +152,22 @@ function StarterPack({ pack, decks, refresh }: { pack: Pack; decks: Deck[]; refr
     </div>
   );
 }
+/**
+ * Delete every deck except the built-in ones (the samples and basic tokens), for a clean start.
+ * Cards a saved game still uses stay until that game is deleted.
+ */
+async function deleteAll(decks: readonly Deck[]): Promise<boolean> {
+  const mine = decks.filter((d) => !d.builtin);
+  const ok = await confirmBox({
+    title: `Delete all ${mine.length} deck${mine.length === 1 ? '' : 's'}?`,
+    body: 'Every deck you imported or restored goes, with its card images and rulings. The built-in sample decks and tokens stay. Saved games keep the cards they use until you delete them. This can’t be undone: back up first if you may want them again.',
+    ok: 'Delete all',
+    danger: true,
+  });
+  if (ok) await deleteDecks(mine.map((d) => d.id));
+  return ok;
+}
+
 export function DecksScreen({ go }: { go: Go }) {
   const [decks, setDecks] = useState<Deck[] | null>(null);
   const [stale, setStale] = useState<ReadonlySet<string>>(new Set());
@@ -208,6 +224,11 @@ export function DecksScreen({ go }: { go: Go }) {
       <p class="muted small">
         Import the same decks on both devices before a networked game: each device draws every card from its own copy.
       </p>
+      {decks.some((d) => !d.builtin) ? (
+        <button class="btn danger" onClick={() => void deleteAll(decks).then((ok) => { if (ok) void refresh(); })}>
+          Delete all decks
+        </button>
+      ) : null}
     </div>
   );
 }

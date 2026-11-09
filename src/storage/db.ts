@@ -222,7 +222,14 @@ export async function getDeck(id: string): Promise<Deck | undefined> {
 }
 
 export async function deleteDeck(id: string): Promise<void> {
-  await (await db()).delete('decks', id);
+  await deleteDecks([id]);
+}
+
+/** Delete decks in one step, then sweep the cards no deck or saved game still uses. */
+export async function deleteDecks(ids: readonly string[]): Promise<void> {
+  const tx = (await db()).transaction('decks', 'readwrite');
+  for (const id of ids) void tx.store.delete(id);
+  await tx.done;
   await sweep();
 }
 

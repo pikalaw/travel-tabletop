@@ -9,8 +9,9 @@ import { zoneKind, zoneOwner, other, canSeeFace, findZone } from '../engine/view
 import { artUrl, sizeFor } from '../storage/art';
 import { abilitiesOf } from './abilities';
 import type { FullModel } from './fullModel';
+import { getRulings } from '../storage/db';
 import type { CardInstance, GameState, PlayerId, ZoneId } from '../types/state';
-import type { Deck } from '../types/storage';
+import type { CardText, Deck, Ruling } from '../types/storage';
 import type { AwayLine } from './gameUi';
 
 /** Send a command or notice through the session. */
@@ -136,6 +137,67 @@ export interface FullCardProps {
   onAbility?: ((text: string) => void) | null;
 }
 
+/** A card's rulings from storage (none until loaded, or for a card without an oracle id). */
+function useRulings(oracleId: string | undefined): Ruling[] {
+  const [got, setGot] = useState<{ id: string; list: Ruling[] } | null>(null);
+  useEffect(() => {
+    if (!oracleId) return;
+    let live = true;
+    getRulings(oracleId).then((r) => { if (live) setGot({ id: oracleId, list: r?.rulings ?? [] }); }).catch((e: unknown) => console.error(e));
+    return () => { live = false; };
+  }, [oracleId]);
+  return got && got.id === oracleId ? got.list : [];
+}
+
+/**
+ * The rulings panel, over the full view: the card's rules text, then each ruling with its date.
+ * Scryfall's own notes are marked unofficial. It scrolls; Back (not Close: the footer's Close
+ * closes the whole full view) or a swipe down on its header returns to the full view.
+ */
+function RulingsPanel({ title, text, rulings, onClose }: { title: string; text: CardText | undefined; rulings: readonly Ruling[]; onClose: () => void }) {
+  const y0 = useRef<{ y: number; id: number } | null>(null);
+  return (
+    // The swipe starts on the header and may end anywhere over the panel.
+    <div
+      class="rulings-panel"
+      role="dialog"
+      aria-label={`Rulings: ${title}`}
+      onPointerUp={(e) => {
+        const s = y0.current;
+        y0.current = null;
+        if (s && s.id === e.pointerId && e.clientY - s.y > SWIPE_PX) onClose();
+      }}
+      onPointerCancel={() => { y0.current = null; }}
+    >
+      <div class="rulings-head" onPointerDown={(e) => { y0.current = { y: e.clientY, id: e.pointerId }; }}>
+        <b>Rulings: {title}</b>
+        <button class="btn primary" onClick={onClose}>
+          Back
+        </button>
+      </div>
+      <div class="rulings-body">
+        {(text?.faces || []).map((f) => (
+          <div class="rulings-face">
+            <b>{f.name}</b> <span class="muted">{f.typeLine}</span>
+            {f.oracleText ? <p>{f.oracleText}</p> : null}
+          </div>
+        ))}
+        <ol class="rulings-list">
+          {rulings.map((r) => (
+            <li>
+              <span class="ruling-meta">
+                {r.publishedAt}
+                {r.source === 'wotc' ? '' : <span class="ruling-unofficial"> · Scryfall note (unofficial)</span>}
+              </span>
+              <p>{r.comment}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
 /** How far a finger moves before a swipe, a drag up or a swipe down counts; under TAP_PX it is a tap. */
 const SWIPE_PX = 50;
 const DRAG_OUT_PX = 40;
@@ -165,6 +227,10 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
   const img = cardImage(ctx, card, zone, card.faceDown && ctx.viewer === card.owner, 'large');
   const c = card.counters;
   const art = ctx.art.get(card.defId);
+  // Rulings, for a face the viewer can see (an ability item shows its source's). The panel's open
+  // state belongs to the card it was opened on, so stepping to another card closes it.
+  const rulings = useRulings(model.visible ? art?.text?.oracleId : undefined);
+  const [rulingsFor, setRulingsFor] = useState<string | null>(null);
   const host = card.attachedTo ? st.cards[card.attachedTo] : null;
   const zoneOfId = (id: string): ZoneId => findZone(st, id) || zone;
   const seen = (x: CardInstance) => canSeeFace(st, x, zoneOfId(x.id), ctx.viewer) || (x.faceDown && ctx.viewer === x.owner);
@@ -330,6 +396,12 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
           {card.isToken ? ' · token' : ''}
           {art?.back ? ' · double-faced' : ''}
         </span>
+        {/* Near the top, so it shows without scrolling on a phone held upright. */}
+        {rulings.length ? (
+          <button class="rulings-link" onClick={() => setRulingsFor(cardId)}>
+            Rulings ({rulings.length})
+          </button>
+        ) : null}
         {host ? <span>Attached to {nameOf(host)}</span> : null}
         {row && parts.length ? <span>{parts.join(' · ')}</span> : null}
         {row ? (
@@ -364,6 +436,9 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
         {model.tapToggle && onToggleTap ? <span class="hint">Tap the card to tap or untap it.</span> : null}
         {model.actions.counters ? <span class="hint">Drag counters from the bar onto the card. Use − and + to change one.</span> : null}
       </div>
+      {rulingsFor === cardId && rulings.length ? (
+        <RulingsPanel title={card.name} text={art?.text} rulings={rulings} onClose={() => setRulingsFor(null)} />
+      ) : null}
     </div>
   );
 }

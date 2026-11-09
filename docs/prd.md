@@ -236,7 +236,9 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 
 **Tokens with every deck.** Importing a deck also downloads the tokens its cards create and saves them as a token deck named after it ("\<deck> · tokens"). The ten Beginner Box decks share one token deck, and the Jumpstart half-decks share another. In a game, the Tokens picker lists the token decks for the decks in play first, then all others.
 
-**Safety checks.** Importing a list whose name or cards match an existing deck of the same kind asks before adding another copy. Deleting any deck asks first; deleting a token deck also names the decks that use its tokens. Card images stay stored when a deck is deleted.
+**Safety checks.** Importing a list whose name or cards match an existing deck of the same kind asks before adding another copy. Deleting any deck asks first; deleting a token deck also names the decks that use its tokens. Deleting a deck also removes its cards, images and rulings, unless another deck or a saved game still uses them.
+
+**Delete all decks.** At the bottom of the Decks screen, one button deletes every deck except the built-in ones (the sample decks and basic tokens), after a confirmation that names how many go, for a clean start before re-importing. Cards a saved game still uses stay until that game is deleted.
 
 **Deck page.** Shows the deck's cards as a grid with counts (commanders first), with Rename and Delete. Tapping a card shows it full screen in the large size, with previous and next buttons, a flip button for double-faced cards, and the card's count in the deck. Tapping the card or Close returns to the deck.
 

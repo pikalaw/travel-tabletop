@@ -125,18 +125,20 @@ export function watchErrors(page: Page) {
 /**
  * Mock the Scryfall API and image CDN. Cards are generated from their names; "Front N"
  * becomes the double-faced "Front N // Back N". `tokens` maps a card name to the token
- * names it creates; `oracle` maps a card name to its rules text (none by default). Images are
- * real JPEGs of Scryfall's three sizes.
+ * names it creates; `oracle` maps a card name to its rules text (none by default), and `rulings`
+ * to its rulings (none by default). Images are real JPEGs of Scryfall's three sizes.
  */
-export async function mockScryfall(page: Page, opts: { tokens?: Record<string, string[]>; oracle?: Record<string, string> } = {}) {
+export async function mockScryfall(page: Page, opts: { tokens?: Record<string, string[]>; oracle?: Record<string, string>; rulings?: Record<string, { source: string; published_at: string; comment: string }[]> } = {}) {
   const slug = (n: string) => createHash('md5').update(n.toLowerCase()).digest('hex').slice(0, 8);
   const imgs = (id: string, face: 'f' | 'b') => Object.fromEntries(['small', 'normal', 'large', 'png'].map((s) => [s, `https://cards.scryfall.io/${s}/front/${id}-${face}.jpg`]));
   const tokenName = new Map<string, string>();
+  const bySlug = new Map<string, string>(); // collector number -> card name, for the rulings route
   for (const ts of Object.values(opts.tokens || {})) for (const t of ts) tokenName.set(`tok-${slug(t)}`, t);
   const card = (name: string, token = false): Record<string, unknown> => {
     const id = (token ? 'tok-' : '') + slug(name);
     const dfc = /^Front (\d+)$/.exec(name);
-    const c: Record<string, unknown> = { id, name, set: token ? 'ttst' : 'tst', collector_number: '1', type_line: 'Creature — Test', oracle_text: opts.oracle?.[name] ?? '' };
+    bySlug.set(id, name);
+    const c: Record<string, unknown> = { id, oracle_id: `o-${id}`, name, set: token ? 'ttst' : 'tst', collector_number: id, type_line: 'Creature — Test', oracle_text: opts.oracle?.[name] ?? '' };
     if (dfc) {
       c.name = `Front ${dfc[1]} // Back ${dfc[1]}`;
       c.card_faces = [{ name: `Front ${dfc[1]}`, image_uris: imgs(id, 'f') }, { name: `Back ${dfc[1]}`, image_uris: imgs(id, 'b') }];
@@ -145,7 +147,7 @@ export async function mockScryfall(page: Page, opts: { tokens?: Record<string, s
     if (toks) c.all_parts = [{ component: 'combo_piece', id, name }, ...toks.map((t) => ({ component: 'token', id: `tok-${slug(t)}`, name: t }))];
     return c;
   };
-  const calls = { collection: 0, named: 0, images: [] as string[], identifiers: [] as Record<string, string>[] };
+  const calls = { collection: 0, named: 0, rulings: 0, images: [] as string[], identifiers: [] as Record<string, string>[] };
   const cors = { 'Access-Control-Allow-Origin': '*' };
   await page.context().route('https://api.scryfall.com/**', async (route) => {
     const req = route.request();
@@ -159,6 +161,11 @@ export async function mockScryfall(page: Page, opts: { tokens?: Record<string, s
     if (req.url().includes('/cards/named')) {
       calls.named++;
       return route.fulfill({ headers: cors, json: card(new URL(req.url()).searchParams.get('fuzzy') || '?') });
+    }
+    const rul = /\/cards\/[^/]+\/([^/]+)\/rulings/.exec(req.url());
+    if (rul) {
+      calls.rulings++;
+      return route.fulfill({ headers: cors, json: { object: 'list', data: opts.rulings?.[bySlug.get(rul[1]!) || ''] ?? [] } });
     }
     return route.fulfill({ status: 404, headers: cors, json: { object: 'error' } });
   });
