@@ -58,6 +58,8 @@ export interface StatePayloads {
   attack: { cardId: string; from: ZoneId; value?: boolean };
   block: { cardId: string; from: ZoneId; attackerId: string; attackerZone: ZoneId; value?: boolean };
   endCombat: Record<string, never>;
+  /** Put an ability of `cardId` on top of the stack as its own item. Added in protocol 5. */
+  putAbility: { cardId: string; from: ZoneId; text: string };
 }
 
 export type StateCommandType = keyof StatePayloads;
@@ -68,7 +70,7 @@ export const STATE_COMMAND_TYPES = [
   'addCounter', 'removeCounter', 'createToken', 'removeToken', 'draw', 'mill',
   'shuffle', 'setLibraryTopFaceUp', 'setPlayerCounter', 'addPlayerCounter',
   'removePlayerCounter', 'passTurn', 'concede', 'endGame', 'attach', 'detach',
-  'attack', 'block', 'endCombat', 'detachAll', 'setLead',
+  'attack', 'block', 'endCombat', 'detachAll', 'setLead', 'putAbility',
 ] as const satisfies readonly StateCommandType[];
 
 interface Envelope {

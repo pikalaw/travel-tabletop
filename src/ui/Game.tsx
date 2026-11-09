@@ -681,7 +681,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
               onPick={(id) => dispatch({ type: 'full', full: { cardId: id, zone: findZone(state, id) || fullZone, anchor: full.anchor } })}
               step={fullStep} onStep={(id) => dispatch({ type: 'full', full: { cardId: id, zone: fullZone, anchor: id } })}
               onDragOut={(e, x0, y0) => dragOutOfFull(full.cardId, fullZone, e, x0, y0)} onClose={closeFull}
-              onToggleTap={isBattlefieldZone(fullZone) ? () => send('tap', { cardId: full.cardId, from: fullZone }) : null} />
+              onToggleTap={isBattlefieldZone(fullZone) ? () => send('tap', { cardId: full.cardId, from: fullZone }) : null}
+              onAbility={(text) => send('putAbility', { cardId: full.cardId, from: fullZone, text })} />
           </div>
         ) : null}
         {sheetEl}

@@ -44,6 +44,12 @@ export interface CardInstance {
    * protocol 4.
    */
   changed?: { by: PlayerId; turn: number };
+  /**
+   * Set on an ability on the stack (id `a<n>`): its text and the card it came from. It shows the
+   * source's picture and name, copied when it was put there, and is face down if the source was.
+   * It exists only on the stack: moving it anywhere else deletes it. Added in protocol 5.
+   */
+  ability?: { text: string; sourceId: string };
 }
 
 export interface PlayerCounter {

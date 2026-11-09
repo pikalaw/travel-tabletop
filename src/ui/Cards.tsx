@@ -188,6 +188,11 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
           </div>
         )}
         {img.visible && img.missing ? <div class="missing-name">{card.name}</div> : null}
+        {card.ability ? (
+          <div class="ability-band" title={card.ability.text}>
+            <b>Ability</b> {card.ability.text}
+          </div>
+        ) : null}
         {tucked ? null : <Badges card={card} zone={zone} interactive={interactive} />}
       </div>
       <div class="marks" style={tapped ? `top:${Math.round((h - w) / 2) + 2}px` : ''}>

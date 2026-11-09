@@ -78,6 +78,9 @@ function newCard(id: string, defId: string, name: string, deckId: string | null,
   };
 }
 
+/** The longest ability text accepted (the longest Oracle paragraphs are well under this). */
+export const MAX_ABILITY_TEXT = 2000;
+
 const fail = (error: 'stale' | 'invalid', detail?: string): ApplyResult => (detail === undefined ? { error } : { error, detail });
 
 const isInt = (x: unknown): x is number => Number.isInteger(x);
@@ -230,7 +233,8 @@ function run(input: GameState, cmd: Command): ApplyResult {
       const carry = c.attachedTo || !isBattlefieldZone(to) ? [] : attachmentsOf(state, from, c.id);
       delete c.attachedTo;
       for (const id of [...carry, c.id]) src.splice(src.indexOf(id), 1);
-      if (c.isToken && !isBattlefieldZone(to) && to !== 'stack') {
+      // A token lives only in play or on the stack; an ability item only on the stack.
+      if ((c.isToken && !isBattlefieldZone(to) && to !== 'stack') || (c.ability && to !== 'stack')) {
         delete state.cards[c.id];
         moved.push({ id: c.id, from, to: null });
         break;
@@ -253,6 +257,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
       if (host.attachedTo) host = state.cards[host.attachedTo]!; // one level: attach to the card at the bottom
       const { card: c, from } = n;
       if (host.id === c.id) return fail('invalid', 'a card cannot be attached to itself');
+      if (c.ability) return fail('invalid', 'An ability on the stack can’t be attached.');
       // A card that carries attachments brings them onto the new host too.
       const own = c.attachedTo ? [] : attachmentsOf(state, from, c.id);
       const group = [...own, c.id];
@@ -511,6 +516,24 @@ function run(input: GameState, cmd: Command): ApplyResult {
       break;
     }
 
+    case 'putAbility': {
+      // A new item on top of the stack with the source's picture, name and owner, face down if
+      // the source is, so it reveals no more than the source does.
+      const n = need(p.cardId, p.from); if (!located(n)) return n;
+      const text = typeof p.text === 'string' ? p.text.trim() : '';
+      if (!text) return fail('invalid', 'An ability needs its text.');
+      if (text.length > MAX_ABILITY_TEXT) return fail('invalid', 'That ability text is too long.');
+      const src = n.card;
+      const id = `a${state.nextId++}`;
+      const item = newCard(id, src.defId, src.name, src.deckId, src.owner, false);
+      item.faceDown = src.faceDown;
+      item.ability = { text, sourceId: src.id };
+      state.cards[id] = item;
+      state.zones.stack.unshift(id);
+      moved.push({ id, from: null, to: 'stack', toIndex: 0 });
+      break;
+    }
+
     case 'concede': {
       if (!isPlayer(p.player)) return fail('invalid', 'bad player');
       state.result = { winner: other(p.player), reason: 'concede' };
@@ -536,7 +559,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
 /** Commands that change a card in play, and so mark it as changed (see `CardInstance.changed`). */
 const MARKING: ReadonlySet<Command['type']> = new Set<Command['type']>([
   'move', 'attach', 'detach', 'detachAll', 'setLead', 'tap', 'flip', 'setFaceDown',
-  'addCounter', 'removeCounter', 'createToken', 'attack', 'block',
+  'addCounter', 'removeCounter', 'createToken', 'attack', 'block', 'putAbility',
 ]);
 
 /**
@@ -600,6 +623,7 @@ export function checkInvariants(state: GameState): string | null {
     if (c.attacking && zoneOwner(z) !== state.activePlayer) return `card ${c.id} attacks from the defending side`;
     if (c.blocking && zoneOwner(z) === state.activePlayer) return `card ${c.id} blocks from the attacking side`;
     for (const a of c.blocking || []) if (!state.cards[a]?.attacking) return `card ${c.id} blocks ${a}, which is not attacking`;
+    if (c.ability && z !== 'stack') return `ability ${c.id} is off the stack`;
     if (c.changed && !isBattlefieldZone(z)) return `card ${c.id} has a changed mark out of play`;
     if (c.changed && c.changed.turn < state.turn - 1) return `card ${c.id} has a changed mark from turn ${c.changed.turn}`;
   }

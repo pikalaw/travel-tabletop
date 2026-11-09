@@ -113,6 +113,11 @@ export function describeCommand(cmd: Command, before: GameState, after: GameStat
     case 'addPlayerCounter': return `${name} added counter "${cmd.payload.key}" for ${st.players[cmd.payload.player].name}`;
     case 'removePlayerCounter': return `${name} removed counter "${cmd.payload.key}" for ${st.players[cmd.payload.player].name}`;
     case 'passTurn': return `Turn ${st.turn}: ${st.players[st.activePlayer].name}`;
+    case 'putAbility': {
+      const p = cmd.payload;
+      const t = p.text.trim();
+      return `${name} put an ability of ${cn(p.cardId, p.from, p.from)} on the stack: “${t.length > 80 ? `${t.slice(0, 79)}…` : t}”`;
+    }
     case 'concede': return `${st.players[cmd.payload.player].name} conceded`;
     case 'endGame': return 'Game ended';
     default: return assertNever(cmd);

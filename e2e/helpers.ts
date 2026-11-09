@@ -125,9 +125,10 @@ export function watchErrors(page: Page) {
 /**
  * Mock the Scryfall API and image CDN. Cards are generated from their names; "Front N"
  * becomes the double-faced "Front N // Back N". `tokens` maps a card name to the token
- * names it creates. Images are real JPEGs of Scryfall's three sizes.
+ * names it creates; `oracle` maps a card name to its rules text (none by default). Images are
+ * real JPEGs of Scryfall's three sizes.
  */
-export async function mockScryfall(page: Page, opts: { tokens?: Record<string, string[]> } = {}) {
+export async function mockScryfall(page: Page, opts: { tokens?: Record<string, string[]>; oracle?: Record<string, string> } = {}) {
   const slug = (n: string) => createHash('md5').update(n.toLowerCase()).digest('hex').slice(0, 8);
   const imgs = (id: string, face: 'f' | 'b') => Object.fromEntries(['small', 'normal', 'large', 'png'].map((s) => [s, `https://cards.scryfall.io/${s}/front/${id}-${face}.jpg`]));
   const tokenName = new Map<string, string>();
@@ -135,7 +136,7 @@ export async function mockScryfall(page: Page, opts: { tokens?: Record<string, s
   const card = (name: string, token = false): Record<string, unknown> => {
     const id = (token ? 'tok-' : '') + slug(name);
     const dfc = /^Front (\d+)$/.exec(name);
-    const c: Record<string, unknown> = { id, name, set: token ? 'ttst' : 'tst', collector_number: '1' };
+    const c: Record<string, unknown> = { id, name, set: token ? 'ttst' : 'tst', collector_number: '1', type_line: 'Creature — Test', oracle_text: opts.oracle?.[name] ?? '' };
     if (dfc) {
       c.name = `Front ${dfc[1]} // Back ${dfc[1]}`;
       c.card_faces = [{ name: `Front ${dfc[1]}`, image_uris: imgs(id, 'f') }, { name: `Back ${dfc[1]}`, image_uris: imgs(id, 'b') }];

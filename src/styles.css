@@ -438,3 +438,15 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .full-step.off { opacity: 0; }
 /* The full view's card handles its own swipes and drag up. */
 .fullcard-inner { touch-action: none; }
+
+/* Abilities: the full view's list, an ability item's text, and the band on an ability item */
+.fullcard-meta { max-height: 100%; overflow-y: auto; align-content: start; }
+@media (orientation: portrait) { .fullcard-meta { max-height: 22%; } .fullcard.grouped .fullcard-meta { max-height: 34%; } }
+.abilities { display: grid; gap: 6px; margin: 6px 0; text-align: left; }
+.ability { text-align: left; white-space: pre-line; background: var(--btn); color: var(--ink); border: 1px solid var(--cell-line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.ability:active { background: var(--btn-2); }
+.ability.custom { color: var(--ink-2); font-style: italic; }
+.ability-face { font-weight: 600; color: var(--ink); margin-top: 4px; }
+.ability-text { white-space: pre-line; color: var(--ink); font-size: 15px; margin: 2px 0 6px; }
+.ability-band { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(10, 16, 14, .88); color: var(--ink); font-size: 9px; line-height: 1.2; padding: 2px 4px; border-top: 2px solid var(--p2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; border-radius: 0 0 4px 4px; }
+.ability-band b { color: var(--p2); text-transform: uppercase; letter-spacing: .04em; font-size: 8px; }

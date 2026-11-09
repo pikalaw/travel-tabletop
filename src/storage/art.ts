@@ -1,6 +1,7 @@
 // Card images as object URLs, in every stored size, for drawing.
 
 import { getDefs, getImage } from './db';
+import type { CardText } from '../types/storage';
 
 export type ImageSize = 'small' | 'normal' | 'large';
 export type FaceUrls = Record<ImageSize, string | null>;
@@ -11,6 +12,8 @@ export interface Art {
   front: string | null;
   back: string | null;
   sizes: { front: FaceUrls; back: FaceUrls | null };
+  /** Rules text, for the abilities list (missing on sample cards and older imports). */
+  text?: CardText;
 }
 
 const urlCache = new Map<string, string>();
@@ -45,6 +48,7 @@ export async function loadArt(defIds: readonly string[]): Promise<Map<string, Ar
     out.set(def.id, {
       name: def.name, front, back,
       sizes: { front: await face(front, def.sizes?.front), back: back ? await face(back, def.sizes?.back) : null },
+      ...(def.text ? { text: def.text } : {}),
     });
   }
   return out;

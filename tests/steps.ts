@@ -37,6 +37,10 @@ export const cmdArb = fc.oneof(
   fc.record({ type: fc.constant('block'), target: fc.nat(), pick: fc.nat() }),
   fc.record({ type: fc.constant('block'), target: fc.nat(), pick: fc.nat() }),
   fc.record({ type: fc.constant('endCombat') }),
+  fc.record({ type: fc.constant('putAbility'), pick: fc.nat() }),
+  fc.record({ type: fc.constant('putAbility'), pick: fc.nat() }),
+  // Resolve: move a card from the stack (an ability item is then deleted).
+  fc.record({ type: fc.constant('resolve'), pick: fc.nat(), to: fc.constantFrom(...ZONES) }),
 );
 
 /** Turn an abstract step into a concrete command against the current state. */
@@ -72,6 +76,12 @@ export function concretize(state: GameState, step: any): TestCommand {
       return { type: 'block', actor: 'p2', payload: { cardId: c, from: z, attackerId: a, attackerZone: az } };
     }
     case 'endCombat': return { type: 'endCombat', actor: 'p1', payload: {} };
+    case 'resolve': {
+      const st = state.zones.stack;
+      const c = st.length ? st[step.pick % st.length] : id;
+      return { type: 'move', actor: 'p1', payload: { cardId: c, from: st.length ? 'stack' : from, to: step.to } };
+    }
+    case 'putAbility': return { type: 'putAbility', actor: 'p1', payload: { cardId: id, from, text: 'Draw a card.' } };
     case 'detachAll': {
       const hosts = [...new Set(Object.values(state.cards).map((c) => c.attachedTo).filter((h): h is string => !!h))].sort();
       const h = hosts.length ? hosts[step.pick % hosts.length] : id;

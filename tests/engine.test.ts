@@ -52,6 +52,44 @@ describe('engine basics', () => {
     expect(checkInvariants(h.state)).toBeNull();
   });
 
+  it('an ability goes on top of the stack with its source picture, and is deleted when it leaves', () => {
+    const h = started();
+    const [src, spell] = h.state.zones['p1.hand'];
+    h.dispatch({ type: 'move', actor: 'p1', payload: { cardId: src, from: 'p1.hand', to: 'p1.battlefield' } });
+    h.dispatch({ type: 'move', actor: 'p1', payload: { cardId: spell, from: 'p1.hand', to: 'stack', toIndex: 0 } });
+    expect(h.dispatch({ type: 'putAbility', actor: 'p1', payload: { cardId: src, from: 'p1.battlefield', text: '  {T}: Add {G}. ' } }).ok).toBe(true);
+    const [aid, below] = h.state.zones.stack;
+    expect(below).toBe(spell);
+    expect(aid).toMatch(/^a\d+$/);
+    const item = h.state.cards[aid];
+    expect(item).toMatchObject({ defId: h.state.cards[src].defId, name: h.state.cards[src].name, owner: 'p1', isToken: false, faceDown: false, ability: { text: '{T}: Add {G}.', sourceId: src } });
+    // the source gets the changed mark, as for any change to a card in play
+    expect(h.state.cards[src].changed).toEqual({ by: 'p1', turn: 1 });
+    // reordering on the stack keeps it; it cannot be attached; moving it off deletes it, source unmoved
+    expect(h.dispatch({ type: 'move', actor: 'p1', payload: { cardId: aid, from: 'stack', to: 'stack', toIndex: 1 } }).ok).toBe(true);
+    expect(h.dispatch({ type: 'attach', actor: 'p1', payload: { cardId: aid, from: 'stack', toCardId: src, toZone: 'p1.battlefield' } })).toMatchObject({ ok: false, error: 'invalid' });
+    expect(h.dispatch({ type: 'move', actor: 'p1', payload: { cardId: aid, from: 'stack', to: 'p1.graveyard' } }).ok).toBe(true);
+    expect(h.state.cards[aid]).toBeUndefined();
+    expect(h.state.zones.stack).toEqual([spell]);
+    expect(h.state.zones['p1.battlefield']).toEqual([src]);
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
+  it('an ability of a face-down card is face down too; empty or oversized text is refused', () => {
+    const h = started();
+    const src = h.state.zones['p1.hand'][0];
+    h.dispatch({ type: 'move', actor: 'p1', payload: { cardId: src, from: 'p1.hand', to: 'p1.battlefield' } });
+    h.dispatch({ type: 'setFaceDown', actor: 'p1', payload: { cardId: src, from: 'p1.battlefield', value: true } });
+    h.dispatch({ type: 'putAbility', actor: 'p1', payload: { cardId: src, from: 'p1.battlefield', text: 'Morph {2}{G}' } });
+    const item = h.state.cards[h.state.zones.stack[0]];
+    expect(item.faceDown).toBe(true);
+    expect(canSeeFace(h.state, item, 'stack', 'p1')).toBe(true);
+    expect(canSeeFace(h.state, item, 'stack', 'p2')).toBe(false);
+    expect(h.dispatch({ type: 'putAbility', actor: 'p1', payload: { cardId: src, from: 'p1.battlefield', text: '   ' } })).toMatchObject({ ok: false, error: 'invalid' });
+    expect(h.dispatch({ type: 'putAbility', actor: 'p1', payload: { cardId: src, from: 'p1.battlefield', text: 'x'.repeat(2001) } })).toMatchObject({ ok: false, error: 'invalid' });
+    expect(h.dispatch({ type: 'putAbility', actor: 'p1', payload: { cardId: src, from: 'p1.hand', text: 'x' } })).toMatchObject({ ok: false, error: 'stale' });
+  });
+
   it('labeled counters add and remove', () => {
     const h = started();
     const id = h.state.zones['p1.hand'][0];
@@ -467,24 +505,32 @@ const ZONES = allZones();
 
 describe('properties', () => {
   it('card conservation holds after any command sequence', () => {
-    let attachedSeen = 0, blocksSeen = 0, leadsSeen = 0;
+    let attachedSeen = 0, blocksSeen = 0, leadsSeen = 0, abilitiesSeen = 0, abilitiesGone = 0;
     fc.assert(fc.property(fc.array(cmdArb, { maxLength: 60 }), fc.integer({ min: 1, max: 1e6 }), (steps, seed) => {
       const h = started(new Table(seeded(seed)));
+      const cmdIds: string[] = [];
       for (const step of steps) {
-        const r = h.dispatch(concretize(h.state, step));
+        const cmd = concretize(h.state, step);
+        cmdIds.push(String(cmd.payload?.cardId ?? ''));
+        const r = h.dispatch(cmd);
         if (r.ok && step.type === 'attach') attachedSeen++;
         if (r.ok && step.type === 'block') blocksSeen++;
         if (r.ok && step.type === 'setLead') leadsSeen++;
+        if (r.ok && step.type === 'putAbility') abilitiesSeen++;
+        if (r.ok && step.type === 'resolve' && /^a/.test(cmdIds.at(-1) || '') && !h.state.cards[cmdIds.at(-1)!]) abilitiesGone++;
         const bad = checkInvariants(h.state);
         if (bad) throw new Error(bad);
       }
     }), { numRuns: 400 });
     // The generator really exercises attachments, blocks and lead changes. The bars sit well
     // below the usual counts (measured over 10 runs of 400: attaches 28–53, blocks 79–95,
-    // lead changes 3–15), so a random run doesn't flake.
+    // lead changes 3–15; abilities put on the stack 109–133, deleted on leaving it 8–19), so a
+    // random run doesn't flake.
     expect(attachedSeen).toBeGreaterThan(10);
     expect(blocksSeen).toBeGreaterThan(10);
     expect(leadsSeen).toBeGreaterThan(0);
+    expect(abilitiesSeen).toBeGreaterThan(10);
+    expect(abilitiesGone).toBeGreaterThan(0);
   });
 
   it('a non-owner never sees hand faces unless revealed', () => {
