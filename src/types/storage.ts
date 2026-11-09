@@ -1,4 +1,4 @@
-// Records stored in IndexedDB (`mtg-tabletop`, version 1) and the backup file format.
+// Records stored in IndexedDB (`mtg-tabletop`, version 2) and the backup file format.
 
 import type { Actor, GameMode, GameState, PlayerId, ZoneId } from './state';
 import type { AnyCommand, CardSpec, Notice } from './commands';
@@ -18,6 +18,48 @@ export interface CardDef {
   scryfallId?: string;
   /** Small (146×204) for crowded boards, large (672×936) for the full view. Missing on sample cards. */
   sizes?: { front: ImageSizes; back: ImageSizes | null };
+  /** Rules text and other facts from Scryfall. Missing on sample cards and on cards restored from older backups. */
+  text?: CardText;
+}
+
+/** One face's printed facts (a single-faced card has one face). */
+export interface FaceText {
+  name: string;
+  typeLine: string;
+  /** Oracle text; paragraphs separated by "\n". */
+  oracleText: string;
+  manaCost?: string;
+  power?: string;
+  toughness?: string;
+  loyalty?: string;
+  defense?: string;
+}
+
+export interface CardText {
+  /** The card across printings (rulings are stored by it). */
+  oracleId?: string;
+  layout?: string;
+  /** Front first; for double-faced and split cards, one entry per face. */
+  faces: FaceText[];
+  /**
+   * The rest of Scryfall's card record, as delivered, minus prices and links: kept for later use
+   * (keywords, colours, produced mana, related cards, rarity, …). Not read by the app yet.
+   */
+  record: Record<string, unknown>;
+}
+
+/** One ruling from Scryfall: Wizards' rulings and release notes (`wotc`), or Scryfall's own notes. */
+export interface Ruling {
+  source: string;
+  publishedAt: string;
+  comment: string;
+}
+
+/** A card's rulings, shared by every printing (keyed by oracle id). */
+export interface RulingsRecord {
+  oracleId: string;
+  rulings: Ruling[];
+  fetchedAt: number;
 }
 
 export interface Deck {

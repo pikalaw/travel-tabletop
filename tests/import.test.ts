@@ -4,11 +4,11 @@ import 'fake-indexeddb/auto';
 import { readFileSync } from 'node:fs';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { unzipSync, zipSync, strToU8 } from 'fflate';
-import { parseDecklist, listSignature, importDeck } from '../src/storage/scryfall';
+import { parseDecklist, listSignature, importDeck, importCache, textOf } from '../src/storage/scryfall';
 import { ensureFixtures } from '../src/storage/fixtures';
 import { STARTER_PACKS } from '../src/storage/starters';
 import { checkManifest, exportBackup, readBackup, restoreBackup } from '../src/storage/backup';
-import { closeDb, getDefs, getImage, listDecks, putDeck, sha256 } from '../src/storage/db';
+import { closeDb, db, getDefs, getImage, getRulings, listDecks, putDeck, sha256 } from '../src/storage/db';
 import type { CardDef, Deck } from '../src/types/storage';
 
 const fixture = (f: string) => readFileSync(new URL(`./fixtures/v1/${f}`, import.meta.url));
@@ -123,6 +123,116 @@ describe('import from Scryfall (mocked)', () => {
     expect(delver!.sizes?.back?.large).toBeTruthy();
     for (const h of [bolt!.front, bolt!.sizes!.front.small, bolt!.sizes!.front.large]) expect(await getImage(h)).toBeTruthy();
     expect(fetched.filter((u) => u.includes('cards.scryfall.io'))).toHaveLength(12); // 3 sizes × (bolt, 2 delver faces, goblin)
+  });
+});
+
+describe('card text and rulings (mocked Scryfall)', () => {
+  const img = (id: string, sz: string) => `https://cards.scryfall.io/${sz}/front/${id}.jpg`;
+  const uris = (id: string) => ({ small: img(id, 'small'), normal: img(id, 'normal'), large: img(id, 'large') });
+  const sages = {
+    id: 'sages', oracle_id: 'o-sages', name: 'Fire Sages', set: 'tla', collector_number: '136', layout: 'normal',
+    type_line: 'Creature — Human Cleric', mana_cost: '{1}{R}', power: '2', toughness: '2',
+    oracle_text: 'Firebending 1 (Whenever this creature attacks, add {R}.)\n{1}{R}{R}: Put a +1/+1 counter on this creature.',
+    keywords: ['Firebending'], rarity: 'uncommon', prices: { usd: '0.10' }, purchase_uris: { x: 'y' }, image_uris: uris('sages'),
+  };
+  const mountain = { id: 'mtn', oracle_id: 'o-mtn', name: 'Mountain', set: 'tla', collector_number: '290', type_line: 'Basic Land — Mountain', oracle_text: '({T}: Add {R}.)', image_uris: uris('mtn') };
+  const dfc = {
+    id: 'dfc', oracle_id: 'o-dfc', name: 'Front // Back', set: 'tla', collector_number: '1', layout: 'transform',
+    card_faces: [
+      { name: 'Front', type_line: 'Creature — Human', oracle_text: 'At the beginning of your upkeep, transform this.', power: '1', toughness: '1', image_uris: uris('dfc-f') },
+      { name: 'Back', type_line: 'Creature — Wolf', oracle_text: 'Trample', power: '3', toughness: '3', image_uris: uris('dfc-b') },
+    ],
+  };
+  const byName: Record<string, unknown> = { 'fire sages': sages, mountain, front: dfc };
+
+  function stubScryfall() {
+    const calls = { collection: [] as string[][], rulings: [] as string[] };
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/cards/collection')) {
+        const ids = (JSON.parse(String(init?.body)) as { identifiers: { name?: string }[] }).identifiers;
+        calls.collection.push(ids.map((x) => x.name || '?'));
+        return new Response(JSON.stringify({ data: ids.map((x) => byName[(x.name || '').toLowerCase()]).filter(Boolean) }));
+      }
+      if (url.includes('/rulings')) {
+        calls.rulings.push(url);
+        return new Response(JSON.stringify({ object: 'list', data: [{ object: 'ruling', oracle_id: 'o-sages', source: 'wotc', published_at: '2025-11-14', comment: 'You may activate the ability any number of times.' }] }));
+      }
+      return new Response(new Blob([url], { type: 'image/jpeg' }));
+    }));
+    return calls;
+  }
+
+  it('keeps the typed text per face and the record without prices or links', () => {
+    const t = textOf(sages);
+    expect(t).toMatchObject({ oracleId: 'o-sages', layout: 'normal', faces: [{ name: 'Fire Sages', typeLine: 'Creature — Human Cleric', manaCost: '{1}{R}', power: '2', toughness: '2' }] });
+    expect(t.faces[0]!.oracleText.split('\n')).toHaveLength(2);
+    expect(t.record).toMatchObject({ keywords: ['Firebending'], rarity: 'uncommon', collector_number: '136' });
+    for (const k of ['prices', 'purchase_uris', 'image_uris']) expect(t.record).not.toHaveProperty(k);
+    expect(textOf(dfc).faces.map((f) => [f.name, f.typeLine, f.oracleText, f.power])).toEqual([
+      ['Front', 'Creature — Human', 'At the beginning of your upkeep, transform this.', '1'], ['Back', 'Creature — Wolf', 'Trample', '3']]);
+  });
+
+  it('stores text on each card, rulings once per card (none for basic lands), and shares lookups across a batch', async () => {
+    const calls = stubScryfall();
+    const cache = importCache();
+    const a = await importDeck({ name: 'A', text: '4 Fire Sages\n10 Mountain', cache });
+    const b = await importDeck({ name: 'B', text: '2 Fire Sages\n2 Front\n8 Mountain', cache });
+    // the second deck looked up only the name the first had not
+    expect(calls.collection).toEqual([['Fire Sages', 'Mountain'], ['Front']]);
+    // rulings: Fire Sages and Front once each, Mountain never
+    expect(calls.rulings.map((u) => u.replace('https://api.scryfall.com', ''))).toEqual(['/cards/tla/136/rulings', '/cards/tla/1/rulings']);
+    expect((await getRulings('o-sages'))?.rulings).toEqual([{ source: 'wotc', publishedAt: '2025-11-14', comment: 'You may activate the ability any number of times.' }]);
+    expect(await getRulings('o-mtn')).toBeUndefined();
+    const decks = await listDecks();
+    const [sagesDef] = await getDefs([decks.find((d) => d.id === a.deckId)!.cards[0]!]);
+    expect(sagesDef!.text?.faces[0]?.typeLine).toBe('Creature — Human Cleric');
+    expect(b.cards).toBe(12);
+    // a later import (a new batch) finds the rulings on the device and asks again for nothing
+    await importDeck({ name: 'C', text: '1 Fire Sages' });
+    expect(calls.rulings).toHaveLength(2);
+  });
+
+  it('a failed rulings request does not fail the import', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/cards/collection')) {
+        const ids = (JSON.parse(String(init?.body)) as { identifiers: { name?: string }[] }).identifiers;
+        return new Response(JSON.stringify({ data: ids.map((x) => byName[(x.name || '').toLowerCase()]).filter(Boolean) }));
+      }
+      if (url.includes('/rulings')) return new Response('down', { status: 500 });
+      return new Response(new Blob([url], { type: 'image/jpeg' }));
+    }));
+    const r = await importDeck({ name: 'A', text: '4 Fire Sages' });
+    expect(r).toMatchObject({ cards: 4, missing: [] });
+    expect(await getRulings('o-sages')).toBeUndefined();
+  });
+
+  it('upgrading from version 1 drops the card data and decks, and keeps saved games', async () => {
+    await closeDb();
+    await new Promise<void>((res) => { const r = indexedDB.deleteDatabase('mtg-tabletop'); r.onsuccess = () => res(); });
+    await new Promise<void>((res, rej) => {
+      const r = indexedDB.open('mtg-tabletop', 1);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        for (const [n, key] of [['images', 'hash'], ['defs', 'id'], ['decks', 'id'], ['games', 'id'], ['meta', 'key']] as const) d.createObjectStore(n, { keyPath: key });
+        d.createObjectStore('snapshots', { keyPath: ['gameId', 'key'] }).createIndex('gameId', 'gameId');
+        d.createObjectStore('logs', { keyPath: ['gameId', 'seq'] }).createIndex('gameId', 'gameId');
+      };
+      r.onsuccess = () => {
+        const tx = r.result.transaction(['defs', 'decks', 'games', 'meta'], 'readwrite');
+        tx.objectStore('defs').put({ id: 'x', name: 'X', front: 'h', back: null });
+        tx.objectStore('decks').put({ id: 'd', name: 'D', kind: 'deck', cards: ['x'], createdAt: 1 });
+        tx.objectStore('games').put({ id: 'g1' });
+        tx.objectStore('meta').put({ key: 'fixtures', value: 1 });
+        tx.oncomplete = () => { r.result.close(); res(); };
+        tx.onerror = () => rej(tx.error);
+      };
+    });
+    const d = await db();
+    expect(await d.count('defs')).toBe(0);
+    expect(await d.count('decks')).toBe(0);
+    expect(await d.get('meta', 'fixtures')).toBeUndefined();
+    expect(await d.count('games')).toBe(1);
+    expect(d.objectStoreNames.contains('rulings')).toBe(true);
   });
 });
 

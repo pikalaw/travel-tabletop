@@ -5,7 +5,7 @@ import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
 import { listDecks, deleteDeck, putDeck } from '../storage/db';
 import { loadArt, artUrl, sizeFor, type Art } from '../storage/art';
-import { importDeck, listSignature, type ImportResult } from '../storage/scryfall';
+import { importCache, importDeck, listSignature, type ImportResult } from '../storage/scryfall';
 import { STARTER_PACKS, type StarterPack as Pack, type StarterDeck } from '../storage/starters';
 import { exportBackup, readBackup, restoreBackup, companionTokenDecks, requestPersistence, storageStatus, type ReadBackup } from '../storage/backup';
 import { saveFile } from './files';
@@ -46,10 +46,13 @@ function StarterPack({ pack, decks, refresh }: { pack: Pack; decks: Deck[]; refr
     setError('');
     setMissing([]);
     const miss = [];
+    // One cache for the whole batch: each card name, token and set of rulings is fetched once.
+    const cache = importCache();
     try {
       for (let i = 0; i < todo.length; i++) {
         const d = todo[i]!;
         const r = await importDeck({
+          cache,
           name: d.name,
           text: d.text,
           extra: {

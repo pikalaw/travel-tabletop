@@ -299,16 +299,17 @@ Persistence is serialized through one promise chain; each commit is one IndexedD
 
 ## Storage
 
-One IndexedDB database `mtg-tabletop`, version 1. The layout is v1's, unchanged.
+One IndexedDB database `mtg-tabletop`, version 2. Version 1 is v1's layout; version 2 adds the `rulings` store and card text, and on upgrade clears `defs`, `images`, `decks` and the `fixtures` meta key (card data without text is dropped, not migrated; saved games are kept and the sample decks are rebuilt).
 
 | Store | Key | Contents |
 | --- | --- | --- |
 | `images` | `hash` | { hash, blob, type }: SHA-256 hex of the bytes; each image stored once |
-| `defs` | `id` | CardDef { id, name, front, back, scryfallId?, sizes? } |
+| `defs` | `id` | CardDef { id, name, front, back, scryfallId?, sizes?, text? }; `text` = { oracleId?, layout?, faces: [{ name, typeLine, oracleText, manaCost?, power?, toughness?, loyalty?, defense? }], record } |
 | `decks` | `id` | Deck { id, name, kind: 'deck' or 'token', cards (defIds, with repeats), commanders?, builtin?, starterId?, forDecks?, signature?, createdAt } |
 | `games` | `id` | { id, state, mode, role, setup, updatedAt, over } |
 | `snapshots` | \[gameId, key\] | { gameId, key, state }; index `gameId` |
 | `logs` | \[gameId, seq\] | LogEntry; index `gameId` |
+| `rulings` | `oracleId` | { oracleId, rulings: [{ source, publishedAt, comment }], fetchedAt } |
 | `meta` | `key` | `fixtures` (sample-deck version), `lastSetup` { names, pick, life }, `guestGame`, `offlineNoticeShown` (new in v2; an extra key, so v1 records still read) |
 
 - **Card ids.** `defId = sha256("name|frontHash|backHash")`, first 20 hex characters (back hash empty when there is none). Identical imports produce identical ids on every device, which is what the handshake compares.
@@ -439,7 +440,7 @@ A card in play with `changed` gets a `.changed-bar` (4 px, `--hot` when `changed
 
 ## Stack and abilities (planned)
 
-Status: designed, not built. The stack becomes a place both players manage: spells and abilities go on it, both players see them in order, and they resolve one at a time. The app stays a playmat: it does not enforce timing or priority, and every default can be overridden or undone.
+Status: step 1 (card text and rulings) built; steps 2–4 designed, not built. The stack becomes a place both players manage: spells and abilities go on it, both players see them in order, and they resolve one at a time. The app stays a playmat: it does not enforce timing or priority, and every default can be overridden or undone.
 
 **Build order.** (1) Card text and rulings from Scryfall. (2) Abilities listed in the full view, with Put on stack. (3) Ability items on the stack, and the stack in the full view. (4) The rulings panel. Each step ships and is tested on its own.
 

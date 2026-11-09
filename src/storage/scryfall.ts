@@ -6,8 +6,8 @@
 // Scryfall's responses are checked by type guards before use: a card without a usable shape is
 // treated as not found.
 
-import { putImage, putDef, putDeck, defIdFor, db } from './db';
-import type { Deck } from '../types/storage';
+import { putImage, putDef, putDeck, defIdFor, db, getRulings, putRulings } from './db';
+import type { CardText, Deck, FaceText, Ruling } from '../types/storage';
 
 const API = 'https://api.scryfall.com';
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -58,25 +58,44 @@ export function parseDecklist(text: string): { entries: DeckEntry[]; errors: str
 // ---------- Scryfall's card objects ----------
 
 export interface ImageUris { small?: string; normal?: string; large?: string; png?: string }
-export interface ScryfallCard {
+/** The printed facts of a card or one of its faces (all optional: Scryfall leaves out what a card lacks). */
+interface ScryfallFacts {
+  type_line?: string;
+  oracle_text?: string;
+  mana_cost?: string;
+  power?: string;
+  toughness?: string;
+  loyalty?: string;
+  defense?: string;
+}
+export interface ScryfallCard extends ScryfallFacts {
   id: string;
   name: string;
   set?: string;
   collector_number?: string;
+  oracle_id?: string;
+  layout?: string;
   image_uris?: ImageUris;
-  card_faces?: { name: string; image_uris?: ImageUris }[];
+  card_faces?: ({ name: string; image_uris?: ImageUris } & ScryfallFacts)[];
   all_parts?: { id: string; component: string; name?: string }[];
 }
+
+const FACT_KEYS = ['type_line', 'oracle_text', 'mana_cost', 'power', 'toughness', 'loyalty', 'defense'] as const;
+/** Parts of Scryfall's record not worth keeping: prices go stale, links point at Scryfall's site. */
+const DROPPED_KEYS = ['prices', 'purchase_uris', 'related_uris', 'uri', 'scryfall_uri', 'rulings_uri', 'prints_search_uri', 'set_uri', 'set_search_uri', 'scryfall_set_uri', 'image_uris'];
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 const isStr = (x: unknown): x is string => typeof x === 'string';
 const isUris = (x: unknown): x is ImageUris => isObj(x) && ['small', 'normal', 'large', 'png'].every((k) => x[k] === undefined || isStr(x[k]));
 
+const factsOk = (x: Record<string, unknown>) => FACT_KEYS.every((k) => x[k] === undefined || isStr(x[k]));
+
 export function isScryfallCard(x: unknown): x is ScryfallCard {
-  return isObj(x) && isStr(x.id) && isStr(x.name)
+  return isObj(x) && isStr(x.id) && isStr(x.name) && factsOk(x)
+    && (x.oracle_id === undefined || isStr(x.oracle_id)) && (x.layout === undefined || isStr(x.layout))
     && (x.set === undefined || isStr(x.set)) && (x.collector_number === undefined || isStr(x.collector_number))
     && (x.image_uris === undefined || isUris(x.image_uris))
-    && (x.card_faces === undefined || (Array.isArray(x.card_faces) && x.card_faces.every((f) => isObj(f) && isStr(f.name) && (f.image_uris === undefined || isUris(f.image_uris)))))
+    && (x.card_faces === undefined || (Array.isArray(x.card_faces) && x.card_faces.every((f) => isObj(f) && isStr(f.name) && factsOk(f) && (f.image_uris === undefined || isUris(f.image_uris)))))
     && (x.all_parts === undefined || (Array.isArray(x.all_parts) && x.all_parts.every((p) => isObj(p) && isStr(p.id) && isStr(p.component))));
 }
 
@@ -111,6 +130,31 @@ export function imagesOf(card: ScryfallCard): { name: string; front: SizeUrls | 
   return null;
 }
 
+const faceOf = (f: { name: string } & ScryfallFacts): FaceText => {
+  const out: FaceText = { name: f.name, typeLine: f.type_line || '', oracleText: f.oracle_text || '' };
+  if (f.mana_cost) out.manaCost = f.mana_cost;
+  if (f.power !== undefined) out.power = f.power;
+  if (f.toughness !== undefined) out.toughness = f.toughness;
+  if (f.loyalty !== undefined) out.loyalty = f.loyalty;
+  if (f.defense !== undefined) out.defense = f.defense;
+  return out;
+};
+
+/**
+ * The rules text and other facts kept for a card: typed faces (one, or one per face for
+ * double-faced and split cards; a face missing a fact takes the card's), and the rest of the
+ * record as delivered, minus prices and links.
+ */
+export function textOf(card: ScryfallCard): CardText {
+  const faces = card.card_faces?.length ? card.card_faces.map((f) => faceOf({ ...pickFacts(card), ...f })) : [faceOf(card)];
+  const record = Object.fromEntries(Object.entries(card).filter(([k]) => !DROPPED_KEYS.includes(k)));
+  const text: CardText = { faces, record };
+  if (card.oracle_id) text.oracleId = card.oracle_id;
+  if (card.layout) text.layout = card.layout;
+  return text;
+}
+const pickFacts = (c: ScryfallFacts): ScryfallFacts => Object.fromEntries(FACT_KEYS.filter((k) => c[k] !== undefined && k !== 'oracle_text').map((k) => [k, c[k]]));
+
 /**
  * A fingerprint of a pasted list's cards (counts and names, order and printing ignored),
  * used to warn before importing the same list twice.
@@ -136,7 +180,23 @@ export interface ImportOptions {
   extra?: Partial<Deck>;
   /** A shared token deck to add this deck's tokens to, instead of "<deck> · tokens". */
   tokens?: { deckId: string; name?: string; extra?: Partial<Deck> } | null;
+  /**
+   * Shared by the imports of one batch (several decks at once), so a card name, a token or a
+   * card's rulings is requested at most once per batch. Make one with `importCache()`.
+   */
+  cache?: ImportCache;
 }
+
+export interface ImportCache {
+  /** Lookups by list key (`set#number` or the lower-cased name). */
+  cards: Map<string, ScryfallCard>;
+  /** Tokens by Scryfall id. */
+  tokens: Map<string, ScryfallCard>;
+  /** Oracle ids whose rulings were looked up in this batch. */
+  rulings: Set<string>;
+}
+
+export const importCache = (): ImportCache => ({ cards: new Map(), tokens: new Map(), rulings: new Set() });
 
 export interface ImportResult {
   deckId: string;
@@ -147,17 +207,20 @@ export interface ImportResult {
 }
 
 /** Import a deck. onProgress(text) is called as work proceeds. */
-export async function importDeck({ name, kind = 'deck', text, onProgress = () => {}, extra = {}, tokens = null }: ImportOptions): Promise<ImportResult> {
+export async function importDeck({ name, kind = 'deck', text, onProgress = () => {}, extra = {}, tokens = null, cache = importCache() }: ImportOptions): Promise<ImportResult> {
   const { entries, errors } = parseDecklist(text);
   const wanted = entries.filter((e) => e.section === 'main' || e.section === 'commander' || (kind === 'token' && e.section === 'tokens'));
   if (!wanted.length) throw new Error('No cards found in that list.');
   const unique = [...new Map(wanted.map((e) => [keyOf(e), e])).values()];
 
-  // 1. Resolve names through the collection endpoint, 75 at a time.
+  // 1. Resolve names through the collection endpoint, 75 at a time (names already looked up in
+  //    this batch are reused).
   const found = new Map<string, ScryfallCard>();
-  for (let i = 0; i < unique.length; i += 75) {
-    onProgress(`Looking up cards ${i + 1}–${Math.min(i + 75, unique.length)} of ${unique.length}…`);
-    const batch = unique.slice(i, i + 75);
+  for (const e of unique) { const c = cache.cards.get(keyOf(e)); if (c) found.set(keyOf(e), c); }
+  const lookup = unique.filter((e) => !found.has(keyOf(e)));
+  for (let i = 0; i < lookup.length; i += 75) {
+    onProgress(`Looking up cards ${i + 1}–${Math.min(i + 75, lookup.length)} of ${lookup.length}…`);
+    const batch = lookup.slice(i, i + 75);
     const res = await api('/cards/collection', { method: 'POST', body: JSON.stringify({ identifiers: batch.map(identOf) }) });
     for (const card of cardsOf(res)) {
       for (const e of batch) {
@@ -181,6 +244,7 @@ export async function importDeck({ name, kind = 'deck', text, onProgress = () =>
     await sleep(120);
     if (isScryfallCard(card)) found.set(keyOf(e), card); else missing.push(e.line);
   }
+  for (const [k, c] of found) cache.cards.set(k, c);
 
   // 3. Download images and store definitions, reusing cards already on this device.
   const known = await knownCards();
@@ -216,11 +280,11 @@ export async function importDeck({ name, kind = 'deck', text, onProgress = () =>
     }
     if (tokenIds.size) {
       onProgress(`Getting ${tokenIds.size} token${tokenIds.size === 1 ? '' : 's'}…`);
-      const tokenCards: ScryfallCard[] = [];
-      const ids = [...tokenIds];
+      const tokenCards: ScryfallCard[] = [...tokenIds].map((id) => cache.tokens.get(id)).filter((c): c is ScryfallCard => !!c);
+      const ids = [...tokenIds].filter((id) => !cache.tokens.has(id));
       for (let i = 0; i < ids.length; i += 75) {
         const res = await api('/cards/collection', { method: 'POST', body: JSON.stringify({ identifiers: ids.slice(i, i + 75).map((id) => ({ id })) }) });
-        tokenCards.push(...cardsOf(res));
+        for (const c of cardsOf(res)) { cache.tokens.set(c.id, c); tokenCards.push(c); }
         await sleep(120);
       }
       const tokenDefs: string[] = [];
@@ -244,16 +308,52 @@ export async function importDeck({ name, kind = 'deck', text, onProgress = () =>
       tokenCount = tokenDefs.length;
     }
   }
+
+  // 5. Rulings, once per card (by oracle id) across every printing and every import.
+  await fetchRulings([...found.values()], cache, onProgress);
   return { deckId, cards: cards.length + commanders.length, tokens: tokenCount, tokenDeckId, missing: [...missing, ...errors] };
 }
 
-/** Scryfall id → defId for cards already stored with all three sizes. */
+/** Scryfall id → defId for cards already stored with all three sizes and their rules text. */
 async function knownCards(): Promise<Map<string, string>> {
   const known = new Map<string, string>();
   for (const d of await (await db()).getAll('defs')) {
-    if (d.scryfallId && d.sizes) known.set(d.scryfallId, d.id); // older one-size imports re-download
+    if (d.scryfallId && d.sizes && d.text) known.set(d.scryfallId, d.id); // anything less is fetched again
   }
   return known;
+}
+
+const isRulingsList = (x: unknown): x is { data: unknown[] } => isObj(x) && Array.isArray(x.data);
+
+/**
+ * Fetch and store the rulings of cards that have none on this device yet (one request per card,
+ * shared by its printings). Basic lands are skipped. A failed request leaves that card without
+ * rulings and is retried by a later import; it never fails this one.
+ */
+async function fetchRulings(cards: readonly ScryfallCard[], cache: ImportCache, onProgress: (t: string) => void): Promise<void> {
+  const todo: ScryfallCard[] = [];
+  for (const c of cards) {
+    const oid = c.oracle_id;
+    if (!oid || !c.set || !c.collector_number || cache.rulings.has(oid)) continue;
+    if (/\bBasic\b.*\bLand\b/.test(c.type_line || c.card_faces?.[0]?.type_line || '')) continue;
+    cache.rulings.add(oid);
+    if (await getRulings(oid)) continue;
+    todo.push(c);
+  }
+  for (const [i, c] of todo.entries()) {
+    onProgress(`Getting rulings ${i + 1} of ${todo.length}…`);
+    try {
+      const res = await api(`/cards/${encodeURIComponent(c.set!)}/${encodeURIComponent(c.collector_number!)}/rulings`);
+      if (isRulingsList(res)) {
+        const rulings: Ruling[] = res.data.filter(isObj).filter((r) => isStr(r.comment))
+          .map((r) => ({ source: isStr(r.source) ? r.source : '', publishedAt: isStr(r.published_at) ? r.published_at : '', comment: r.comment as string }));
+        await putRulings({ oracleId: c.oracle_id!, rulings, fetchedAt: Date.now() });
+      } else cache.rulings.delete(c.oracle_id!);
+    } catch {
+      cache.rulings.delete(c.oracle_id!); // try again on a later import
+    }
+    await sleep(120);
+  }
 }
 
 /** Run `fn` over items with 4 at a time. */
@@ -286,6 +386,7 @@ async function storeCard(card: ScryfallCard, known: Map<string, string>): Promis
   await putDef({
     id, name: imgs.name, front: f.normal, back: b?.normal || null, scryfallId: card.id,
     sizes: { front: { small: f.small, large: f.large }, back: b ? { small: b.small, large: b.large } : null },
+    text: textOf(card),
   });
   known.set(card.id, id);
   return id;

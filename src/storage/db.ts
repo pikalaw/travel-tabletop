@@ -7,10 +7,14 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { sha256Bytes } from './sha256';
 import type { GameState } from '../types/state';
-import type { CardDef, Deck, GameRecord, ImageRecord, LogEntry, MetaRecord, SnapshotRecord } from '../types/storage';
+import type { CardDef, CardText, Deck, GameRecord, ImageRecord, LogEntry, MetaRecord, RulingsRecord, SnapshotRecord } from '../types/storage';
 
 export const DB_NAME = 'mtg-tabletop';
-export const DB_VERSION = 1;
+/**
+ * 1: the first release. 2: card definitions gain rules text, and rulings get their own store;
+ * card data from version 1 is dropped (decks are re-imported), with no migration.
+ */
+export const DB_VERSION = 2;
 
 interface TabletopDB extends DBSchema {
   images: { key: string; value: ImageRecord };
@@ -20,6 +24,7 @@ interface TabletopDB extends DBSchema {
   snapshots: { key: [string, number]; value: SnapshotRecord; indexes: { gameId: string } };
   logs: { key: [string, number]; value: LogEntry; indexes: { gameId: string } };
   meta: { key: string; value: MetaRecord };
+  rulings: { key: string; value: RulingsRecord };
 }
 
 export type Database = IDBPDatabase<TabletopDB>;
@@ -29,16 +34,29 @@ let dbp: Promise<Database> | null = null;
 export function db(): Promise<Database> {
   if (!dbp) {
     dbp = openDB<TabletopDB>(DB_NAME, DB_VERSION, {
-      upgrade(d) {
-        d.createObjectStore('images', { keyPath: 'hash' });
-        d.createObjectStore('defs', { keyPath: 'id' });
-        d.createObjectStore('decks', { keyPath: 'id' });
-        d.createObjectStore('games', { keyPath: 'id' });
-        const snaps = d.createObjectStore('snapshots', { keyPath: ['gameId', 'key'] });
-        snaps.createIndex('gameId', 'gameId');
-        const logs = d.createObjectStore('logs', { keyPath: ['gameId', 'seq'] });
-        logs.createIndex('gameId', 'gameId');
-        d.createObjectStore('meta', { keyPath: 'key' });
+      upgrade(d, oldVersion, _newVersion, tx) {
+        if (oldVersion < 1) {
+          d.createObjectStore('images', { keyPath: 'hash' });
+          d.createObjectStore('defs', { keyPath: 'id' });
+          d.createObjectStore('decks', { keyPath: 'id' });
+          d.createObjectStore('games', { keyPath: 'id' });
+          const snaps = d.createObjectStore('snapshots', { keyPath: ['gameId', 'key'] });
+          snaps.createIndex('gameId', 'gameId');
+          const logs = d.createObjectStore('logs', { keyPath: ['gameId', 'seq'] });
+          logs.createIndex('gameId', 'gameId');
+          d.createObjectStore('meta', { keyPath: 'key' });
+        }
+        if (oldVersion < 2) {
+          d.createObjectStore('rulings', { keyPath: 'oracleId' });
+          if (oldVersion >= 1) {
+            // Version 1 card data has no rules text: drop it, and the decks built from it. The
+            // sample decks are rebuilt on the next start; saved games keep their cards' names.
+            void tx.objectStore('defs').clear();
+            void tx.objectStore('images').clear();
+            void tx.objectStore('decks').clear();
+            void tx.objectStore('meta').delete('fixtures');
+          }
+        }
       },
     });
   }
@@ -60,10 +78,24 @@ const isStrArr = (x: unknown): x is string[] => Array.isArray(x) && x.every(isSt
 const optional = <T>(x: unknown, guard: (y: unknown) => y is T): boolean => x === undefined || guard(x);
 const isSizes = (x: unknown): boolean => isObj(x) && isStr(x.small) && isStr(x.large);
 
+const isFace = (x: unknown): boolean => isObj(x) && isStr(x.name) && isStr(x.typeLine) && isStr(x.oracleText)
+  && ['manaCost', 'power', 'toughness', 'loyalty', 'defense'].every((k) => optional(x[k], isStr));
+
+export function isCardText(x: unknown): x is CardText {
+  return isObj(x) && Array.isArray(x.faces) && x.faces.length > 0 && x.faces.every(isFace) && isObj(x.record)
+    && optional(x.oracleId, isStr) && optional(x.layout, isStr);
+}
+
 export function isCardDef(x: unknown): x is CardDef {
   return isObj(x) && isStr(x.id) && isStr(x.name) && isStr(x.front) && (x.back === null || isStr(x.back))
     && optional(x.scryfallId, isStr)
-    && (x.sizes === undefined || (isObj(x.sizes) && isSizes(x.sizes.front) && (x.sizes.back === null || isSizes(x.sizes.back))));
+    && (x.sizes === undefined || (isObj(x.sizes) && isSizes(x.sizes.front) && (x.sizes.back === null || isSizes(x.sizes.back))))
+    && optional(x.text, isCardText);
+}
+
+export function isRulingsRecord(x: unknown): x is RulingsRecord {
+  return isObj(x) && isStr(x.oracleId) && isNum(x.fetchedAt) && Array.isArray(x.rulings)
+    && x.rulings.every((r) => isObj(r) && isStr(r.source) && isStr(r.publishedAt) && isStr(r.comment));
 }
 
 export function isDeck(x: unknown): x is Deck {
@@ -159,6 +191,14 @@ export async function getDefs(ids: readonly string[]): Promise<CardDef[]> {
 }
 
 export async function putDeck(deck: Deck): Promise<void> { await (await db()).put('decks', deck); }
+
+export async function putRulings(rec: RulingsRecord): Promise<void> { await (await db()).put('rulings', rec); }
+
+/** A card's rulings by oracle id, or undefined if none were fetched. */
+export async function getRulings(oracleId: string): Promise<RulingsRecord | undefined> {
+  const r = await (await db()).get('rulings', oracleId);
+  return isRulingsRecord(r) ? r : undefined;
+}
 
 /** Decks first, then token decks, each by name. */
 export async function listDecks(): Promise<Deck[]> {
