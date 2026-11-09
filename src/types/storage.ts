@@ -174,4 +174,9 @@ export interface BackupManifest {
   defs: CardDef[];
   /** Image hash → file extension. */
   images: Record<string, string>;
+  /**
+   * The rulings of the cards in `defs`, by oracle id. Optional, so the format stays version 1: an
+   * app from before rulings were backed up ignores them, and a backup without them still restores.
+   */
+  rulings?: RulingsRecord[];
 }

@@ -242,7 +242,7 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 
 **Deck page.** Shows the deck's cards as a grid with counts (commanders first), with Rename and Delete. Tapping a card shows it full screen in the large size, drawn like the game's full view: the ← and → signs at the sides show where a swipe leads, and under the card a caption gives its name, its count in the deck, its position ("3 of 12"), and Flip for a double-faced card. A sideways swipe or an arrow key goes to the previous or next card, stopping at the ends; a swipe down, a tap on the card, a tap outside it or Escape returns to the deck.
 
-**Back up and restore.** Any set of decks can be saved to one backup file, with their token decks and every image size, and restored on any device and browser without internet.
+**Back up and restore.** Any set of decks can be saved to one backup file, with their token decks, every image size, each card's rules text and its rulings, and restored on any device and browser without internet.
 
 - On the Backup screen, built-in decks are greyed out ("built in · on every device"), and token decks made for other decks follow those decks ("included with its decks").
 - Before restoring, each deck in the file is shown as New, Already here, or Possible duplicate (same name or cards as a deck on the device); only new decks are selected by default. A deck that already exists is added as a renamed copy.

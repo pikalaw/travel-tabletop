@@ -274,6 +274,27 @@ describe('backups', () => {
     expect((await listDecks()).map((d) => d.id)).toEqual(['sample-grove', 'grove-tokens']);
   });
 
+  it('carries each card\'s rulings, so a device restoring without internet has them', async () => {
+    const image = await sha256('img');
+    const d = await db();
+    await d.put('images', { hash: image, blob: new Blob(['img'], { type: 'image/png' }), type: 'image/png' });
+    const text = { oracleId: 'o-elf', faces: [{ name: 'Elf', typeLine: 'Creature', oracleText: '{T}: Add {G}.' }], record: {} };
+    await d.put('defs', { id: 'elf', name: 'Elf', front: image, back: null, scryfallId: 's-elf', text });
+    await putDeck({ id: 'elves', name: 'Elves', kind: 'deck', cards: ['elf'], createdAt: 1 });
+    const rulings = { oracleId: 'o-elf', rulings: [{ source: 'wotc', publishedAt: '2024-11-08', comment: 'It is a mana ability.' }], fetchedAt: 5 };
+    await d.put('rulings', rulings);
+    const out = await exportBackup(['elves']);
+    // a fresh device
+    await closeDb();
+    await new Promise<void>((res) => { const r = indexedDB.deleteDatabase('mtg-tabletop'); r.onsuccess = () => res(); });
+    const read = await readBackup(out.blob);
+    expect(read.manifest.rulings).toEqual([rulings]);
+    await restoreBackup(read, ['elves']);
+    expect(await getRulings('o-elf')).toEqual(rulings);
+    // a malformed rulings list marks the file damaged
+    expect(() => checkManifest({ ...read.manifest, rulings: [{ oracleId: 1 }] })).toThrow('damaged');
+  });
+
   it('refuses files that are not backups, newer backups and damaged images', async () => {
     await expect(readBackup(new Blob(['not a zip']))).rejects.toThrow('not a deck backup');
     const zip = (m: unknown, extra: Record<string, Uint8Array> = {}) => new Blob([zipSync({ 'manifest.json': strToU8(JSON.stringify(m)), ...extra })]);

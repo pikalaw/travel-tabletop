@@ -342,11 +342,11 @@ One IndexedDB database `mtg-tabletop`, version 2. Version 1 is v1's layout; vers
 
 `backup.ts`. A zip built with fflate, extension `.mtgdecks`, named `tabletop-decks-<YYYY-MM-DD>.mtgdecks`. v1 and v2 read each other's files.
 
-- `manifest.json`: { format: `travel-tabletop-decks`, version: 1, exportedAt, decks, defs, images: { hash → extension } }.
+- `manifest.json`: { format: `travel-tabletop-decks`, version: 1, exportedAt, decks, defs, images: { hash → extension }, rulings? }. `defs` carry each card's rules text; `rulings` holds the rulings record of every card in `defs` that has one, by oracle id. It is optional, so the format stays version 1: an app from before rulings were backed up ignores it, and a file without it restores without rulings.
 - `images/<sha256>.<ext>`: each image every def refers to (both faces, all sizes), stored without recompression; extensions jpg, png, svg, webp from the MIME type.
-- Token decks whose `forDecks` include a chosen deck are added automatically.
+- Token decks whose `forDecks` include a chosen deck are added automatically (never built-in ones).
 - **Reading** compares each deck with the device: `same` when its id exists; `similar` when a deck of the same kind has the same name (case-insensitive), signature or `starterId`; otherwise `new`. A wrong format is refused, and so is a newer `version`.
-- **Restoring** the chosen decks writes only defs whose every image is present and matches its hash, and lists the cards skipped. A deck whose id exists is added as a copy, `<id>-copy-<5 random>` named "\<name> (copy)", without its `starterId`. `forDecks` is remapped and `builtin` cleared.
+- **Restoring** the chosen decks writes only defs whose every image is present and matches its hash, and lists the cards skipped. It stores the rulings of the restored cards, unless the device has a copy fetched as recently. A deck whose id exists is added as a copy, `<id>-copy-<5 random>` named "\<name> (copy)", without its `starterId`. `forDecks` is remapped and `builtin` cleared.
 - Files reach the user through `navigator.share({ files })` on touch devices (`pointer: coarse`) when sharing is supported, otherwise as a download. The file picker accepts any file, because iOS may not recognise the extension.
 
 ## Action log

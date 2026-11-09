@@ -5,8 +5,8 @@
 // A backup file comes from outside the app, so its manifest passes a guard before use.
 
 import { zipSync, unzipSync, strToU8, strFromU8, type Zippable } from 'fflate';
-import { db, sha256, listDecks, getDefs, putDef, putDeck, isCardDef, isDeck, holdSweep, sweep, hashesOf } from './db';
-import { BACKUP_FORMAT, BACKUP_VERSION, type BackupManifest, type Deck } from '../types/storage';
+import { db, sha256, listDecks, getDefs, putDef, putDeck, isCardDef, isDeck, isRulingsRecord, getRulings, putRulings, holdSweep, sweep, hashesOf } from './db';
+import { BACKUP_FORMAT, BACKUP_VERSION, type BackupManifest, type Deck, type RulingsRecord } from '../types/storage';
 
 export { BACKUP_FORMAT, BACKUP_VERSION };
 
@@ -41,9 +41,15 @@ export async function exportBackup(deckIds: readonly string[], onProgress: (text
     images[h] = ext;
     if (++n % 20 === 0) onProgress(`Packing images ${n} of ${hashes.length}…`);
   }
+  // Rulings, so a device restoring without internet has them too.
+  const rulings: RulingsRecord[] = [];
+  for (const oracleId of new Set(defs.map((x) => x.text?.oracleId).filter((x): x is string => !!x))) {
+    const rec = await getRulings(oracleId);
+    if (rec) rulings.push(rec);
+  }
   const manifest: BackupManifest = {
     format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: now.toISOString(),
-    decks, defs, images,
+    decks, defs, images, rulings,
   };
   files['manifest.json'] = strToU8(JSON.stringify(manifest));
   const zip = zipSync(files);
@@ -61,7 +67,8 @@ export function checkManifest(x: unknown): BackupManifest {
   if (typeof m.version !== 'number' || m.version > BACKUP_VERSION) throw new Error('This backup was made by a newer version of the app. Update the app first.');
   const images = m.images;
   if (!Array.isArray(m.decks) || !Array.isArray(m.defs) || typeof images !== 'object' || images === null
-    || !m.decks.every(isDeck) || !m.defs.every(isCardDef) || !Object.values(images).every((e) => typeof e === 'string')) {
+    || !m.decks.every(isDeck) || !m.defs.every(isCardDef) || !Object.values(images).every((e) => typeof e === 'string')
+    || (m.rulings !== undefined && !(Array.isArray(m.rulings) && m.rulings.every(isRulingsRecord)))) {
     throw new Error('The backup file is damaged.');
   }
   return m as BackupManifest;
@@ -118,6 +125,13 @@ async function restoreChosen({ manifest, files }: Pick<ReadBackup, 'manifest' | 
     }
     if (ok) { await putDef(def); goodDefs.add(def.id); } else skipped.push(def.name);
     if (++n % 20 === 0) onProgress(`Restoring cards ${n} of ${defs.length}…`);
+  }
+  // The restored cards' rulings, unless this device already has a copy fetched as recently.
+  const oracles = new Set(manifest.defs.filter((x) => goodDefs.has(x.id)).map((x) => x.text?.oracleId).filter(Boolean));
+  for (const rec of manifest.rulings || []) {
+    if (!oracles.has(rec.oracleId)) continue;
+    const mine = await getRulings(rec.oracleId);
+    if (!mine || mine.fetchedAt < rec.fetchedAt) await putRulings(rec);
   }
   // New ids for decks that already exist here, so a copy never overwrites the original.
   const idMap = new Map<string, string>();
