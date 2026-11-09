@@ -133,6 +133,7 @@ test('the stack sheet numbers its cards from the top: the last one added is 1', 
   await page.locator('[data-drop="stack"]').click();
   const sheet = page.locator('.sheet');
   await expect(sheet).toContainText('1 resolves first');
+  await expect(sheet.locator('[data-card]')).toHaveCount(3);
   const order = await sheet.locator('[data-card]').evaluateAll((els) => els.map((e) => [(e as HTMLElement).dataset.card, e.querySelector('.mark.order')?.textContent]));
   expect(order).toEqual([[added[2], '1'], [added[1], '2'], [added[0], '3']]);
   errs.expectNone();
