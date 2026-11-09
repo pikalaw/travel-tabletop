@@ -34,7 +34,7 @@ let dbp: Promise<Database> | null = null;
 export function db(): Promise<Database> {
   if (!dbp) {
     dbp = openDB<TabletopDB>(DB_NAME, DB_VERSION, {
-      upgrade(d, oldVersion, _newVersion, tx) {
+      upgrade(d, oldVersion) {
         if (oldVersion < 1) {
           d.createObjectStore('images', { keyPath: 'hash' });
           d.createObjectStore('defs', { keyPath: 'id' });
@@ -47,15 +47,9 @@ export function db(): Promise<Database> {
           d.createObjectStore('meta', { keyPath: 'key' });
         }
         if (oldVersion < 2) {
+          // Nothing is deleted: cards imported before version 2 have no rules text, and the app
+          // names their decks at startup (staleDecks) so the user can delete and re-import them.
           d.createObjectStore('rulings', { keyPath: 'oracleId' });
-          if (oldVersion >= 1) {
-            // Version 1 card data has no rules text: drop it, and the decks built from it. The
-            // sample decks are rebuilt on the next start; saved games keep their cards' names.
-            void tx.objectStore('defs').clear();
-            void tx.objectStore('images').clear();
-            void tx.objectStore('decks').clear();
-            void tx.objectStore('meta').delete('fixtures');
-          }
         }
       },
     });
@@ -204,6 +198,16 @@ export async function getRulings(oracleId: string): Promise<RulingsRecord | unde
 export async function listDecks(): Promise<Deck[]> {
   const all = (await (await db()).getAll('decks')).filter(keep('deck', isDeck));
   return all.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'deck' ? -1 : 1));
+}
+
+/** Imported decks with a card saved before card text was kept (it came from Scryfall but has no text). */
+export async function staleDecks(): Promise<Deck[]> {
+  const stale = new Set<string>();
+  for (const def of await (await db()).getAll('defs')) {
+    if (isCardDef(def) && def.scryfallId && !def.text) stale.add(def.id);
+  }
+  if (!stale.size) return [];
+  return (await listDecks()).filter((d) => d.cards.some((id) => stale.has(id)));
 }
 
 export async function getDeck(id: string): Promise<Deck | undefined> {

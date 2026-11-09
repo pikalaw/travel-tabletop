@@ -299,7 +299,7 @@ Persistence is serialized through one promise chain; each commit is one IndexedD
 
 ## Storage
 
-One IndexedDB database `mtg-tabletop`, version 2. Version 1 is v1's layout; version 2 adds the `rulings` store and card text, and on upgrade clears `defs`, `images`, `decks` and the `fixtures` meta key (card data without text is dropped, not migrated; saved games are kept and the sample decks are rebuilt).
+One IndexedDB database `mtg-tabletop`, version 2. Version 1 is v1's layout; version 2 adds the `rulings` store and card text. The upgrade deletes nothing. Cards imported before version 2 have no text; at startup the app names the imported decks that hold such cards (`staleDecks`) and asks the user to delete and re-import them.
 
 | Store | Key | Contents |
 | --- | --- | --- |

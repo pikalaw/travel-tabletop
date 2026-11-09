@@ -8,7 +8,7 @@ import { parseDecklist, listSignature, importDeck, importCache, textOf } from '.
 import { ensureFixtures } from '../src/storage/fixtures';
 import { STARTER_PACKS } from '../src/storage/starters';
 import { checkManifest, exportBackup, readBackup, restoreBackup } from '../src/storage/backup';
-import { closeDb, db, getDefs, getImage, getRulings, listDecks, putDeck, sha256 } from '../src/storage/db';
+import { closeDb, db, getDefs, getImage, getRulings, listDecks, putDeck, sha256, staleDecks } from '../src/storage/db';
 import type { CardDef, Deck } from '../src/types/storage';
 
 const fixture = (f: string) => readFileSync(new URL(`./fixtures/v1/${f}`, import.meta.url));
@@ -206,7 +206,7 @@ describe('card text and rulings (mocked Scryfall)', () => {
     expect(await getRulings('o-sages')).toBeUndefined();
   });
 
-  it('upgrading from version 1 drops the card data and decks, and keeps saved games', async () => {
+  it('upgrading from version 1 keeps everything, and names the decks with cards that lack text', async () => {
     await closeDb();
     await new Promise<void>((res) => { const r = indexedDB.deleteDatabase('mtg-tabletop'); r.onsuccess = () => res(); });
     await new Promise<void>((res, rej) => {
@@ -219,8 +219,10 @@ describe('card text and rulings (mocked Scryfall)', () => {
       };
       r.onsuccess = () => {
         const tx = r.result.transaction(['defs', 'decks', 'games', 'meta'], 'readwrite');
-        tx.objectStore('defs').put({ id: 'x', name: 'X', front: 'h', back: null });
-        tx.objectStore('decks').put({ id: 'd', name: 'D', kind: 'deck', cards: ['x'], createdAt: 1 });
+        tx.objectStore('defs').put({ id: 'x', name: 'X', front: 'h', back: null, scryfallId: 's-x' });
+        tx.objectStore('defs').put({ id: 'y', name: 'Y', front: 'h', back: null });
+        tx.objectStore('decks').put({ id: 'd', name: 'D', kind: 'deck', cards: ['x', 'y'], createdAt: 1 });
+        tx.objectStore('decks').put({ id: 'e', name: 'E', kind: 'deck', cards: ['y'], createdAt: 1 });
         tx.objectStore('games').put({ id: 'g1' });
         tx.objectStore('meta').put({ key: 'fixtures', value: 1 });
         tx.oncomplete = () => { r.result.close(); res(); };
@@ -228,9 +230,11 @@ describe('card text and rulings (mocked Scryfall)', () => {
       };
     });
     const d = await db();
-    expect(await d.count('defs')).toBe(0);
-    expect(await d.count('decks')).toBe(0);
-    expect(await d.get('meta', 'fixtures')).toBeUndefined();
+    expect(await d.count('defs')).toBe(2);
+    expect(await d.count('decks')).toBe(2);
+    expect(await d.get('meta', 'fixtures')).toEqual({ key: 'fixtures', value: 1 });
+    // only D has a Scryfall card without text; E's card is not from Scryfall
+    expect((await staleDecks()).map((x) => x.id)).toEqual(['d']);
     expect(await d.count('games')).toBe(1);
     expect(d.objectStoreNames.contains('rulings')).toBe(true);
   });
