@@ -1,7 +1,11 @@
 // The picture of a full-screen card, shared by the game's full view and the card viewer (deck
 // page, Tokens sheet): the large image, the ← and → signs at its sides, the card gestures on it,
-// and the arrow keys. Only what both screens have lives here; each screen draws its own details,
-// caption and buttons around it.
+// and the arrow keys. Each screen draws its own details, caption and buttons around it.
+//
+// Rule: add here only what every screen that uses the frame has. Anything one screen needs goes
+// in that screen, around the frame or in `children`. (`target` is the one exception, and small.)
+// If the frame ever needs a second option that only one screen uses, split it again rather than
+// grow a flag.
 
 import { useEffect, useRef } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
