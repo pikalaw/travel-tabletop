@@ -76,7 +76,7 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 | Graveyard | Pile, face up, top card shown | — | A sheet listing the whole zone |
 | Exile | Pile, face up unless set face-down | — | A sheet listing the zone |
 | Command | Pile, face up | — | A sheet listing the zone |
-| Stack | Shared pile, face up; the newest card is on top | — | A sheet listing the zone, numbered from the top (1 resolves first) |
+| Stack | Shared pile, face up; the newest card is on top | — | The full view on the top item, captioned "Stack 1 of 3 · resolves first"; swipes step down the stack |
 
 **Gestures**
 

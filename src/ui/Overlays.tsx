@@ -8,6 +8,7 @@ import { Row, cardImage, BACK_URL, type BoardCtx } from './Cards';
 import { zoneKind, zoneOwner, other, canSeeFace, findZone } from '../engine/view';
 import { artUrl, sizeFor } from '../storage/art';
 import { abilitiesOf } from './abilities';
+import type { FullModel } from './fullModel';
 import type { CardInstance, GameState, PlayerId, ZoneId } from '../types/state';
 import type { Deck } from '../types/storage';
 import type { AwayLine } from './gameUi';
@@ -87,10 +88,7 @@ export function CardSheet({ ctx, sheet, onClose, onRandom }: { ctx: BoardCtx; sh
     layout = 'tray';
     override = true;
     title = `Revealed: top of ${zoneTitle(st, zone)}`;
-  } else {
-    ids = lib;
-    if (zone === 'stack' && ids.length) hint = 'Numbered from the top: 1 resolves first. A response goes on top.';
-  }
+  } else ids = lib;
   const trayDrop = layout === 'tray' ? 'tray' : 'row';
   return (
     <Sheet
@@ -107,7 +105,7 @@ export function CardSheet({ ctx, sheet, onClose, onRandom }: { ctx: BoardCtx; sh
     >
       {hint ? <div class="sheet-hint">{hint}</div> : null}
       <div class="sheet-row">
-        <Row ctx={ctx} zone={zone} ids={ids} open={true} layout={trayDrop} override={override} emptyText="Empty" numbered={zone === 'stack'} />
+        <Row ctx={ctx} zone={zone} ids={ids} open={true} layout={trayDrop} override={override} emptyText="Empty" />
       </div>
     </Sheet>
   );
@@ -120,8 +118,8 @@ export function CardSheet({ ctx, sheet, onClose, onRandom }: { ctx: BoardCtx; sh
  */
 export interface FullCardProps {
   ctx: BoardCtx;
-  cardId: string;
-  zone: ZoneId;
+  /** What to show and offer (see fullModel). */
+  model: FullModel;
   row?: FullRow | null;
   onPick?: (id: string) => void;
   onCounter?: ((type: 'addCounter' | 'removeCounter', kind: string, label: string | undefined) => void) | null;
@@ -132,9 +130,9 @@ export interface FullCardProps {
   onDragOut?: ((e: PointerEvent, x0: number, y0: number) => void) | null;
   /** Swiping the card down: back to the board, the same as Close. */
   onClose?: (() => void) | null;
-  /** A tap on the card taps or untaps it (cards in play only; null elsewhere). */
+  /** A tap on the card taps or untaps it (when the model allows). */
   onToggleTap?: (() => void) | null;
-  /** Put one of the card's abilities (or any text, from Custom…) on the stack. */
+  /** Put one of the card's abilities (or any text, from Custom…) on the stack (when the model offers them). */
   onAbility?: ((text: string) => void) | null;
 }
 
@@ -143,7 +141,7 @@ const SWIPE_PX = 50;
 const DRAG_OUT_PX = 40;
 const TAP_PX = 8;
 
-export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null, onToggleTap = null, onAbility = null }: FullCardProps) {
+export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null, onToggleTap = null, onAbility = null }: FullCardProps) {
   const swipe = useRef<{ x: number; y: number; id: number } | null>(null);
   // The arrow keys step through the slot too. One listener for the view's life, reading the
   // latest targets, so a key pressed right after a step never acts on the previous card.
@@ -162,8 +160,8 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
     return () => removeEventListener('keydown', key);
   }, []);
   const st = ctx.state;
-  const card = st.cards[cardId];
-  if (!card) return null;
+  const { card, zone } = model;
+  const cardId = card.id;
   const img = cardImage(ctx, card, zone, card.faceDown && ctx.viewer === card.owner, 'large');
   const c = card.counters;
   const art = ctx.art.get(card.defId);
@@ -195,7 +193,7 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
     const dx = e.clientX - s0.x,
       dy = e.clientY - s0.y;
     if (Math.abs(dx) < TAP_PX && Math.abs(dy) < TAP_PX) {
-      onToggleTap?.();
+      if (model.tapToggle) onToggleTap?.();
       return;
     }
     if (dy > SWIPE_PX && dy > 1.5 * Math.abs(dx)) {
@@ -266,10 +264,11 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
       )),
   ].filter(Boolean);
   // The card's abilities, for a face the viewer can see; an ability item shows its own text instead.
-  const abilities = onAbility && img.visible && !card.ability ? abilitiesOf(art?.text, card.face, !!art?.back) : [];
+  const offer = model.offersAbilities && onAbility ? onAbility : null;
+  const abilities = offer ? abilitiesOf(art?.text, card.face, !!art?.back) : [];
   const custom = () =>
     void promptBox({ title: 'Put an ability on the stack', body: `Any text: a delayed trigger, an effect from elsewhere. It goes on the stack with ${card.name}’s picture.`, placeholder: 'e.g. Draw a card at the next end step', ok: 'Put on stack' })
-      .then((t) => { if (t?.trim()) onAbility?.(t.trim()); });
+      .then((t) => { if (t?.trim()) offer?.(t.trim()); });
   // Caption for the row: how many are attached, and the combat side.
   const parts: string[] = [];
   if (row && row.group.length > 1) parts.push(`${row.group.length - 1} attached`);
@@ -319,8 +318,9 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
         {badges.length ? <div class="full-badges">{badges}</div> : null}
       </div>
       <div class="fullcard-meta">
-        <b>{card.ability ? `Ability of ${img.visible ? card.name : 'a face-down card'}` : img.visible ? card.name : 'Hidden card'}</b>
-        {card.ability ? <p class="ability-text">{card.ability.text}</p> : null}
+        {model.caption ? <span class="full-caption">{model.caption}</span> : null}
+        <b>{model.title}</b>
+        {model.abilityText ? <p class="ability-text">{model.abilityText}</p> : null}
         <span>
           {zoneTitle(st, zone)}
           {card.tapped ? ' · tapped' : ''}
@@ -342,14 +342,14 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
             <span class="hint">Tap a thumbnail to see that card. Swipe the card for the next card or group in the slot.</span>
           </>
         ) : null}
-        {onAbility && img.visible && !card.ability ? (
+        {offer ? (
           <div class="abilities" role="group" aria-label="Abilities">
             <span class="hint">Tap an ability to put it on the stack.</span>
             {abilities.map((g) => (
               <>
                 {g.face ? <span class="ability-face">{g.face}</span> : null}
                 {g.lines.map((line) => (
-                  <button class="ability" onClick={() => onAbility(line)}>
+                  <button class="ability" onClick={() => offer(line)}>
                     {line}
                   </button>
                 ))}
@@ -360,8 +360,9 @@ export function FullCard({ ctx, cardId, zone, row = null, onPick = () => {}, onC
             </button>
           </div>
         ) : null}
-        {onToggleTap ? <span class="hint">Tap the card to tap or untap it.</span> : null}
-        <span class="hint">Drag counters from the bar onto the card. Use − and + to change one.</span>
+        {model.caption ? <span class="hint">Swipe for the next item down the stack. Drag it up to move it: an ability dragged off the stack is gone.</span> : null}
+        {model.tapToggle && onToggleTap ? <span class="hint">Tap the card to tap or untap it.</span> : null}
+        {model.actions.counters ? <span class="hint">Drag counters from the bar onto the card. Use − and + to change one.</span> : null}
       </div>
     </div>
   );

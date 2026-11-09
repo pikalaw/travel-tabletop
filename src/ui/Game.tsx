@@ -15,7 +15,8 @@ import {
   type FullRow, type LogLine, type MenuItem,
 } from './Overlays';
 import { initialUi, uiReducer, type SheetState } from './gameUi';
-import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone, isBattlefieldZone } from '../engine/view';
+import { fullModel } from './fullModel';
+import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone } from '../engine/view';
 import { listDecks, loadLog } from '../storage/db';
 import { loadArt, type Art } from '../storage/art';
 import type { Session } from '../client/session';
@@ -309,6 +310,12 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
 
   function pileTap(zone: ZoneId) {
     if (zoneKind(zone) === 'library') { dispatch({ type: 'mode', mode: { kind: 'library', zone, n: 1 } }); return; }
+    // The stack opens in the full view on its top item; swipes step down it. An empty stack does nothing.
+    if (zone === 'stack') {
+      const top = state.zones.stack[0];
+      if (top) dispatch({ type: 'full', full: { cardId: top, zone, anchor: top } });
+      return;
+    }
     setSheet({ kind: 'zone', zone });
   }
 
@@ -535,19 +542,16 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
     if (fullRow && fullRow.group.length + fullRow.partners.length < 2) fullRow = null;
   }
   const fullStep = full && fullZone ? slotSteps(state, full.cardId, fullZone, viewer, sheet) : null;
+  const model = full && fullZone ? fullModel(state, full.cardId, fullZone, viewer) : null;
   const matchSet = ctx.match;
   const showAttack = actor === 'table' || actingPlayer === state.activePlayer;
 
   // ----- footer -----
   let footer;
-  const fullCard = full ? state.cards[full.cardId] : undefined;
-  if (full && fullCard && fullZone) {
-    const card = fullCard;
-    const k = zoneKind(fullZone);
-    const field = k === 'battlefield' || k === 'lands';
-    // The group this card belongs to: its host, and how many cards are attached to it.
+  if (model) {
+    const { card, zone: fullZone, actions: a } = model;
     const hostId = card.attachedTo || card.id;
-    const groupSize = field ? state.zones[fullZone].filter((id) => state.cards[id]?.attachedTo === hostId).length : 0;
+    const groupSize = a.detachAll;
     const detachAll = () => {
       const host = state.cards[hostId];
       if (!host) return;
@@ -560,20 +564,17 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
     };
     footer = (
       <div class="bar">
-        <button class="btn" onClick={() => send('flip', { cardId: card.id, from: fullZone })}>Flip</button>
-        <button class="btn" onClick={() => send('setFaceDown', { cardId: card.id, from: fullZone, value: !card.faceDown })}>{card.faceDown ? 'Face up' : 'Face down'}</button>
-        {k === 'hand' ? <button class="btn" onClick={() => revealCard(card, fullZone)}>Reveal</button> : null}
-        {field ? <button class="btn" onClick={() => send('tap', { cardId: card.id, from: fullZone })}>{card.tapped ? 'Untap' : 'Tap'}</button> : null}
-        {field && zoneOwner(fullZone) === state.activePlayer
-          ? <button class="btn" onClick={() => send('attack', { cardId: card.id, from: fullZone })}>{card.attacking ? 'Stop attacking' : 'Attack'}</button> : null}
-        {field && zoneOwner(fullZone) !== state.activePlayer
-          ? <button class="btn" onClick={() => { startCombat({ cardId: card.id, zone: fullZone }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Block</button> : null}
-        {card.attachedTo
-          ? <button class="btn" onClick={() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button>
-          : k !== 'library' ? <button class="btn" onClick={() => { dispatch({ type: 'mode', mode: { kind: 'attach', cardId: card.id, zone: fullZone } }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Attach</button> : null}
-        {card.attachedTo ? <button class="btn" onClick={() => send('setLead', { cardId: card.id, from: fullZone })}>Make lead</button> : null}
+        {a.flip ? <button class="btn" onClick={() => send('flip', { cardId: card.id, from: fullZone })}>Flip</button> : null}
+        {a.faceDown ? <button class="btn" onClick={() => send('setFaceDown', { cardId: card.id, from: fullZone, value: !card.faceDown })}>{card.faceDown ? 'Face up' : 'Face down'}</button> : null}
+        {a.reveal ? <button class="btn" onClick={() => revealCard(card, fullZone)}>Reveal</button> : null}
+        {a.tap ? <button class="btn" onClick={() => send('tap', { cardId: card.id, from: fullZone })}>{card.tapped ? 'Untap' : 'Tap'}</button> : null}
+        {a.attack ? <button class="btn" onClick={() => send('attack', { cardId: card.id, from: fullZone })}>{card.attacking ? 'Stop attacking' : 'Attack'}</button> : null}
+        {a.block ? <button class="btn" onClick={() => { startCombat({ cardId: card.id, zone: fullZone }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Block</button> : null}
+        {a.detach ? <button class="btn" onClick={() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button> : null}
+        {a.attach ? <button class="btn" onClick={() => { dispatch({ type: 'mode', mode: { kind: 'attach', cardId: card.id, zone: fullZone } }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Attach</button> : null}
+        {a.makeLead ? <button class="btn" onClick={() => send('setLead', { cardId: card.id, from: fullZone })}>Make lead</button> : null}
         {groupSize > 0 ? <button class="btn" onClick={detachAll}>Detach all</button> : null}
-        <CounterChips label={label} attack={showAttack} />
+        {a.counters ? <CounterChips label={label} attack={showAttack} /> : null}
         <span class="spacer" />
         <button class="btn primary" onClick={closeFull}>Close</button>
       </div>
@@ -674,14 +675,14 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
     <div class={`game ${isOffline && session.kind === 'guest' ? 'readonly' : ''} ${pointMode ? 'pointing' : ''}`} ref={rootRef}>
       <div class="board-wrap">
         <Board ctx={ctx} P={P} openSlots={openSlots} />
-        {full && fullZone ? (
+        {full && fullZone && model ? (
           <div class="full-wrap">
-            <FullCard ctx={ctx} cardId={full.cardId} zone={fullZone} row={fullRow}
+            <FullCard ctx={ctx} model={model} row={fullRow}
               onCounter={(type, kind, lbl) => send(type, { cardId: full.cardId, from: fullZone, kind, label: lbl })}
               onPick={(id) => dispatch({ type: 'full', full: { cardId: id, zone: findZone(state, id) || fullZone, anchor: full.anchor } })}
               step={fullStep} onStep={(id) => dispatch({ type: 'full', full: { cardId: id, zone: fullZone, anchor: id } })}
               onDragOut={(e, x0, y0) => dragOutOfFull(full.cardId, fullZone, e, x0, y0)} onClose={closeFull}
-              onToggleTap={isBattlefieldZone(fullZone) ? () => send('tap', { cardId: full.cardId, from: fullZone }) : null}
+              onToggleTap={() => send('tap', { cardId: full.cardId, from: fullZone })}
               onAbility={(text) => send('putAbility', { cardId: full.cardId, from: fullZone, text })} />
           </div>
         ) : null}
@@ -782,7 +783,8 @@ export function slotSteps(state: GameState, cardId: string, zone: ZoneId, viewer
     const h = hostOf(state, id);
     if (units.includes(h) || !state.cards[h]) continue;
     const c = state.cards[h]!;
-    if (tray || canSeeFace(state, c, zone, viewer) || (c.faceDown && viewer === c.owner)) units.push(h);
+    // On the stack every item counts, hidden or not, so positions match "Stack 2 of 3".
+    if (zone === 'stack' || tray || canSeeFace(state, c, zone, viewer) || (c.faceDown && viewer === c.owner)) units.push(h);
   }
   const at = units.indexOf(hostOf(state, cardId));
   if (at < 0) return { prev: null, next: null };

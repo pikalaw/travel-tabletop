@@ -105,7 +105,7 @@ export function Board({ ctx, P, openSlots }: { ctx: BoardCtx; P: PlayerId; openS
           'hand',
         )}
       </div>
-      <div class="cell c53 shared">{<Pile ctx={ctx} zone="stack" label="Stack" />}</div>
+      <div class="cell c53 shared">{<Pile ctx={ctx} zone="stack" label="Stack" all />}</div>
     </div>
   );
 }

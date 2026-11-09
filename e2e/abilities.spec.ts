@@ -79,8 +79,7 @@ test('a card with no rules text offers only Custom…; an ability item shows its
   await longPress(page, hand.nth(elf));
   await page.locator('.abilities .ability').first().click();
   await barButton(page, 'Close');
-  await page.locator('[data-drop="stack"]').click();
-  await longPress(page, page.locator('.sheet [data-card]').first());
+  await page.locator('[data-drop="stack"]').click(); // the stack opens in the full view
   await expect(page.locator('.fullcard-meta b')).toHaveText('Ability of Elf Test');
   await expect(page.locator('.fullcard-meta .ability-text')).toHaveText('{T}: Add {G}.');
   await expect(page.locator('.abilities')).toHaveCount(0);

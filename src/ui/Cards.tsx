@@ -91,11 +91,9 @@ export interface CardProps {
   attachedN?: number;
   /** In a fanned group: the width of the gap to the previous card of the group, bridged by a gold bar. */
   linkLeft?: number;
-  /** Position in the stack, 1 = top (resolves first); 0 for none. */
-  order?: number;
 }
 
-export function Card({ ctx, card, zone, h, override = false, style = '', interactive = true, tucked = false, attachedN = 0, linkLeft = 0, order = 0 }: CardProps) {
+export function Card({ ctx, card, zone, h, override = false, style = '', interactive = true, tucked = false, attachedN = 0, linkLeft = 0 }: CardProps) {
   const img = cardImage(ctx, card, zone, override, h);
   const w = Math.round(h * RATIO);
   const tapped = card.tapped && (zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands');
@@ -143,13 +141,6 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
         </span>,
       );
   }
-  // The stack's order, first so it reads before anything else on the card.
-  if (order)
-    markers.unshift(
-      <span class="mark order" title={order === 1 ? 'Top of the stack: resolves first' : `Resolves ${order}${order === 2 ? 'nd' : order === 3 ? 'rd' : 'th'}`}>
-        {order}
-      </span>,
-    );
   // Top-left stays visible when the next card overlaps this one in a crowded row.
   if (attachedN)
     markers.unshift(
@@ -221,11 +212,9 @@ export interface RowProps {
   offset?: number;
   override?: boolean;
   emptyText?: string;
-  /** Number the cards 1, 2, 3… from the left (the stack's top). */
-  numbered?: boolean;
 }
 
-export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'row', offset = 0, override = false, emptyText = '', numbered = false }: RowProps) {
+export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'row', offset = 0, override = false, emptyText = '' }: RowProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { w, h } = useSize(ref);
   const cardH = Math.max(28, h - 14);
@@ -301,7 +290,6 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
                   tucked={tucked}
                   attachedN={fanned ? 0 : attachedN.get(card.id) || 0}
                   linkLeft={fanned && sameGroup(i) ? innerGap : 0}
-                  order={numbered ? i + 1 : 0}
                 />
               );
             })}
@@ -316,12 +304,17 @@ export interface PileProps {
   ctx: BoardCtx;
   zone: ZoneId;
   label: string;
+  /**
+   * Draw every card, stacked under the top one (the stack: the full view steps through it, and
+   * dragging any item up from there hands the board's element for it to a drag).
+   */
+  all?: boolean;
   layout?: 'pile' | 'library';
   topOverride?: boolean;
   extraClass?: string;
 }
 
-export function Pile({ ctx, zone, label, layout = 'pile', topOverride = false, extraClass = '' }: PileProps) {
+export function Pile({ ctx, zone, label, layout = 'pile', topOverride = false, extraClass = '', all = false }: PileProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { w, h } = useSize(ref);
   const ids = ctx.state.zones[zone] || [];
@@ -334,7 +327,13 @@ export function Pile({ ctx, zone, label, layout = 'pile', topOverride = false, e
       </span>
       {top && h > 0 ? (
         <div class="pile-card">
-          <Card ctx={ctx} card={top} zone={zone} h={cardH} override={topOverride} />
+          <Card ctx={ctx} card={top} zone={zone} h={cardH} override={topOverride} style={all ? `z-index:${ids.length}` : ''} />
+          {all
+            ? ids.slice(1).map((id, i) => {
+                const c = ctx.state.cards[id];
+                return c ? <Card key={id} ctx={ctx} card={c} zone={zone} h={cardH} style={`position:absolute;left:0;top:0;z-index:${ids.length - 1 - i}`} /> : null;
+              })
+            : null}
         </div>
       ) : (
         <div class="pile-empty" />
