@@ -179,9 +179,15 @@ export class Host {
   /** Logged, broadcast events that do not change state. Randomness results are filled here. */
   notice(kind: NoticeKind, actor: Actor, input: unknown): DispatchResult {
     const payload: Record<string, unknown> = { ...(typeof input === 'object' && input ? input : {}) };
+    // A guest's notice may hold any JSON: the fields the log text and results read must be well formed.
+    const bad = (payload.zone != null && !isZone(payload.zone))
+      || ('n' in payload && !Number.isInteger(payload.n))
+      || (payload.cardId != null && typeof payload.cardId !== 'string')
+      || ('ids' in payload && !(Array.isArray(payload.ids) && payload.ids.every((x) => typeof x === 'string')));
+    if (bad) return { ok: false, error: 'invalid', detail: `bad ${kind} notice` };
     if (kind === 'coinFlip') payload.result = this.random(1)[0]! < 0.5 ? 'heads' : 'tails';
     if (kind === 'rollDie') {
-      const sides = Math.max(2, Math.min(1000, parseInt(String(payload.sides), 10) || 6));
+      const sides = Math.max(2, Math.min(1000, (typeof payload.sides === 'number' ? Math.trunc(payload.sides) : parseInt(typeof payload.sides === 'string' ? payload.sides : '', 10)) || 6));
       payload.sides = sides;
       payload.result = 1 + Math.floor(this.random(1)[0]! * sides);
     }

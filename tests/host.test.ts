@@ -3,6 +3,9 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import { Host, SNAPSHOT_CAP } from '../src/host/host';
+import { checkInvariants } from '../src/engine/engine';
+import { allZones } from '../src/engine/view';
+import { STATE_COMMAND_TYPES, NOTICE_KINDS } from '../src/types/commands';
 import { replay } from '../src/host/replay';
 import type { Commit } from '../src/storage/db';
 import type { LogEntry } from '../src/types/storage';
@@ -31,6 +34,18 @@ describe('host', () => {
     if (!pick.ok || pick.notice?.kind !== 'randomPick') throw new Error('no notice');
     expect(h.state.zones['p1.hand']).toContain(pick.notice.payload.cardId);
     expect(h.dispatch({ type: 'randomPick', actor: 'p1', payload: { zone: 'p1.exile' } })).toMatchObject({ ok: false, error: 'invalid' });
+  });
+
+  it('any command or notice with any payload, as a guest might send it, is applied or refused, never thrown', () => {
+    // Values that broke the host before: an object whose toString is not a function.
+    const hostile: unknown[] = [{ toString: '' }, { valueOf: 1, toString: 2 }, [{ toString: '' }]];
+    const value = fc.oneof(fc.constantFrom<unknown>(...allZones(), 'p1', 'p2', 'c1', 'c3', 'a1', 'plus', 'label', null, undefined, true, -1, 2.5, 1e9, ...hostile), fc.anything());
+    const payload = fc.dictionary(fc.constantFrom('cardId', 'from', 'to', 'toZone', 'toCardId', 'attackerId', 'attackerZone', 'player', 'kind', 'label', 'n', 'value', 'zone', 'key', 'toIndex', 'defId', 'name', 'owner', 'winner', 'text', 'sides', 'ids', 'to'), value);
+    fc.assert(fc.property(fc.constantFrom(...STATE_COMMAND_TYPES.filter((t) => t !== 'startGame'), ...NOTICE_KINDS), payload, (type, p) => {
+      const h = newHost();
+      expect(() => h.dispatch({ type, actor: 'p2', payload: p })).not.toThrow();
+      expect(checkInvariants(h.state)).toBeNull();
+    }), { numRuns: 600 });
   });
 
   it('tells listeners about changes, notices and undos', () => {

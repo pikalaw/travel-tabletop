@@ -84,6 +84,17 @@ export const MAX_ABILITY_TEXT = 2000;
 const fail = (error: 'stale' | 'invalid', detail?: string): ApplyResult => (detail === undefined ? { error } : { error, detail });
 
 const isInt = (x: unknown): x is number => Number.isInteger(x);
+
+/**
+ * A payload value as text, for error messages. A guest's payload may hold any JSON, and
+ * String() throws on an object whose toString is not a function ({"toString": ""}), so only
+ * strings, numbers and booleans are converted; anything else becomes its type name, or '' if absent.
+ */
+function str(x: unknown): string {
+  if (typeof x === 'string') return x;
+  if (typeof x === 'number' || typeof x === 'boolean') return String(x);
+  return x == null ? '' : typeof x;
+}
 const isFiniteNum = (x: unknown): x is number => Number.isFinite(x);
 
 /** Reset what a card loses when it changes zone (the same rules for every kind of move). */
@@ -183,8 +194,8 @@ function run(input: GameState, cmd: Command): ApplyResult {
 
   // Shared precondition: the card is where the sender saw it.
   const need = (cardId: unknown, from: unknown): { id: string; from: ZoneId; card: CardInstance } | ApplyResult => {
-    if (!isZone(from)) return fail('invalid', `bad zone ${String(from)}`);
-    if (typeof cardId !== 'string' || !state.zones[from].includes(cardId)) return fail('stale', `${String(cardId)} not in ${from}`);
+    if (!isZone(from)) return fail('invalid', `bad zone ${str(from)}`);
+    if (typeof cardId !== 'string' || !state.zones[from].includes(cardId)) return fail('stale', `${str(cardId)} not in ${from}`);
     return { id: cardId, from, card: state.cards[cardId]! };
   };
   const located = (x: ReturnType<typeof need>): x is { id: string; from: ZoneId; card: CardInstance } => 'card' in x;
@@ -225,7 +236,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
 
     case 'move': {
       const n = need(p.cardId, p.from); if (!located(n)) return n;
-      if (!isZone(p.to)) return fail('invalid', `bad zone ${String(p.to)}`);
+      if (!isZone(p.to)) return fail('invalid', `bad zone ${str(p.to)}`);
       const { card: c, from } = n;
       const to = p.to;
       const src = state.zones[from];
@@ -252,7 +263,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
       const n = need(p.cardId, p.from); if (!located(n)) return n;
       if (!isZone(p.toZone) || !isBattlefieldZone(p.toZone)) return fail('invalid', 'cards can only be attached to a card on the battlefield');
       const toZone = p.toZone;
-      if (typeof p.toCardId !== 'string' || !state.zones[toZone].includes(p.toCardId)) return fail('stale', `${String(p.toCardId)} not in ${toZone}`);
+      if (typeof p.toCardId !== 'string' || !state.zones[toZone].includes(p.toCardId)) return fail('stale', `${str(p.toCardId)} not in ${toZone}`);
       let host = state.cards[p.toCardId]!;
       if (host.attachedTo) host = state.cards[host.attachedTo]!; // one level: attach to the card at the bottom
       const { card: c, from } = n;
@@ -415,7 +426,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
         if (next < 0) return fail('invalid', 'no counter to remove');
         c.counters[p.kind] = next;
       } else {
-        const label = String(p.label || '').trim();
+        const label = typeof p.label === 'string' ? p.label.trim() : '';
         if (!label) return fail('invalid', 'counter needs a label');
         const next = (c.counters.labeled[label] || 0) + sign * n;
         if (next < 0) return fail('invalid', 'no counter to remove');
@@ -429,7 +440,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
       if (!isZone(p.to)) return fail('invalid', 'bad zone');
       const owner = isPlayer(p.owner) ? p.owner : (zoneOwner(p.to) || 'p1');
       const id = `t${state.nextId++}`;
-      state.cards[id] = newCard(id, String(p.defId ?? ''), typeof p.name === 'string' && p.name ? p.name : 'Token', null, owner, true);
+      state.cards[id] = newCard(id, typeof p.defId === 'string' ? p.defId : '', typeof p.name === 'string' && p.name ? p.name : 'Token', null, owner, true);
       const dst = state.zones[p.to];
       const idx = isInt(p.toIndex) ? Math.max(0, Math.min(p.toIndex, dst.length)) : dst.length;
       dst.splice(idx, 0, id);
@@ -479,7 +490,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
       if (!isPlayer(p.player)) return fail('invalid', 'bad player');
       const ctr = state.players[p.player].counters.find((x) => x.key === p.key);
       if (!ctr) return fail('invalid', 'no such counter');
-      const v = Number(p.value);
+      const v = typeof p.value === 'number' || typeof p.value === 'string' ? Number(p.value) : NaN;
       if (!Number.isFinite(v)) return fail('invalid', 'bad value');
       ctr.value = Math.round(v);
       break;
@@ -487,7 +498,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
 
     case 'addPlayerCounter': {
       if (!isPlayer(p.player)) return fail('invalid', 'bad player');
-      const key = String(p.key || '').trim();
+      const key = typeof p.key === 'string' ? p.key.trim() : '';
       if (!key) return fail('invalid', 'counter needs a name');
       const list = state.players[p.player].counters;
       if (list.some((x) => x.key.toLowerCase() === key.toLowerCase())) return fail('invalid', 'counter exists');
