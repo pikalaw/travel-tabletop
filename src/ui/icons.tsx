@@ -26,6 +26,21 @@ export const SwordsIcon = () => (
   </Icon>
 );
 
+/** End combat: the crossed swords, smaller, inside a red stop-sign outline (the only red part). */
+export const EndCombatIcon = () => (
+  <Icon>
+    <path d="M8.3 2.5h7.4l5.8 5.8v7.4l-5.8 5.8H8.3l-5.8-5.8V8.3z" stroke="#ff5a4a" stroke-width="2" />
+    <path d="M6.8 6.8l8 8" /><path d="M12.6 16.6l4-4" /><path d="M15.2 15.2l2 2" />
+    <path d="M17.2 6.8l-8 8" /><path d="M7.4 12.6l4 4" /><path d="M8.8 15.2l-2 2" />
+  </Icon>
+);
+
+/** Pause: two bars. */
+export const PauseIcon = () => <Icon><path d="M9 5v14M15 5v14" stroke-width="2.6" /></Icon>;
+
+/** Close: an ×. */
+export const CloseIcon = () => <Icon><path d="M6 6l12 12M18 6L6 18" /></Icon>;
+
 /** End turn: an hourglass. */
 export const HourglassIcon = () => (
   <Icon><path d="M6 2h12M6 22h12" /><path d="M7 2v3c0 3 5 4.5 5 7 0-2.5 5-4 5-7V2" /><path d="M7 22v-3c0-3 5-4.5 5-7 0 2.5 5 4 5 7v3" /></Icon>

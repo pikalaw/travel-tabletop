@@ -50,13 +50,13 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
   await page.mouse.click(s2.x + 6, s2.y + s2.height / 2);
   await expect(ticker).toContainText(/Player 1 tapped /);
 
-  // tapping the slot's "tap to open" strip (top right, above the cards) fans the group; Close slot folds it
+  // tapping the slot's "tap to open" strip (top right, above the cards) fans the group; tapping it again folds it
   const fb = (await bf.boundingBox())!;
   await page.mouse.click(fb.x + fb.width - 10, fb.y + 4);
   await expect(bf).toHaveAttribute('data-fanned', /.+/);
   await expect(bf.locator('.card.tucked')).toHaveCount(0);
   await expect(bf.locator('.link-bar')).toHaveCount(2); // a gold bar joins each attached card to the next
-  await barButton(page, 'Close slot');
+  await page.mouse.click(fb.x + fb.width - 10, fb.y + 4);
   await expect(bf.locator('.link-bar')).toHaveCount(0);
   await expect(bf).not.toHaveAttribute('data-fanned', /.*/);
 

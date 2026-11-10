@@ -36,12 +36,11 @@ describe('game screen state', () => {
     const log = run(initialUi(false, 'p1', 'p1'), { type: 'sheet', sheet: { kind: 'log' } }, { type: 'blind' });
     expect(log.sheet).toEqual({ kind: 'log' });
   });
-  it('slots open once each and close one by one or all together', () => {
+  it('slots open once each and close one by one', () => {
     let s = run(initialUi(true, 'p1', 'p1'), { type: 'openSlot', zone: 'p1.hand' }, { type: 'openSlot', zone: 'p1.hand' }, { type: 'openSlot', zone: 'p2.lands' });
     expect(s.openSlots).toEqual(['p1.hand', 'p2.lands']);
     s = run(s, { type: 'closeSlot', zone: 'p1.hand' });
     expect(s.openSlots).toEqual(['p2.lands']);
-    expect(run(s, { type: 'closeSlots' }).openSlots).toEqual([]);
   });
 });
 

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { toast } from './toast';
-import { UndoIcon, EyeIcon, EyeOffIcon, SwordsIcon, HourglassIcon, PawnIcon, DieIcon, PointIcon, UntapIcon } from './icons';
+import { UndoIcon, EyeIcon, EyeOffIcon, SwordsIcon, EndCombatIcon, PauseIcon, CloseIcon, HourglassIcon, PawnIcon, DieIcon, PointIcon, UntapIcon } from './icons';
 import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
 import { Board } from './Board';
@@ -616,7 +616,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         {groupSize > 0 ? <button class="btn" onClick={detachAll}>Detach all</button> : null}
         {a.counters ? <CounterChips label={label} attack={showAttack} /> : null}
         <span class="spacer" />
-        <button class="btn primary" onClick={closeFull}>Close</button>
+        <button class="btn icon primary" onClick={closeFull} aria-label="Close" title="Close"><CloseIcon /></button>
       </div>
     );
   } else if (combat) {
@@ -632,9 +632,9 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
             : <>Tap {state.players[state.activePlayer].name}’s attackers, or a blocker then its attacker.</>}</span>
         <button class={`btn${combat.vigilance ? ' on' : ''}`} aria-pressed={combat.vigilance}
           onClick={() => dispatch({ type: 'mode', mode: { ...combat, vigilance: !combat.vigilance } })}>Vigilance</button>
-        <button class="btn warn" onClick={endCombat}>End combat</button>
+        <button class="btn icon" onClick={endCombat} aria-label="End combat" title="End combat"><EndCombatIcon /></button>
         {/* Leaves combat mode with every mark kept; Combat comes back to it, End combat ends it. */}
-        <button class="btn primary" onClick={toNormal}>Pause</button>
+        <button class="btn icon primary" onClick={toNormal} aria-label="Pause" title="Pause: back to normal play, marks kept"><PauseIcon /></button>
       </div>
     );
   } else if (attaching && state.cards[attaching.cardId]) {
@@ -674,9 +674,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         {same && viewer === 'nobody' ? <button class="btn icon primary" onClick={() => dispatch({ type: 'choosing', open: true })} aria-label="Unblind" title="Unblind"><EyeIcon /></button> : null}
         <button class="btn icon" onClick={() => startCombat(null)} aria-label="Combat" title="Combat"><SwordsIcon /></button>
         {canPass ? <button class="btn icon pass" onClick={passTurn} aria-label="Pass turn" title="End the turn"><HourglassIcon /></button> : null}
-        {hasCombatMarks ? <button class="btn warn" onClick={endCombat}>End combat</button> : null}
+        {hasCombatMarks ? <button class="btn icon" onClick={endCombat} aria-label="End combat" title="End combat"><EndCombatIcon /></button> : null}
         {matchSet?.size ? <button class="btn on" onClick={() => dispatch({ type: 'match', cardId: null })}>Clear highlight</button> : null}
-        {openSlots.length ? <button class="btn" onClick={() => dispatch({ type: 'closeSlots' })}>{openSlots.length > 1 ? 'Close slots' : 'Close slot'}</button> : null}
         {/* No ⚔ Attack chip here: attackers are marked in combat mode. */}
         <CounterChips label={label} attack={false} />
         <button class="btn icon token-btn" data-trash onClick={() => setSheet({ kind: 'tokens' })} aria-label="Tokens" title="Tokens (drop a token here to remove it)"><PawnIcon /></button>

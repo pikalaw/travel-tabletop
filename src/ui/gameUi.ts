@@ -54,7 +54,6 @@ export type UiAction =
   | { type: 'libraryN'; n: number }
   | { type: 'openSlot'; zone: ZoneId }
   | { type: 'closeSlot'; zone: ZoneId }
-  | { type: 'closeSlots' }
   | { type: 'sheet'; sheet: SheetState | null }
   | { type: 'full'; full: FullState | null }
   | { type: 'match'; cardId: string | null }
@@ -89,7 +88,6 @@ export function uiReducer(s: UiState, a: UiAction): UiState {
     case 'libraryN': return s.mode.kind === 'library' ? { ...s, mode: { ...s.mode, n: Math.max(1, Math.min(99, a.n)) } } : s;
     case 'openSlot': return s.openSlots.includes(a.zone) ? s : { ...s, openSlots: [...s.openSlots, a.zone] };
     case 'closeSlot': return { ...s, openSlots: s.openSlots.filter((z) => z !== a.zone) };
-    case 'closeSlots': return { ...s, openSlots: [] };
     case 'sheet': return { ...s, sheet: a.sheet };
     case 'full': return { ...s, full: a.full };
     case 'match': return { ...s, match: a.cardId };
