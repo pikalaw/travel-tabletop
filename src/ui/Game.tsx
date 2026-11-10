@@ -97,7 +97,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
 
   // ----- session events -----
   useEffect(() => {
-    const addLine = (text: string, alert: boolean | undefined) => setLines((ls) => [...ls.slice(-199), { text, alert: !!alert, time: clockTime() }]);
+    const addLine = (text: string, alert: boolean | undefined) => setLines((ls) => [...ls, { text, alert: !!alert, time: clockTime() }]);
     const offState = session.subscribe((info) => {
       setTick((t) => t + 1);
       if (info?.text) {

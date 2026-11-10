@@ -113,11 +113,10 @@ export const clockTime = (d: Date = new Date()): string => d.toLocaleTimeString(
 
 /**
  * The log sheet's lines for a stored game log, so a resumed game shows what happened before: the
- * commands, notices and undos, with the text and alerts they had live, the last 200.
+ * commands, notices and undos, with the text and alerts they had live, from the start of the game.
  */
 export function logLines(entries: readonly LogEntry[]): LogLine[] {
   return entries
     .filter((e) => e.text && (e.kind === 'command' || e.kind === 'notice' || e.kind === 'undo'))
-    .slice(-200)
     .map((e) => ({ text: e.text!, alert: !!(e.alert ?? e.notice?.alert), time: clockTime(new Date(e.ts)) }));
 }

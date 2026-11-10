@@ -14,7 +14,9 @@ test('a resumed game\'s log sheet shows what happened before', async ({ page }) 
   await expect(page.locator('.ticker-text')).toHaveText(before);
   await page.locator('.ticker-text').click();
   const sheet = page.locator('.sheet');
-  await expect(sheet).toContainText(before);
-  await expect(sheet).toContainText('New game');
+  // newest first, back to the start of the game
+  const items = sheet.locator('.log-list li');
+  await expect(items.first()).toContainText(before);
+  await expect(items.last()).toContainText('New game');
   errs.expectNone();
 });

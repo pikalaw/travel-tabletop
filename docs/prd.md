@@ -265,7 +265,7 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 
 ## Action log
 
-Every game produces a complete record of what happened, kept for review and as future LLM training data. The footer ticker shows the latest action, and Recent actions lists the last 200 lines with times, including after the game is resumed (on the device that hosts it).
+Every game produces a complete record of what happened, kept for review and as future LLM training data. The footer ticker shows the latest action, and Recent actions lists every line since the game began, newest first, with times, including after the game is resumed (on the device that hosts it).
 
 For every action the record captures:
 

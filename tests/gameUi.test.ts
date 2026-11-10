@@ -64,10 +64,10 @@ describe('log lines from a stored log', () => {
     ]);
     expect(lines[0]!.time).toMatch(/\d/);
   });
-  it('keeps the last 200', () => {
-    const many = Array.from({ length: 250 }, (_, i) => entry(i + 1, 'command', { text: `line ${i + 1}` }));
+  it('keeps the whole log, from the start of the game', () => {
+    const many = Array.from({ length: 2500 }, (_, i) => entry(i + 1, 'command', { text: `line ${i + 1}` }));
     const lines = logLines(many);
-    expect(lines).toHaveLength(200);
-    expect(lines[0]!.text).toBe('line 51');
+    expect(lines).toHaveLength(2500);
+    expect(lines[0]!.text).toBe('line 1');
   });
 });
