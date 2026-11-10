@@ -12,7 +12,7 @@ import { saveFile } from './files';
 import { attachGestures, type Drop, type GestureHandlers, type Gestures } from './gestures';
 import { setGameLink } from './link';
 import {
-  CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, AwaySheet, Sheet, zoneTitle, gameTokens,
+  CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, AwaySheet, Sheet, gameTokens,
   type FullRow, type LogLine, type MenuItem,
 } from './Overlays';
 import { initialUi, uiReducer, clockTime, roleOf, type SheetState } from './gameUi';
@@ -219,6 +219,12 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     if (el.dataset.badge && !el.closest('.full-wrap')) el = el.closest<HTMLElement>('[data-card]') || el;
     // The matchup highlight stays while you tap its cards; a tap anywhere else clears it.
     if (match && !el.dataset.card) dispatch({ type: 'match', cardId: null });
+    // The library footer stays while you work with a library (its sheets, or a library pile); a tap
+    // anywhere else goes back to the main footer and still does what it does. Drags never close it.
+    if (lib && !el.closest('.sheet')) {
+      const z = zoneAttr(el) ?? (isZone(el.dataset.slot) ? el.dataset.slot : null) ?? el.closest<HTMLElement>('[data-slot]')?.dataset.slot;
+      if (!isZone(z) || zoneKind(z) !== 'library') toNormal();
+    }
     if ((attaching || combat) && slotTap(el)) return;
     if (attaching) {
       const targetId = el.dataset.card;
@@ -568,7 +574,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     { label: 'Leave to home screen', onClick: onExit },
   ];
 
-  const ctx: BoardCtx = { state, viewer, art, pointed: null, selected: combat ? combat.blocker?.cardId : null, match: match ? matchupIds(state, match) : null };
+  const ctx: BoardCtx = { state, viewer, art, pointed: null, selected: combat ? combat.blocker?.cardId : null, match: match ? matchupIds(state, match) : null, library: lib };
   const fullZone: ZoneId | null = full ? (findZone(state, full.cardId) || full.zone) : null;
   const isOffline = session.kind !== 'same-device' && session.status !== 'open';
   // The full view's row: the anchor's group (host first, then its attachments), then the host's
@@ -604,17 +610,17 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     };
     footer = (
       <div class="bar">
-        {a.flip ? <button class="btn" onClick={() => send('flip', { cardId: card.id, from: fullZone })}>Flip</button> : null}
-        {a.faceDown ? <button class="btn" onClick={() => send('setFaceDown', { cardId: card.id, from: fullZone, value: !card.faceDown })}>{card.faceDown ? 'Face up' : 'Face down'}</button> : null}
+        {/* No Tap button (a tap on the picture taps) and no Attack button (drag the ⚔ Attack tag on, the mark off). */}
         {a.reveal ? <button class="btn" onClick={() => revealCard(card, fullZone)}>Reveal</button> : null}
-        {a.tap ? <button class="btn" onClick={() => send('tap', { cardId: card.id, from: fullZone })}>{card.tapped ? 'Untap' : 'Tap'}</button> : null}
-        {a.attack ? <button class="btn" onClick={() => send('attack', { cardId: card.id, from: fullZone, tap: true })}>{card.attacking ? 'Stop attacking' : 'Attack'}</button> : null}
         {a.block ? <button class="btn" onClick={() => { startCombat({ cardId: card.id, zone: fullZone }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Block</button> : null}
         {a.detach ? <button class="btn" onClick={() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button> : null}
         {a.attach ? <button class="btn" onClick={() => { dispatch({ type: 'mode', mode: { kind: 'attach', cardId: card.id, zone: fullZone } }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Attach</button> : null}
         {a.makeLead ? <button class="btn" onClick={() => send('setLead', { cardId: card.id, from: fullZone })}>Make lead</button> : null}
         {groupSize > 0 ? <button class="btn" onClick={detachAll}>Detach all</button> : null}
         {a.counters ? <CounterChips label={label} attack={showAttack} /> : null}
+        {/* Rarely used, so last. */}
+        {a.flip ? <button class="btn" onClick={() => send('flip', { cardId: card.id, from: fullZone })}>Flip</button> : null}
+        {a.faceDown ? <button class="btn" onClick={() => send('setFaceDown', { cardId: card.id, from: fullZone, value: !card.faceDown })}>{card.faceDown ? 'Face up' : 'Face down'}</button> : null}
         <span class="spacer" />
         <button class="btn icon primary" onClick={closeFull} aria-label="Close" title="Close"><CloseIcon /></button>
       </div>
@@ -651,7 +657,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     const setN = (n: number) => dispatch({ type: 'libraryN', n });
     footer = (
       <div class="bar lib">
-        <span class="lib-counts">{zoneTitle(state, lib)}: <b>{state.zones[lib].length}</b> · other: {state.zones[`${other(libOwner)}.library`].length}</span>
         <span class="stepper"><button class="btn round" onClick={() => setN(libN - 1)}>−</button><b>{libN}</b><button class="btn round" onClick={() => setN(libN + 1)}>+</button></span>
         {mine ? <button class="btn" onClick={libActions.draw}>Draw {libN}</button> : null}
         <button class="btn" onClick={libActions.mill}>Mill {libN}</button>

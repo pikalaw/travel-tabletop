@@ -19,9 +19,9 @@ describe('fullModel', () => {
     const { h, a } = table();
     const m = fullModel(h.state, a, 'p1.battlefield', 'p1')!;
     expect(m).toMatchObject({ title: h.state.cards[a].name, caption: null, abilityText: null, offersAbilities: true, tapToggle: true });
-    expect(m.actions).toMatchObject({ tap: true, attack: true, block: false, flip: true, attach: true, counters: true, reveal: false });
-    // attack or block follows the card's side, not who is looking
-    expect(fullModel(h.state, a, 'p1.battlefield', 'p2')!.actions).toMatchObject({ attack: true, block: false });
+    expect(m.actions).toMatchObject({ block: false, flip: true, attach: true, counters: true, reveal: false });
+    // Block follows the card's side, not who is looking
+    expect(fullModel(h.state, a, 'p1.battlefield', 'p2')!.actions).toMatchObject({ block: false });
   });
 
   it('the stack: position caption, top resolves first; an ability item offers only what makes sense', () => {
@@ -33,7 +33,7 @@ describe('fullModel', () => {
     const spell = fullModel(h.state, b, 'stack', 'p1')!;
     // a card already on the stack offers no abilities to put there
     expect(spell).toMatchObject({ caption: 'Stack 2 of 2', offersAbilities: false, tapToggle: false });
-    expect(spell.actions).toMatchObject({ flip: true, attach: true, tap: false, attack: false, block: false });
+    expect(spell.actions).toMatchObject({ flip: true, attach: true, block: false });
   });
 
   it('hidden faces: a card in the other hand is a hidden card; a face-down ability hides its source', () => {

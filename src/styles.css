@@ -289,7 +289,6 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .chip.plus { color: #9be7a8; } .chip.minus { color: #ffa29a; } .chip.label { color: #d7c58f; }
 .stepper { display: inline-flex; align-items: center; gap: 6px; }
 .stepper b { min-width: 20px; text-align: center; }
-.lib-counts { font-size: 12px; color: var(--ink-2); }
 
 /* Sheets */
 .sheet {
@@ -427,6 +426,8 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .mark.atk { background: #b8322a; color: #fff; font-size: 10px; }
 .mark.blk { background: #2f5fa8; color: #fff; font-size: 10px; }
 .card.selected .card-inner { outline: 3px solid #5aa0ff; outline-offset: 1px; border-radius: 6px; }
+/* The library the library footer acts on. */
+.pile.picked { outline: 2px solid #c9a65a; outline-offset: -2px; border-radius: var(--radius); }
 .bar.combat { background: #1a1210; }
 .bar.combat .attach-hint { flex: 1; min-width: 0; white-space: normal; font-size: 12px; line-height: 1.25; }
 .bar.combat .btn { flex: none; }

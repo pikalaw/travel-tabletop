@@ -19,6 +19,8 @@ export interface BoardCtx {
   selected: string | null | undefined;
   /** Cards in the highlighted combat matchup. */
   match: Set<string> | null;
+  /** The library the library footer is acting on, outlined so it is clear whose it is. */
+  library?: ZoneId | null;
 }
 export const BACK_URL: string = backSvg;
 export const RATIO = 63 / 88; // card width / height
@@ -314,7 +316,7 @@ export function Pile({ ctx, zone, label, layout = 'pile', topOverride = false, a
   const top = ids[0] ? ctx.state.cards[ids[0]] : null;
   const cardH = Math.max(28, Math.min(h - 18, (w - 6) / RATIO));
   return (
-    <div ref={ref} class="pile" data-drop={zone} data-layout={layout} data-tap="pile" data-slot={zone}>
+    <div ref={ref} class={`pile ${ctx.library === zone ? 'picked' : ''}`} data-drop={zone} data-layout={layout} data-tap="pile" data-slot={zone}>
       <span class="slot-label">
         <span class="slot-name">{label}</span>
         <b>{ids.length}</b>

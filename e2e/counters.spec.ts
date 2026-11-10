@@ -57,6 +57,7 @@ test('counter badges in the full view by touch: drag off, + and − buttons', as
   const page = await ctx.newPage();
   const cdp = await ctx.newCDPSession(page);
   const tdrag = async (src: Parameters<typeof point>[1], dst: Parameters<typeof point>[1]) => {
+    if (typeof src === 'string') await page.locator(src).scrollIntoViewIfNeeded(); // a footer tag
     const a = await point(page, src), b = await point(page, dst);
     await touchSwipe(cdp, page, a.x, a.y, b.x, b.y, { steps: 14 });
   };
@@ -67,7 +68,6 @@ test('counter badges in the full view by touch: drag off, + and − buttons', as
   const c = await point(page, bf.locator('[data-card]').first());
   await touchSwipe(cdp, page, c.x, c.y, c.x, c.y, { steps: 1, holdBefore: 700 });
   await expect(page.locator('.fullcard')).toHaveCount(1);
-  await page.locator('.bar').first().evaluate((e) => { e.scrollLeft = e.scrollWidth; });
   const fi = page.locator('.card-frame-pic');
   for (let i = 0; i < 2; i++) await tdrag('[data-counter="minus"]', fi);
   const mb = page.locator('.full-badges .badge.minus');

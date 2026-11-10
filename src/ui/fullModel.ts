@@ -8,8 +8,7 @@ export interface FullActions {
   flip: boolean;
   faceDown: boolean;
   reveal: boolean;
-  tap: boolean;
-  attack: boolean;
+  /** Not for a creature on the active player's side: it is marked attacking with the ⚔ Attack tag. */
   block: boolean;
   attach: boolean;
   detach: boolean;
@@ -31,7 +30,7 @@ export interface FullModel {
   caption: string | null;
   /** List the card's abilities, to put one on the stack (not for a card already on the stack). */
   offersAbilities: boolean;
-  /** A tap on the picture taps or untaps the card. */
+  /** A tap on the picture taps or untaps the card (there is no Tap button). */
   tapToggle: boolean;
   actions: FullActions;
 }
@@ -61,8 +60,6 @@ export function fullModel(state: GameState, cardId: string, zone: ZoneId, viewer
       flip: isCard,
       faceDown: isCard,
       reveal: kind === 'hand',
-      tap: field,
-      attack: attacker,
       block: field && !attacker,
       attach: isCard && !card.attachedTo && kind !== 'library',
       detach: !!card.attachedTo,

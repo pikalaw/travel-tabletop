@@ -48,11 +48,14 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   // hold above the card's counter badge, which covers its middle on a small card
   await longPress(page, field.first(), 0.5, 0.2);
   await expect(page.locator('.fullcard')).toHaveCount(1);
+  // no Tap or Attack buttons: a tap on the picture taps, and the ⚔ Attack tag marks attackers
+  await expect(page.locator('.bar').first().getByRole('button', { name: /^(Tap|Untap|Attack|Stop attacking)$/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'Flip' }).click();
   await barButton(page, 'Close');
 
   // look at the top 3, move one to the graveyard
   await page.locator('.c33 .pile').click();
+  await expect(page.locator('.c33 .pile')).toHaveClass(/\bpicked\b/); // the library the footer acts on
   const plus = page.locator('.bar').getByRole('button', { name: '+' });
   await plus.click(); await plus.click();
   await page.getByRole('button', { name: 'Look at top 3' }).click();
@@ -61,7 +64,12 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   await expect(page.locator('.c43 .slot-label b')).toHaveText('1');
   await expect(page.locator('.sheet [data-card]')).toHaveCount(2);
   await page.locator('.sheet').getByRole('button', { name: 'Done' }).click();
-  await barButton(page, 'Done');
+  // still the library footer after its sheet; a tap elsewhere on the board goes back to the main footer
+  await expect(page.locator('.bar.lib')).toHaveCount(1);
+  await page.locator('.counters-cell').click();
+  await expect(page.locator('.bar.lib')).toHaveCount(0);
+  await expect(page.locator('.c33 .pile')).not.toHaveClass(/\bpicked\b/);
+  await page.locator('.sheet').getByRole('button', { name: 'Done' }).click();
 
   // tokens: create by drag, remove by dragging onto the Tokens button
   await barButton(page, 'Tokens');
