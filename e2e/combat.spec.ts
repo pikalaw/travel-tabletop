@@ -72,7 +72,7 @@ test('combat mode: attackers tap, Vigilance once, blockers, double block; End co
   await resetBar(page); await barButton(page, 'End combat');
   await answerDialog(page, true);
   for (const id of [...a, ...d]) await expect(page.locator(`.board [data-card="${id}"] .mark.atk, .board [data-card="${id}"] .mark.blk`)).toHaveCount(0);
-  await barButton(page, 'Undo');
+  await barButton(page, 'Undo'); await answerDialog(page, true);
   await expect(marks(page, d[1]!).locator('.mark.blk')).toHaveCount(2);
   await resetBar(page); await barButton(page, 'Pass turn');
   await answerDialog(page, true);

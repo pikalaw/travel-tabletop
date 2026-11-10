@@ -73,7 +73,6 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .btn.icon { padding: 8px; display: grid; place-items: center; color: var(--ink-3); }
 /* Footer icon buttons: square, in the ink colour; Undo is set apart from the rest by a gap. */
 .bar .btn.icon { min-width: 42px; padding: 4px 9px; color: var(--ink); }
-.bar .btn.icon.undo { margin-right: 18px; }
 .bar .btn.icon.pass { color: var(--hot); }
 .bar .btn.icon.primary { color: #17130a; } .bar .btn.icon.warn { color: #ffd2b8; }
 .winner { color: #e8c25a; }

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { drag, longPress, startOneDevice, unblind, barButton, watchErrors } from './helpers';
+import { drag, longPress, startOneDevice, unblind, barButton, watchErrors, answerDialog } from './helpers';
 
 test.use({ viewport: { width: 844, height: 390 } });
 
@@ -36,6 +36,13 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   await barButton(page, 'Done');
 
   await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.locator('.confirm-box.plain')).toContainText('Undo the last change?');
+  await answerDialog(page, true);
+  // Untap all asks first too; Cancel changes nothing
+  await barButton(page, 'Untap all');
+  await expect(page.locator('.confirm-box.plain')).toContainText('Untap all of Player 1’s cards?');
+  await answerDialog(page, false);
+  await expect(page.locator('.confirm-box')).toHaveCount(0);
   await expect(hand).toHaveCount(6);
 
   // hold above the card's counter badge, which covers its middle on a small card

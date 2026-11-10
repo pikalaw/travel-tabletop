@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { drag, startTwoDevices, pairByText, barButton, watchErrors } from './helpers';
+import { drag, startTwoDevices, pairByText, barButton, watchErrors, answerDialog } from './helpers';
 
 test.use({ viewport: { width: 844, height: 390 } });
 
@@ -32,7 +32,7 @@ test('two devices: pair by text, play, alerts, pointing, undo, dice', async ({ b
   await expect(G.locator('.pointer-ring')).toHaveCount(1);
 
   // the guest undoes its move
-  await G.getByRole('button', { name: 'Undo' }).click();
+  await G.getByRole('button', { name: 'Undo' }).click(); await answerDialog(G, true);
   await expect(H.locator('.c22 [data-card]')).toHaveCount(0);
 
   // dice results show on both devices
@@ -74,7 +74,7 @@ test('two devices: the guest leaves and reconnects; the host resumes after a rel
   await H.waitForSelector('.board');
   await expect(H.locator('.c42 [data-card]')).toHaveCount(1);
   await expect(H.locator('.c22 [data-card]')).toHaveCount(1);
-  await H.getByRole('button', { name: 'Undo' }).click();
+  await H.getByRole('button', { name: 'Undo' }).click(); await answerDialog(H, true);
   await expect(H.locator('.c42 [data-card]')).toHaveCount(0);
 
   // export the action log

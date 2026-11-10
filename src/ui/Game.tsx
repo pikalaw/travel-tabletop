@@ -303,6 +303,17 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     setCombat(blocker?.cardId === id ? null : { cardId: id, zone });
   }
 
+  /** Undo asks first: it takes back the latest change by either player, and there is no redo. */
+  function undo() {
+    void confirmBox({ title: 'Undo the last change?', body: 'This takes back the most recent change to the board, by either player. There’s no redo.', ok: 'Undo' })
+      .then((yes) => { if (yes) send('undo', {}); });
+  }
+
+  function untapAll() {
+    void confirmBox({ title: `Untap all of ${state.players[actingPlayer].name}’s cards?`, ok: 'Untap all' })
+      .then((yes) => { if (yes) send('untapAll', { player: actingPlayer }); });
+  }
+
   function passTurn() {
     const from = state.players[state.activePlayer].name, to = state.players[other(state.activePlayer)].name;
     void confirmBox({ title: `End ${from}’s turn?`, body: `The turn passes to ${to}, whose cards untap.`, ok: `Pass to ${to}` })
@@ -655,11 +666,10 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     );
   } else {
     footer = (
-      // Most used first, as icons where a symbol is clear. Undo sits apart at the edge: there is no
-      // redo, so a stray tap on it costs an action. Buttons shown only sometimes come after End turn,
-      // so the everyday ones never move.
+      // Most used first, as icons where a symbol is clear. Buttons shown only sometimes come after End
+      // turn, so the everyday ones never move. Undo sits at the far right by the menu, away from the
+      // rest, and asks first: there is no redo, so a stray tap would cost an action.
       <div class="bar">
-        <button class="btn icon undo" onClick={() => send('undo', {})} aria-label="Undo" title="Undo the last action"><UndoIcon /></button>
         {same && viewer !== 'nobody' ? <button class="btn icon warn" onClick={blind} aria-label="Blind my hand" title="Blind my hand"><EyeOffIcon /></button> : null}
         {same && viewer === 'nobody' ? <button class="btn icon primary" onClick={() => dispatch({ type: 'choosing', open: true })} aria-label="Unblind" title="Unblind"><EyeIcon /></button> : null}
         <button class="btn icon" onClick={() => startCombat(null)} aria-label="Combat" title="Combat"><SwordsIcon /></button>
@@ -673,8 +683,9 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         <button class="btn icon" onClick={() => setSheet({ kind: 'dice' })} aria-label="Dice" title="Dice and random"><DieIcon /></button>
         <button class={`btn icon ${pointMode ? 'on' : ''}`} aria-pressed={pointMode} onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}
           aria-label="Point" title={pointMode ? 'Tap a card to point at it' : 'Point at a card'}><PointIcon /></button>
-        <button class="btn icon" onClick={() => send('untapAll', { player: actingPlayer })} aria-label="Untap all" title="Untap all"><UntapIcon /></button>
+        <button class="btn icon" onClick={untapAll} aria-label="Untap all" title="Untap all"><UntapIcon /></button>
         <span class="spacer" />
+        <button class="btn icon" onClick={undo} aria-label="Undo" title="Undo the last change"><UndoIcon /></button>
         <button class="btn icon" onClick={() => setSheet({ kind: 'menu' })} aria-label="Menu">☰</button>
       </div>
     );

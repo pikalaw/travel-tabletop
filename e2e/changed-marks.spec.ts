@@ -35,7 +35,7 @@ test('changed marks: a left border in the changer\'s role colour, cleared by the
   await expect(bar(c!)).toHaveClass(/\batk\b/);
   for (const id of [a!, b!]) await expect(bar(id)).toHaveCount(0);
   // undo brings the previous turn's marks back
-  await page.getByRole('button', { name: 'Undo' }).click();
+  await page.getByRole('button', { name: 'Undo' }).click(); await answerDialog(page, true);
   await expect(bar(a!)).toHaveClass(/\bdef\b/);
   errs.expectNone();
 });
@@ -65,7 +65,7 @@ test('one device: passing the turn turns the blinded board to the next player; u
   await expect(board).toHaveClass(/\bpersp-p1\b/);
   await resetBar(page); await barButton(page, 'Pass turn'); await answerDialog(page, true);
   await expect(board).toHaveClass(/\bpersp-p2\b/); // blinded, facing Player 2
-  await page.getByRole('button', { name: 'Undo' }).click();
+  await page.getByRole('button', { name: 'Undo' }).click(); await answerDialog(page, true);
   await expect(page.locator('.turn-label')).toContainText('Turn 1', { ignoreCase: true });
   await expect(board).toHaveClass(/\bpersp-p1\b/);
   errs.expectNone();
