@@ -119,9 +119,15 @@ export function Setup({ go, startGame }: { go: Go; startGame: StartGame }) {
         </label>
       ) : null}
       <div class="setup-grid">
-        {playerForm('p1', mode === 'same' ? 'Player 1' : 'You')}
+        {playerForm('p1', mode === 'same' ? 'Player 1 (goes first)' : 'You')}
         {mode === 'same' ? playerForm('p2', 'Player 2') : null}
       </div>
+      {mode === 'same' ? (
+        // Player 1 goes first, so swapping the players' names and decks changes who starts.
+        <div class="swap-row">
+          <button class="btn" onClick={() => { setNames({ p1: names.p2, p2: names.p1 }); setPick({ p1: pick.p2, p2: pick.p1 }); }}>⇅ Swap who goes first</button>
+        </div>
+      ) : null}
       {mode !== 'join' ? (
         <div class="life-pick">Starting life
           {[20, 30, 40].map((v) => <button class={`btn ${life === v ? 'on' : 'ghost'}`} onClick={() => setLife(v)}>{v}</button>)}
