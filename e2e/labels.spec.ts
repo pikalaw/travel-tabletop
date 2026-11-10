@@ -88,3 +88,15 @@ test('"tap to open" shows on a collapsed row and on a single attached group; "ta
   expect(await pseudo(page, '[data-drop="p1.battlefield"]', '::after')).toBe('none');
   expect(await pseudo(page, '.row-box:has([data-drop="p1.battlefield"])', '::before')).toBe('"tap to close"');
 });
+
+test('a narrow side slot shortens its name, never its count', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await startOneDevice(page);
+  for (const zone of ['p1.library', 'p2.library', 'p1.graveyard', 'p1.exile']) {
+    const label = page.locator(`[data-drop="${zone}"] .slot-label`);
+    const box = (await label.boundingBox())!, count = (await label.locator('b').boundingBox())!;
+    await expect(label.locator('b')).toBeVisible();
+    expect(count.x + count.width).toBeLessThanOrEqual(box.x + box.width + 0.5);
+  }
+  await page.screenshot({ path: 'test-results/narrow-labels.png' });
+});

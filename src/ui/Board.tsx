@@ -66,7 +66,6 @@ export function Board({ ctx, P, openSlots }: { ctx: BoardCtx; P: PlayerId; openS
   // A player's name in the attacker (hot) or defender (cool) colour.
   const who = (pl: PlayerId) => <span class={st.activePlayer === pl ? 'role-atk' : 'role-def'}>{name(pl)}</span>;
   const O = other(P);
-  const topFace = (zone: ZoneId) => !!st.players[zone.split('.')[0] as PlayerId].libraryTopFaceUp;
   const row = (zone: ZoneId, label: ComponentChildren, cls = '') => (
     <Row ctx={ctx} zone={zone} ids={st.zones[zone]} open={openSlots.includes(zone)} label={label} extraClass={cls} />
   );
@@ -83,12 +82,12 @@ export function Board({ ctx, P, openSlots }: { ctx: BoardCtx; P: PlayerId; openS
       <div class="cell c21 opp">{<Pile ctx={ctx} zone={z.oppCmd} label="Command" />}</div>
       <div class="cell c22 opp">{row(z.oppField, <>{who(O)} · battlefield</>)}</div>
       <div class="cell c23 opp">
-        {<Pile ctx={ctx} zone={z.oppLib} label="Library" layout="library" extraClass={topFace(z.oppLib) ? 'top-up' : ''} />}
+        {<Pile ctx={ctx} zone={z.oppLib} label="Library" layout="library" />}
       </div>
       <div class="cell c31 me">{<Pile ctx={ctx} zone={z.myCmd} label="Command" />}</div>
       <div class="cell c32 me">{row(z.myField, <>{who(P)} · battlefield</>, 'field')}</div>
       <div class="cell c33 me">
-        {<Pile ctx={ctx} zone={z.myLib} label="Library" layout="library" extraClass={topFace(z.myLib) ? 'top-up' : ''} />}
+        {<Pile ctx={ctx} zone={z.myLib} label="Library" layout="library" />}
       </div>
       <div class="cell c41 me">{<Pile ctx={ctx} zone={z.myExile} label="Exile" />}</div>
       <div class="cell c42 me">{row(z.myLands, <>{who(P)} · lands</>)}</div>

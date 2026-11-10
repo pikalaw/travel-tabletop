@@ -135,10 +135,12 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 
 .slot-label {
   position: absolute; left: 6px; top: 3px; z-index: 1; font-size: 10px; letter-spacing: .3px;
-  color: var(--ink-3); pointer-events: none; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; max-width: calc(100% - 10px);
-  text-transform: uppercase;
+  color: var(--ink-3); pointer-events: none; white-space: nowrap; max-width: calc(100% - 10px);
+  text-transform: uppercase; display: flex; gap: .35em;
 }
-.slot-label b { color: var(--ink-2); font-weight: 600; }
+/* A narrow slot shortens its name ("LIBR… 50"), never its count. */
+.slot-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.slot-label b { color: var(--ink-2); font-weight: 600; flex-shrink: 0; }
 .slot-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-3); font-size: 13px; pointer-events: none; }
 
 /* Rows */
@@ -175,7 +177,6 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 body.dragging .pile[data-layout="library"].drop-hover .drop-hint { display: block; position: absolute; left: 0; right: 0; text-align: center; font-size: 10px; font-weight: 700; padding: 2px; z-index: 2; background: rgba(0,0,0,.55); text-transform: uppercase; }
 .pile .drop-hint.top { top: 0; } .pile .drop-hint.bottom { bottom: 0; }
 .pile.drop-top .drop-hint.top, .pile.drop-bottom .drop-hint.bottom { background: #c9a65a; color: #111; }
-.pile.top-up .slot-label::after { content: " · top up"; color: var(--warn); }
 
 /* Cards */
 .card { position: relative; flex: none; display: flex; align-items: center; justify-content: center; touch-action: inherit; }
@@ -221,7 +222,7 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 
 /* Counters cell */
 .counters-cell { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-around; padding: 4px 6px; cursor: pointer; }
-.counters-cell .turn-label { position: static; max-width: none; white-space: normal; line-height: 1.15; font-weight: 600; }
+.counters-cell .turn-label { display: block; position: static; max-width: none; white-space: normal; line-height: 1.15; font-weight: 600; }
 /* Opponent's hand size, right-aligned on their lands row; that row's tap hints move to the bottom. */
 .opp-hand { position: absolute; right: 6px; top: 3px; z-index: 2; font-size: 10px; letter-spacing: .3px; color: var(--ink-2); pointer-events: none; text-transform: uppercase; white-space: nowrap; }
 /* While dragging, the other player's hand count is a drop target for their hand. */

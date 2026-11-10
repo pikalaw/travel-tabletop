@@ -248,15 +248,8 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
     <div class={`row-box ${scrolls || fanned ? 'open' : ''}`}>
       {label ? (
         <span class="slot-label">
-          {label}
-          {ids.length ? (
-            <>
-              {' '}
-              <b>{ids.length}</b>
-            </>
-          ) : (
-            ''
-          )}
+          <span class="slot-name">{label}</span>
+          {ids.length ? <b>{ids.length}</b> : null}
         </span>
       ) : null}
       <div
@@ -312,19 +305,19 @@ export interface PileProps {
   all?: boolean;
   layout?: 'pile' | 'library';
   topOverride?: boolean;
-  extraClass?: string;
-}
+  }
 
-export function Pile({ ctx, zone, label, layout = 'pile', topOverride = false, extraClass = '', all = false }: PileProps) {
+export function Pile({ ctx, zone, label, layout = 'pile', topOverride = false, all = false }: PileProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { w, h } = useSize(ref);
   const ids = ctx.state.zones[zone] || [];
   const top = ids[0] ? ctx.state.cards[ids[0]] : null;
   const cardH = Math.max(28, Math.min(h - 18, (w - 6) / RATIO));
   return (
-    <div ref={ref} class={`pile ${extraClass}`} data-drop={zone} data-layout={layout} data-tap="pile" data-slot={zone}>
+    <div ref={ref} class="pile" data-drop={zone} data-layout={layout} data-tap="pile" data-slot={zone}>
       <span class="slot-label">
-        {label} <b>{ids.length}</b>
+        <span class="slot-name">{label}</span>
+        <b>{ids.length}</b>
       </span>
       {top && h > 0 ? (
         <div class="pile-card">

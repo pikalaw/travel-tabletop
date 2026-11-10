@@ -66,13 +66,13 @@ Each player sees the same 5×3 grid from their own side: rows 1–2 are the oppo
 
 ## Zones and interactions
 
-Any card can be dragged from any slot to any slot, including the opponent's slots; each slot differs only in how it displays cards and which actions it offers.
+Any card can be dragged from any slot to any slot, including the opponent's slots; each slot differs only in how it displays cards and which actions it offers. Each slot's label names the zone and gives its count; on a narrow screen the name is shortened ("LIB… 33"), never the count.
 
 | Slot | Display | Tap on a card | Tap on the slot |
 | --- | --- | --- | --- |
 | Battlefield, lands | Face up, a row; overlaps when full. A tapped card turns a quarter to the right, as in paper Magic | Tap or untap | Open or close it |
 | Hand | Owner sees faces; others see backs; overlaps when full | — | Open or close it |
-| Library | Pile, face down; the top card shows face up only with "Top face up" | — | Library actions in the footer |
+| Library | Pile, face down; the top card shows face up only with "Top face up" (the face-up card is the only sign; no label tag) | — | Library actions in the footer |
 | Graveyard | Pile, face up, top card shown | — | A sheet listing the whole zone |
 | Exile | Pile, face up unless set face-down | — | A sheet listing the zone |
 | Command | Pile, face up | — | A sheet listing the zone |
