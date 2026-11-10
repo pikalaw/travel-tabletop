@@ -102,9 +102,9 @@ export function ReadCode({ onCode, prompt }: { onCode: (code: string) => void | 
 /** How this device's code says it can be reached; a warning when only hidden names are offered. */
 function ReachNote({ reach }: { reach: Reachability }) {
   return (
-    <p class={`muted small reach ${reach.direct ? '' : 'warn'}`}>
+    <p class={`muted small reach ${reach.direct || reach.relay ? '' : 'warn'}`}>
       This code offers {describeReachability(reach)}.
-      {reach.direct ? null : ' The other device may not find this one: allow the camera when asked, or connect both to the same Wi-Fi network.'}
+      {reach.direct || reach.relay ? null : ' The other device may not find this one: allow the camera when asked, connect both to the same Wi-Fi network, or connect to the internet for the relay.'}
     </p>
   );
 }

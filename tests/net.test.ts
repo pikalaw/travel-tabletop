@@ -4,6 +4,9 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import { encodeSignal, decodeSignal } from '../src/transport/codec';
+import { iceServers } from '../src/transport/ice';
+import { reachability } from '../src/transport/webrtc';
+import { createHmac } from 'node:crypto';
 import { memoryPair, frames, Reassembler } from '../src/transport/transport';
 import { Host } from '../src/host/host';
 import { LocalSession, GuestSession, type Rejection } from '../src/client/session';
@@ -24,6 +27,26 @@ describe('pairing codec', () => {
     expect(back.sdp).toContain('typ host');
     expect(() => decodeSignal('hello')).toThrow();
     expect(() => decodeSignal('MTG1oAAAA')).toThrow();
+  });
+});
+
+describe('internet route', () => {
+  const cand = (type: string, ip: string) => `a=candidate:1 1 udp 1 ${ip} 5000 typ ${type} generation 0`;
+  const sdp = ['v=0', cand('host', '192.168.1.20'), cand('host', 'abc.local'), cand('srflx', '203.0.113.7'), cand('relay', '198.51.100.9'),
+    'a=candidate:2 1 tcp 1 192.168.1.20 9 typ host tcptype active generation 0', ''].join('\r\n');
+  it('a pairing code keeps internet and relay addresses, and drops host TCP ones', () => {
+    const back = decodeSignal(encodeSignal('offer', sdp)).sdp;
+    expect(back).toContain('typ srflx'); expect(back).toContain('typ relay'); expect(back).not.toContain('tcptype');
+    expect(reachability(back)).toMatchObject({ direct: 1, hidden: 1, internet: 1, relay: 1 });
+  });
+  it('relay credentials follow the TURN REST scheme: "<expiry>:<name>", base64 HMAC-SHA1 of it', async () => {
+    const now = Date.UTC(2026, 10, 10);
+    const servers = await iceServers(now);
+    expect(servers[0]!.urls).toBe('stun:stun.l.google.com:19302');
+    const turn = servers[1]!;
+    expect(turn.urls).toContain('turns:staticauth.openrelay.metered.ca:443?transport=tcp');
+    expect(turn.username).toBe(`${now / 1000 + 24 * 3600}:travel-tabletop`);
+    expect(turn.credential).toBe(createHmac('sha1', 'openrelayprojectsecret').update(turn.username!).digest('base64'));
   });
 });
 
@@ -158,7 +181,7 @@ describe('handshake', () => {
 });
 
 describe('reachability', () => {
-  it('counts direct addresses and hidden .local names in a code’s candidates', async () => {
+  it('counts direct addresses, hidden .local names and internet addresses in a code’s candidates', async () => {
     const { reachability } = await import('../src/transport/webrtc');
     const sdp = [
       'a=candidate:1 1 udp 2122260223 192.168.1.20 54321 typ host generation 0',
@@ -166,6 +189,6 @@ describe('reachability', () => {
       'a=candidate:3 1 udp 2122260223 6b1f2a3c-0d4e-4f5a-9b8c-7d6e5f4a3b2c.local 54323 typ host generation 0',
       'a=candidate:4 1 udp 1686052607 203.0.113.9 54324 typ srflx raddr 0.0.0.0 rport 0',
     ].join('\r\n');
-    expect(reachability(sdp)).toEqual({ direct: 2, hidden: 1, addresses: ['192.168.1.20 udp', 'fe80::1 udp'] });
+    expect(reachability(sdp)).toEqual({ direct: 2, hidden: 1, addresses: ['192.168.1.20 udp', 'fe80::1 udp'], internet: 1, relay: 0 });
   });
 });

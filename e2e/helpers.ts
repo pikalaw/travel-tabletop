@@ -98,6 +98,8 @@ export async function unblind(page: Page, name: string) {
 export async function startOneDevice(page: Page, opts: { unblindTo?: string | null } = {}) {
   await page.goto('index.html');
   await page.getByRole('button', { name: 'New game' }).click();
+  // the decks and the last setup load just after the screen opens; Start needs a deck picked for each player
+  await expect(page.locator('.deck-check.on').first()).toBeVisible();
   await page.getByRole('button', { name: 'Start game' }).click();
   await page.waitForSelector('.board');
   const who = opts.unblindTo === undefined ? 'Player 1' : opts.unblindTo;

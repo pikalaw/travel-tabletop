@@ -17,7 +17,7 @@ Phase 1 is a two-player, offline, rules-free Magic: The Gathering tabletop, play
 
 - More than two players.
 - Rules enforcement, card-text parsing, legality checks, deck-size or card-type limits. The one exception is combat marks (see Combat marks).
-- Play over the internet.
+- A matchmaking or signalling server: over the internet, players exchange the pairing codes themselves (by message).
 - Bluetooth transport.
 - A deck editor.
 
@@ -25,10 +25,12 @@ Phase 1 is a two-player, offline, rules-free Magic: The Gathering tabletop, play
 
 The app installs from a web link onto phones and tablets and works fully offline after the first visit. Two devices connect over a shared local network, with no internet. The device that shares a hotspot can't be one of the two players (see the v2 design's risks), so a hotspot must come from a third device or a travel router.
 
+When both devices have internet access, they can also connect when they aren't on one network, or when the network keeps its devices apart (hotel and café Wi-Fi often do): the connection then goes through a free public relay (Open Relay, by Metered). The local network is always tried first, so a game on one Wi-Fi never uses the relay. The relay passes the game's messages along encrypted and can't read them; a whole game is well under a megabyte. Players in different places paste the pairing codes into a message instead of scanning them. The relay is a free, best-effort service with no guarantee it stays up; a relay of our own is planned for later.
+
 - **Devices.** iPhone, iPad, and Android phones and tablets, in any mix. It also runs in desktop browsers.
 - **Modes.** One device shared by both players, or two devices (one hosts, one joins).
 - **Host and guest.** One device hosts the game and holds the authoritative board; the other joins as guest. Either device can host.
-- **Pairing.** The host shows a QR code; the guest scans it and shows one back for the host to scan. Copying and pasting a text code works instead of scanning. The app asks for the camera first, because it needs it to scan and because it lets the two devices find each other on the local network.
+- **Pairing.** The host shows a QR code; the guest scans it and shows one back for the host to scan. Copying and pasting a text code works instead of scanning. The app asks for the camera first, because it needs it to scan and because it lets the two devices find each other on the local network. The pairing details say how the code can be reached: direct (local) addresses, internet addresses, and relay addresses.
 - **Compatibility check.** Both devices must run the same app version. Each device must also hold the card images the other side's decks use: the host checks the guest's decks, and the guest checks the cards in the host's game. Otherwise pairing stops with an error naming the missing cards.
 - **Screen stays on** during a game.
 - **Offline and updates.** After the first visit the whole app is stored on the device; the first time that finishes, a one-time message says "Ready to play offline" (from v2). A new version downloads in the background the next time the app opens online. The home screen then shows "A new version is ready" with **Update now**; the update never applies during a game. The home screen footer shows the version and installed build.

@@ -21,10 +21,13 @@ function fromB64url(text: string): Uint8Array {
   return out;
 }
 
-/** Drop SDP lines a data-channel-only LAN connection does not need, to shrink the QR code. */
+/**
+ * Drop SDP lines a data-channel connection does not need, to shrink the QR code: media extras and
+ * host TCP candidates. Internet (srflx) and relay candidates stay, for play beyond one network.
+ */
 export function slimSdp(sdp: string): string {
   return sdp.split(/\r?\n/).filter((l) => l && !/^a=(extmap|rtcp-fb|ssrc|msid)/.test(l)
-    && !/typ (srflx|relay)/.test(l) && !/ tcptype /.test(l)).join('\r\n') + '\r\n';
+    && !/ tcptype /.test(l)).join('\r\n') + '\r\n';
 }
 
 export function encodeSignal(kind: SignalKind, sdp: string): string {

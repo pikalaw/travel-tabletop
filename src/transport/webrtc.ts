@@ -1,14 +1,16 @@
 // Peer-to-peer transport over one reliable, ordered WebRTC data channel, paired by
-// exchanging one offer and one answer (QR code or pasted text). No STUN/TURN: LAN only.
+// exchanging one offer and one answer (QR code or pasted text, which can be sent by message).
+// The local network is tried first; over the internet, STUN and the Open Relay TURN relay (ice.ts).
 
 import { encodeSignal, decodeSignal } from './codec';
+import { iceServers } from './ice';
 import { Reassembler, frames, type Transport, type TransportStatus } from './transport';
 
 const PING_MS = 2000;
 const LOST_MS = 7000;
 
 /** Wait for ICE gathering to finish so one blob carries every candidate (no trickle). */
-function gathered(pc: RTCPeerConnection, timeoutMs = 4000): Promise<void> {
+function gathered(pc: RTCPeerConnection, timeoutMs = 5000): Promise<void> {
   if (pc.iceGatheringState === 'complete') return Promise.resolve();
   return new Promise((resolve) => {
     const done = () => { pc.removeEventListener('icegatheringstatechange', check); clearTimeout(t); resolve(); };
@@ -45,22 +47,29 @@ export interface Reachability {
   hidden: number;
   /** The direct addresses themselves (local network addresses, for diagnosing). */
   addresses: string[];
+  /** Internet addresses found by STUN, which work when the networks allow a direct route. */
+  internet: number;
+  /** Relay addresses on the TURN server, which work whenever both devices are online. */
+  relay: number;
 }
 
 export function reachability(sdp: string): Reachability {
-  let direct = 0, hidden = 0;
+  let direct = 0, hidden = 0, internet = 0, relay = 0;
   const addresses: string[] = [];
   for (const line of sdp.split(/\r?\n/)) {
-    const m = /^a=candidate:\S+ \d+ (\S+) \d+ (\S+) \d+ typ host/i.exec(line);
+    const m = /^a=candidate:\S+ \d+ (\S+) \d+ (\S+) \d+ typ (host|srflx|relay)/i.exec(line);
     if (!m) continue;
-    if (m[2]!.toLowerCase().endsWith('.local')) hidden++;
+    const type = m[3]!.toLowerCase();
+    if (type === 'srflx') internet++;
+    else if (type === 'relay') relay++;
+    else if (m[2]!.toLowerCase().endsWith('.local')) hidden++;
     else { direct++; addresses.push(`${m[2]} ${m[1]!.toLowerCase()}`); }
   }
-  return { direct, hidden, addresses };
+  return { direct, hidden, addresses, internet, relay };
 }
 
 export const describeReachability = (r: Reachability) =>
-  `${r.direct} direct address${r.direct === 1 ? '' : 'es'}${r.addresses.length ? ` (${r.addresses.join(', ')})` : ''}, ${r.hidden} hidden (.local)`;
+  `${r.direct} direct address${r.direct === 1 ? '' : 'es'}${r.addresses.length ? ` (${r.addresses.join(', ')})` : ''}, ${r.hidden} hidden (.local), ${r.internet} internet, ${r.relay} relay`;
 
 /** Connectivity checks seen while connecting: address pairs tried and ICE check counts. */
 interface Checks { pairs: number; succeeded: number; sent: number; answered: number; received: number }
@@ -92,7 +101,7 @@ const describeChecks = (c: Checks | null) => (c
 export async function createOffer(camera = false): Promise<{ pc: RTCPeerConnection; dc: RTCDataChannel; code: string; reach: Reachability }> {
   const cam = await openCamera(camera);
   try {
-    const pc = new RTCPeerConnection({ iceServers: [] });
+    const pc = new RTCPeerConnection({ iceServers: await iceServers() });
     const dc = pc.createDataChannel('mtg', { ordered: true });
     await pc.setLocalDescription(await pc.createOffer());
     await gathered(pc);
@@ -115,7 +124,7 @@ export async function answerOffer(offerCode: string): Promise<{ pc: RTCPeerConne
   if (kind !== 'offer') throw new Error('That is an answer code. Scan the code shown on the host device.');
   const cam = await openCamera(false);
   try {
-    const pc = new RTCPeerConnection({ iceServers: [] });
+    const pc = new RTCPeerConnection({ iceServers: await iceServers() });
     const dcP = new Promise<RTCDataChannel>((resolve) => { pc.ondatachannel = (e) => resolve(e.channel); });
     await pc.setRemoteDescription({ type: 'offer', sdp });
     await pc.setLocalDescription(await pc.createAnswer());
@@ -162,7 +171,7 @@ function openTransport(pc: RTCPeerConnection, channel: RTCDataChannel | Promise<
       checks = most(checks, await readChecks(pc));
       reject(new Error(`${message} (Details: this device offered ${describeReachability(mine)}; the other device offered ${describeReachability(other)}; states ${states.join(' → ')}; ${describeChecks(checks)}.)`));
     };
-    const timer = timeoutMs === null ? undefined : setTimeout(() => void fail('Could not connect. Make sure both devices are on the same Wi-Fi. A hotspot must come from a third device, not one of the two playing, and the network must let its devices reach each other.'), timeoutMs);
+    const timer = timeoutMs === null ? undefined : setTimeout(() => void fail('Could not connect. On one Wi-Fi, the network must let its devices reach each other (a hotspot must come from a third device). Otherwise both devices need internet access, for the relay.'), timeoutMs);
     void Promise.resolve(channel).then((dc) => {
       if (done) return;
       const t = new ChannelTransport(pc, dc);
@@ -171,7 +180,7 @@ function openTransport(pc: RTCPeerConnection, channel: RTCDataChannel | Promise<
       else dc.addEventListener('open', opened, { once: true });
     });
     pc.addEventListener('connectionstatechange', () => {
-      if (pc.connectionState === 'failed') void fail('Connection failed. Both devices must be on the same local network.');
+      if (pc.connectionState === 'failed') void fail('Connection failed. Put both devices on the same Wi-Fi, or make sure both have internet access.');
     });
   });
 }

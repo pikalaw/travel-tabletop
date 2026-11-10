@@ -14,6 +14,7 @@ test('finished games: listed under games in progress, open with their result, un
   await menu(page, 'Leave to home screen');
   // the finished one has a name
   await page.getByRole('button', { name: 'New game' }).click();
+  await expect(page.locator('.deck-check.on').first()).toBeVisible();
   await page.getByLabel(/Game name/).fill('Friday match');
   await page.getByRole('button', { name: 'Start game' }).click();
   await page.waitForSelector('.board'); await unblind(page, 'Player 1');
