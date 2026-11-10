@@ -14,7 +14,7 @@ import {
   CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, AwaySheet, Sheet, zoneTitle, gameTokens,
   type FullRow, type LogLine, type MenuItem,
 } from './Overlays';
-import { initialUi, uiReducer, type SheetState } from './gameUi';
+import { initialUi, uiReducer, clockTime, type SheetState } from './gameUi';
 import { fullModel } from './fullModel';
 import { CardViewer, type CardView } from './CardViewer';
 import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone } from '../engine/view';
@@ -25,7 +25,6 @@ import type { Notice } from '../types/commands';
 import type { Actor, CardInstance, GameState, PlayerId, Viewer, ZoneId } from '../types/state';
 import type { Deck, LogManifest } from '../types/storage';
 
-const timeNow = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 /** Re-pairing from inside a game (host: re-pair the guest; guest: reconnect to the host). */
 export interface PairingControl { render(close: () => void): ComponentChildren }
@@ -35,11 +34,13 @@ export interface GameProps {
   onExit: () => void;
   onRematch?: (() => void) | undefined;
   pairing?: PairingControl | null | undefined;
+  /** The log sheet's lines from before this screen opened (a resumed game's stored log). */
+  history?: readonly LogLine[];
 }
 
 type PointerRing = { key: number; rect: DOMRect; actor: Actor };
 
-export function Game({ session, onExit, onRematch, pairing }: GameProps) {
+export function Game({ session, onExit, onRematch, pairing, history = [] }: GameProps) {
   const same = session.kind === 'same-device';
   const [, setTick] = useState(0);
   const [ui, dispatch] = useReducer(uiReducer, undefined, () => initialUi(same, session.me, session.state.activePlayer || 'p1'));
@@ -50,7 +51,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
   const toNormal = () => dispatch({ type: 'mode', mode: { kind: 'normal' } });
   const [art, setArt] = useState(new Map<string, Art>());
   const [tokenDecks, setTokenDecks] = useState<Deck[]>([]);
-  const [lines, setLines] = useState<LogLine[]>([]);
+  const [lines, setLines] = useState<LogLine[]>(() => [...history]);
   const [pointer, setPointer] = useState<PointerRing | null>(null);
   const seen = useRef<Record<PlayerId, number>>({ p1: 0, p2: 0 });
   // One device: every action, by actor, for the "while you were away" list on unblinding.
@@ -96,7 +97,7 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
 
   // ----- session events -----
   useEffect(() => {
-    const addLine = (text: string, alert: boolean | undefined) => setLines((ls) => [...ls.slice(-199), { text, alert: !!alert, time: timeNow() }]);
+    const addLine = (text: string, alert: boolean | undefined) => setLines((ls) => [...ls.slice(-199), { text, alert: !!alert, time: clockTime() }]);
     const offState = session.subscribe((info) => {
       setTick((t) => t + 1);
       if (info?.text) {

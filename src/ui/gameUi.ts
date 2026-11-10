@@ -2,7 +2,8 @@
 // together. Nothing here is shared with the other device; it is how this screen is being used.
 
 import type { PlayerId, Viewer, ZoneId } from '../types/state';
-import type { CardSheetState } from './Overlays';
+import type { CardSheetState, LogLine } from './Overlays';
+import type { LogEntry } from '../types/storage';
 
 /** What a tap on the board means right now. */
 export type Mode =
@@ -105,4 +106,18 @@ export function uiReducer(s: UiState, a: UiAction): UiState {
     case 'blind':
       return { ...s, viewer: 'nobody', sheet: s.sheet && PRIVATE_TRAYS.has(s.sheet.kind) ? null : s.sheet };
   }
+}
+
+/** A log line's time of day, as the log sheet shows it. */
+export const clockTime = (d: Date = new Date()): string => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+/**
+ * The log sheet's lines for a stored game log, so a resumed game shows what happened before: the
+ * commands, notices and undos, with the text and alerts they had live, the last 200.
+ */
+export function logLines(entries: readonly LogEntry[]): LogLine[] {
+  return entries
+    .filter((e) => e.text && (e.kind === 'command' || e.kind === 'notice' || e.kind === 'undo'))
+    .slice(-200)
+    .map((e) => ({ text: e.text!, alert: !!(e.alert ?? e.notice?.alert), time: clockTime(new Date(e.ts)) }));
 }

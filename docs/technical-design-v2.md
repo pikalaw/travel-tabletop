@@ -361,6 +361,7 @@ interface LogEntry {
   command?: Command;          // as applied, with random filled in
   notice?: Notice;            // as filled in by the host
   text?: string;              // the ticker text
+  alert?: boolean;            // kind 'command': the ticker alert (library moves, shuffles)
   cards?: { id: string; defId: string; name: string; from?: ZoneId; to?: ZoneId; toIndex?: number;
             visibleTo: { before: PlayerId[]; after: PlayerId[] } }[];
   undoneSeq?: number;         // kind 'undo': the state seq that was reverted
@@ -368,6 +369,8 @@ interface LogEntry {
   state?: GameState;          // kind 'snapshot'
 }
 ```
+
+**Recent actions after a resume.** The log sheet (tap the ticker) shows the last 200 lines. Live lines come from the session; when a saved game is resumed, `App` passes the stored log's lines in as `history` (`logLines` in `gameUi.ts`: commands, notices and undos with their text, alert and time), so the sheet and the ticker carry on where they were. They are tied to the resumed game's id, so a rematch starts with an empty sheet. A guest keeps no log, so a guest's sheet starts empty when it reconnects.
 
 **Exporting the log.** One JSON Lines file `mtg-game-<gameId>.jsonl`: a manifest line { kind: 'manifest', gameId, mode, players, exportedAt, schemaVersion }, then every log entry. On one device it is refused before the game ends; on a guest it is refused.
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { initialUi, uiReducer, type UiAction, type UiState } from '../src/ui/gameUi';
+import { initialUi, uiReducer, logLines, type UiAction, type UiState } from '../src/ui/gameUi';
+import type { LogEntry } from '../src/types/storage';
 
 const run = (s: UiState, ...as: UiAction[]) => as.reduce(uiReducer, s);
 
@@ -40,5 +41,33 @@ describe('game screen state', () => {
     s = run(s, { type: 'closeSlot', zone: 'p1.hand' });
     expect(s.openSlots).toEqual(['p2.lands']);
     expect(run(s, { type: 'closeSlots' }).openSlots).toEqual([]);
+  });
+});
+
+describe('log lines from a stored log', () => {
+  const entry = (seq: number, kind: LogEntry['kind'], extra: Partial<LogEntry> = {}): LogEntry =>
+    ({ gameId: 'g', seq, ts: '2026-11-09T20:00:00.000Z', mode: 'same-device', turn: 1, kind, actor: 'p1', schemaVersion: 1, ...extra });
+  it('keeps commands, notices and undos with their text and alerts, and drops the rest', () => {
+    const lines = logLines([
+      entry(1, 'snapshot'),
+      entry(2, 'command', { text: 'Player 1 shuffled their library', alert: true }),
+      entry(3, 'rejected', { reason: 'stale' }),
+      entry(4, 'notice', { text: 'Player 1 is looking at the top 1', notice: { kind: 'peek', actor: 'p1', payload: { zone: 'p1.library', n: 1 }, alert: true } }),
+      entry(5, 'undo', { text: 'Player 1 undid the last action' }),
+      entry(6, 'command', { text: 'Player 1 tapped Elf' }),
+    ]);
+    expect(lines.map((l) => [l.text, l.alert])).toEqual([
+      ['Player 1 shuffled their library', true],
+      ['Player 1 is looking at the top 1', true],
+      ['Player 1 undid the last action', false],
+      ['Player 1 tapped Elf', false],
+    ]);
+    expect(lines[0]!.time).toMatch(/\d/);
+  });
+  it('keeps the last 200', () => {
+    const many = Array.from({ length: 250 }, (_, i) => entry(i + 1, 'command', { text: `line ${i + 1}` }));
+    const lines = logLines(many);
+    expect(lines).toHaveLength(200);
+    expect(lines[0]!.text).toBe('line 51');
   });
 });

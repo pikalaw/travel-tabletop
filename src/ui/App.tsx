@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { toast, useToasts } from './toast';
 import { Dialogs } from './Dialogs';
 import { Game, type PairingControl } from './Game';
+import { logLines } from './gameUi';
+import type { LogLine } from './Overlays';
 import { Home } from './Home';
 import { Setup, type StartGame } from './Setup';
 import { DecksScreen, DeckScreen, ImportScreen, BackupScreen, RestoreScreen } from './Decks';
@@ -23,7 +25,8 @@ import type { StatePayloads } from '../types/commands';
 const errText = (e: unknown) => String((e as Error | null)?.message || e);
 
 type GameMeta = Pick<GameRecord, 'mode' | 'role' | 'setup'>;
-interface OpenGame { session: Session; rematch: (() => void) | undefined; pairing: PairingControl | null }
+/** `history`: the stored log's lines of the game resumed, shown only while that game is on screen (not after a rematch). */
+interface OpenGame { session: Session; rematch: (() => void) | undefined; pairing: PairingControl | null; history: { gameId: string; lines: LogLine[] } | null }
 
 /** Set from main.tsx once the service worker reports a waiting update (step 4.1). */
 export interface AppProps { update?: (() => void) | null }
@@ -116,7 +119,7 @@ export function App({ update = null }: AppProps) {
     openGame(session, null, { name: opts.name, decks: opts.decks });
   };
 
-  function openGame(session: LocalSession | GuestSession, meta: GameMeta | null, guestInfo?: { name: string; decks: Deck[] }) {
+  function openGame(session: LocalSession | GuestSession, meta: GameMeta | null, guestInfo?: { name: string; decks: Deck[] }, history: OpenGame['history'] = null) {
     let pairing: PairingControl | null = null;
     if (session instanceof LocalSession && session.kind === 'host') {
       pairing = {
@@ -145,7 +148,7 @@ export function App({ update = null }: AppProps) {
       const payload = await startPayload(meta.setup, newGameId(), session.state.mode, p2?.spec ? { name: p2.name, spec: { cards: p2.spec.cards, commanders: p2.spec.commanders || [] } } : null);
       session.host.dispatch({ type: 'startGame', actor: 'host', payload });
     } : undefined;
-    setGame({ session, rematch: rematch ? () => void rematch() : undefined, pairing });
+    setGame({ session, rematch: rematch ? () => void rematch() : undefined, pairing, history });
     go('game');
   }
 
@@ -157,7 +160,7 @@ export function App({ update = null }: AppProps) {
     const meta: GameMeta = { mode: rec.mode, role: rec.role, setup: rec.setup };
     const host = makeHost(meta, rec.state, snaps, log.length ? log[log.length - 1]!.seq : 0);
     const session = new LocalSession(host, { mode: rec.mode === 'networked' ? 'host' : 'same-device', me: 'p1' });
-    openGame(session, meta);
+    openGame(session, meta, undefined, { gameId: id, lines: logLines(log) });
   }
 
   async function rejoin(g: GuestGameMeta) {
@@ -198,7 +201,10 @@ export function App({ update = null }: AppProps) {
       break;
     }
     case 'game':
-      screen = game ? <Game key={game.session.state.gameId} session={game.session} onExit={exitGame} onRematch={game.rematch} pairing={game.pairing} /> : null;
+      screen = game ? (
+        <Game key={game.session.state.gameId} session={game.session} onExit={exitGame} onRematch={game.rematch} pairing={game.pairing}
+          history={game.history?.gameId === game.session.state.gameId ? game.history.lines : []} />
+      ) : null;
       break;
   }
   return (

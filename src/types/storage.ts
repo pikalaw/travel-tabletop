@@ -145,6 +145,8 @@ export interface LogEntry {
   command?: AnyCommand;
   notice?: Notice;
   text?: string;
+  /** A command's ticker alert (library moves, shuffles), so a resumed game's log shows it again. */
+  alert?: boolean;
   cards?: LoggedCard[];
   undoneSeq?: number;
   reason?: string;

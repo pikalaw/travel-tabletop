@@ -138,7 +138,7 @@ export class Host {
     this.lastText = text;
     this.lastAlert = alert;
     const entries = [this.entry('command', filled.actor, {
-      command: filled, text,
+      command: filled, text, ...(alert ? { alert } : {}),
       cards: res.moved.map((m) => {
         const c = (before.cards[m.id] || after.cards[m.id])!;
         const b = before.cards[m.id], a = after.cards[m.id];
