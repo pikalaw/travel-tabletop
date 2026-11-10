@@ -226,7 +226,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     }
     // The life counters stay usable in combat mode: combat damage changes life.
     if (combat && el.dataset.tap === 'counters') { setSheet({ kind: 'counters' }); return; }
-    if (combat) { combatTap(el, combat.blocker); return; }
+    if (combat) { combatTap(el, combat.blocker, combat.vigilance); return; }
     if (pointMode) {
       const cardId = el.dataset.card || null;
       const zone = el.dataset.zone || el.dataset.slot || el.closest<HTMLElement>('[data-slot]')?.dataset.slot || null;
@@ -269,11 +269,14 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
    * Combat mode. A card on the active player's side toggles attacking. A card on the other side
    * is picked as a blocker; the next tap on an attacker pairs them (tap again to undo the pair).
    */
-  function combatTap(el: HTMLElement, blocker: { cardId: string; zone: ZoneId } | null) {
+  /** A tap in combat mode. Vigilance lasts one tap, whatever that tap does. */
+  function combatTap(el: HTMLElement, blocker: { cardId: string; zone: ZoneId } | null, vigilance: boolean) {
+    const setCombat = (b: typeof blocker) => dispatch({ type: 'mode', mode: { kind: 'combat', blocker: b, vigilance: false } });
     const zone = zoneAttr(el);
     const k = zone ? zoneKind(zone) : null;
     if (!el.dataset.card || !zone || el.closest('.sheet') || (k !== 'battlefield' && k !== 'lands')) {
-      toast('In combat, tap creatures on the battlefield. Done returns to normal play.', 'info');
+      toast('In combat, tap creatures on the battlefield. Pause returns to normal play.', 'info');
+      setCombat(blocker);
       return;
     }
     const row = el.closest<HTMLElement>('[data-drop]');
@@ -281,13 +284,16 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     const id = c?.attachedTo && !row?.dataset.fanned ? c.attachedTo : el.dataset.card; // a tucked strip means its card
     if (zoneOwner(zone) === state.activePlayer) {
       if (blocker) {
-        if (!state.cards[id]?.attacking) { toast('Mark that creature as attacking first.', 'info'); return; }
+        if (!state.cards[id]?.attacking) { toast('Mark that creature as attacking first.', 'info'); setCombat(blocker); return; }
         send('block', { cardId: blocker.cardId, from: findZone(state, blocker.cardId) || blocker.zone, attackerId: id, attackerZone: zone });
-        dispatch({ type: 'mode', mode: { kind: 'combat', blocker: null } });
-      } else send('attack', { cardId: id, from: zone });
+        setCombat(null);
+      } else {
+        send('attack', { cardId: id, from: zone, tap: !vigilance });
+        setCombat(null);
+      }
       return;
     }
-    dispatch({ type: 'mode', mode: { kind: 'combat', blocker: blocker?.cardId === id ? null : { cardId: id, zone } } });
+    setCombat(blocker?.cardId === id ? null : { cardId: id, zone });
   }
 
   function passTurn() {
@@ -389,6 +395,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       const cardId = src.dataset.cardOf;
       // In the full-screen view the card fills most of the screen, so any drag of a counter removes one.
       if (!src.closest('.full-wrap') && (onCard === cardId || dCard === cardId)) return;
+      // Tidying up after damage: the creature stays tapped.
       if (src.dataset.badge === 'attack') { send('attack', { cardId, from: src.dataset.zone, value: false }); return; }
       if (src.dataset.badge === 'block') {
         const atk = src.dataset.attacker;
@@ -413,7 +420,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         if (k !== 'battlefield' && k !== 'lands') { toast('Only a card on the battlefield can attack.', 'info'); return; }
         if (zoneOwner(dz) !== state.activePlayer) { toast(`Only ${state.players[state.activePlayer].name}’s creatures can attack this turn.`, 'info'); return; }
         const c = state.cards[dCard];
-        send('attack', { cardId: c?.attachedTo || dCard, from: dz, value: true });
+        send('attack', { cardId: c?.attachedTo || dCard, from: dz, value: true, tap: true });
         return;
       }
       send('addCounter', { cardId: dCard, from: dz, kind, label: kind === 'label' ? label : undefined });
@@ -508,7 +515,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
    */
   function startCombat(blocker: { cardId: string; zone: ZoneId } | null) {
     if (same && viewer !== 'nobody') blind();
-    dispatch({ type: 'mode', mode: { kind: 'combat', blocker } });
+    dispatch({ type: 'mode', mode: { kind: 'combat', blocker, vigilance: false } });
   }
 
   function blind() {
@@ -585,7 +592,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         {a.faceDown ? <button class="btn" onClick={() => send('setFaceDown', { cardId: card.id, from: fullZone, value: !card.faceDown })}>{card.faceDown ? 'Face up' : 'Face down'}</button> : null}
         {a.reveal ? <button class="btn" onClick={() => revealCard(card, fullZone)}>Reveal</button> : null}
         {a.tap ? <button class="btn" onClick={() => send('tap', { cardId: card.id, from: fullZone })}>{card.tapped ? 'Untap' : 'Tap'}</button> : null}
-        {a.attack ? <button class="btn" onClick={() => send('attack', { cardId: card.id, from: fullZone })}>{card.attacking ? 'Stop attacking' : 'Attack'}</button> : null}
+        {a.attack ? <button class="btn" onClick={() => send('attack', { cardId: card.id, from: fullZone, tap: true })}>{card.attacking ? 'Stop attacking' : 'Attack'}</button> : null}
         {a.block ? <button class="btn" onClick={() => { startCombat({ cardId: card.id, zone: fullZone }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Block</button> : null}
         {a.detach ? <button class="btn" onClick={() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button> : null}
         {a.attach ? <button class="btn" onClick={() => { dispatch({ type: 'mode', mode: { kind: 'attach', cardId: card.id, zone: fullZone } }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Attach</button> : null}
@@ -604,7 +611,11 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       <div class="bar combat">
         <span class="attach-hint">{b
           ? <><b>{bName}</b> blocks: tap the attacker</>
-          : <>Tap {state.players[state.activePlayer].name}’s attackers, or a blocker then its attacker.</>}</span>
+          : combat.vigilance
+            ? <>Vigilance: the next attacker you tap stays untapped.</>
+            : <>Tap {state.players[state.activePlayer].name}’s attackers, or a blocker then its attacker.</>}</span>
+        <button class={`btn${combat.vigilance ? ' on' : ''}`} aria-pressed={combat.vigilance}
+          onClick={() => dispatch({ type: 'mode', mode: { ...combat, vigilance: !combat.vigilance } })}>Vigilance</button>
         <button class="btn warn" onClick={endCombat}>End combat</button>
         {/* Leaves combat mode with every mark kept; Combat comes back to it, End combat ends it. */}
         <button class="btn primary" onClick={toNormal}>Pause</button>

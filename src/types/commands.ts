@@ -55,7 +55,7 @@ export interface StatePayloads {
   detachAll: { cardId: string; from: ZoneId };
   /** Make an attached card the lead (host) of its group. Added in protocol 3. */
   setLead: { cardId: string; from: ZoneId };
-  attack: { cardId: string; from: ZoneId; value?: boolean };
+  attack: { cardId: string; from: ZoneId; value?: boolean; tap?: boolean };
   block: { cardId: string; from: ZoneId; attackerId: string; attackerZone: ZoneId; value?: boolean };
   endCombat: Record<string, never>;
   /** Put an ability of `cardId` on top of the stack as its own item. Added in protocol 5. */

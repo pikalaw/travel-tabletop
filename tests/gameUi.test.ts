@@ -12,8 +12,8 @@ describe('game screen state', () => {
   it('modes replace each other: one mode at a time', () => {
     const s = run(initialUi(true, 'p1', 'p1'),
       { type: 'mode', mode: { kind: 'library', zone: 'p1.library', n: 1 } },
-      { type: 'mode', mode: { kind: 'combat', blocker: null } });
-    expect(s.mode).toEqual({ kind: 'combat', blocker: null });
+      { type: 'mode', mode: { kind: 'combat', blocker: null, vigilance: false } });
+    expect(s.mode).toEqual({ kind: 'combat', blocker: null, vigilance: false });
   });
   it('the library count stays within 1–99 and only applies in library mode', () => {
     let s = run(initialUi(true, 'p1', 'p1'), { type: 'mode', mode: { kind: 'library', zone: 'p1.library', n: 1 } }, { type: 'libraryN', n: 0 });

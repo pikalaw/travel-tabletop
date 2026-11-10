@@ -351,6 +351,22 @@ describe('combat marks', () => {
     expect(h.state.cards[a2].attacking).toBe(2);
   });
 
+  it('tap: true taps an attacker and untaps it when taken back; without it tapping is untouched', () => {
+    const { h, a1, a2 } = setup();
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield', tap: true });
+    expect(h.state.cards[a1].tapped).toBe(true);
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield', tap: true }); // a mistaken mark, taken back
+    expect(h.state.cards[a1].tapped).toBe(false);
+    send(h, 'attack', { cardId: a2, from: 'p1.battlefield' }); // vigilance, or a log from before protocol 6
+    expect(h.state.cards[a2]).toMatchObject({ attacking: 1, tapped: false });
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield', tap: true });
+    send(h, 'attack', { cardId: a1, from: 'p1.battlefield', value: false }); // tidying up after damage
+    expect(h.state.cards[a1].attacking).toBeUndefined();
+    expect(h.state.cards[a1].tapped).toBe(true);
+    send(h, 'endCombat', {});
+    expect(h.state.cards[a1].tapped).toBe(true);
+  });
+
   it('blocks need an attacker; several blockers on one, one blocker on several, toggling', () => {
     const { h, a1, a2, b1, b2 } = setup();
     expect(send(h, 'block', { cardId: b1, from: 'p2.battlefield', attackerId: a1, attackerZone: 'p1.battlefield' }, 'p2')).toMatchObject({ ok: false, error: 'invalid' });

@@ -298,6 +298,9 @@ function run(input: GameState, cmd: Command): ApplyResult {
         const used = Object.values(state.cards).map((x) => x.attacking || 0);
         c.attacking = Math.max(0, ...used) + 1;
       } else if (!on) delete c.attacking;
+      // tap: true also taps (CR 508.1f) or, unmarking, untaps. Left out, tapping is untouched: so
+      // vigilance, tidying marks up after damage, and logs from before protocol 6 all replay as played.
+      if (p.tap === true) c.tapped = on;
       break;
     }
 

@@ -9,7 +9,8 @@ import type { LogEntry } from '../types/storage';
 export type Mode =
   | { kind: 'normal' }
   /** Taps mark attackers and blockers; `blocker` is a chosen blocker waiting for its attacker. */
-  | { kind: 'combat'; blocker: { cardId: string; zone: ZoneId } | null }
+  /** `vigilance`: the next attacker marked stays untapped; any tap in combat clears it. */
+  | { kind: 'combat'; blocker: { cardId: string; zone: ZoneId } | null; vigilance: boolean }
   /** Waiting for the card to attach `cardId` to. */
   | { kind: 'attach'; cardId: string; zone: ZoneId }
   /** The next tap points at a card or slot on both screens. */

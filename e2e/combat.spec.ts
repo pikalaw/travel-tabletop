@@ -21,14 +21,20 @@ async function holdOn(page: Page, id: string) {
   await page.mouse.move(p.x, p.y); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up(); await page.waitForTimeout(300);
 }
 
-test('combat mode: attackers, blockers, double block, no tapping; End combat, undo, pass turn clears', async ({ page }) => {
+test('combat mode: attackers tap, Vigilance once, blockers, double block; End combat, undo, pass turn clears', async ({ page }) => {
   const errs = watchErrors(page);
   await startOneDevice(page);
   const { a, d } = await deal(page, 2, 2);
   await resetBar(page); await barButton(page, 'Combat');
   await inOpenRow(page, 'p1.battlefield', async () => {
     await inOpenRow(page, 'p2.battlefield', async () => {
-        await tapCard(page, a[0]!); await tapCard(page, a[1]!);
+        const vig = page.locator('.bar').first().getByRole('button', { name: 'Vigilance', exact: true });
+        await vig.click();
+        await expect(vig).toHaveAttribute('aria-pressed', 'true');
+        await tapCard(page, a[0]!); // vigilance: marked, not tapped, and the button resets
+        await expect(vig).toHaveAttribute('aria-pressed', 'false');
+        await tapCard(page, a[1]!); // an ordinary attacker taps
+        await expect(page.locator(`[data-card="${a[1]}"].tapped`)).toHaveCount(1);
         await expect(marks(page, a[0]!)).toContainText('⚔');
         await expect(marks(page, a[1]!)).toContainText('⚔');
         await tapCard(page, d[0]!);
@@ -40,10 +46,11 @@ test('combat mode: attackers, blockers, double block, no tapping; End combat, un
         await expect(marks(page, d[1]!).locator('.mark.blk')).toHaveCount(2);
     });
   });
-  await expect(page.locator('.card.tapped')).toHaveCount(0);
-  // both combat-bar buttons fit on screen
+  await expect(page.locator('.card.tapped')).toHaveCount(1);
+  await expect(page.locator(`[data-card="${a[0]}"].tapped`)).toHaveCount(0);
+  // every combat-bar button fits on screen
   const vw = await page.evaluate(() => innerWidth);
-  for (const t of ['End combat', 'Pause']) {
+  for (const t of ['Vigilance', 'End combat', 'Pause']) {
     const r = (await page.locator('.bar').first().getByRole('button', { name: t, exact: true }).boundingBox())!;
     expect(r.x).toBeGreaterThanOrEqual(0); expect(r.x + r.width).toBeLessThanOrEqual(vw);
   }
@@ -90,8 +97,7 @@ test('combat in open slots: attack chip, mark placement on a tapped card, tap on
   await tapCard(page, a[0]!);
   await expect(marks(page, a[0]!)).toContainText('⚔');
   await barButton(page, 'Pause');
-  await tapCard(page, a[0]!);
-  await expect(page.locator(`[data-card="${a[0]}"].tapped`)).toHaveCount(1);
+  await expect(page.locator(`[data-card="${a[0]}"].tapped`)).toHaveCount(1); // marking tapped it
   // on a tapped card the mark sits at the top-left of the picture
   const mb = (await page.locator(`[data-card="${a[0]}"] .mark.atk`).boundingBox())!;
   const ib = (await page.locator(`[data-card="${a[0]}"] .card-face`).boundingBox())!;

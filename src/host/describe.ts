@@ -61,9 +61,10 @@ export function describeCommand(cmd: Command, before: GameState, after: GameStat
     }
     case 'attack': {
       const p = cmd.payload;
-      const n = st.cards[p.cardId]?.attacking;
+      const c = st.cards[p.cardId];
+      const n = c?.attacking;
       return n
-        ? `${name}: ${cn(p.cardId, p.from, p.from)} attacks (⚔${n})`
+        ? `${name}: ${cn(p.cardId, p.from, p.from)} attacks${p.tap === false && !c.tapped ? ' untapped' : ''} (⚔${n})`
         : `${name}: ${cn(p.cardId, p.from, p.from)} no longer attacks`;
     }
     case 'block': {
