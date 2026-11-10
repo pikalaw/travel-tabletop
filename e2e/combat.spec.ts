@@ -43,11 +43,11 @@ test('combat mode: attackers, blockers, double block, no tapping; End combat, un
   await expect(page.locator('.card.tapped')).toHaveCount(0);
   // both combat-bar buttons fit on screen
   const vw = await page.evaluate(() => innerWidth);
-  for (const t of ['End combat', 'Done']) {
+  for (const t of ['End combat', 'Pause']) {
     const r = (await page.locator('.bar').first().getByRole('button', { name: t, exact: true }).boundingBox())!;
     expect(r.x).toBeGreaterThanOrEqual(0); expect(r.x + r.width).toBeLessThanOrEqual(vw);
   }
-  await barButton(page, 'Done');
+  await barButton(page, 'Pause');
   await resetBar(page);
   await expect(page.locator('.bar').first().getByRole('button', { name: 'End combat' })).toHaveCount(1);
   // outside combat the collapsed row needs a tap to open; then a tap taps, and keeps the marks
@@ -108,7 +108,7 @@ test('combat in open slots: attack chip, mark placement on a tapped card, tap on
   const m = await point(page, `[data-card="${a[0]}"] .mark.atk`);
   await page.mouse.click(m.x, m.y); await page.waitForTimeout(250);
   await expect(marks(page, d[2]!)).toContainText('🛡');
-  await barButton(page, 'Done');
+  await barButton(page, 'Pause');
 
   // dragging 🛡 off removes that pair
   const s = await point(page, `[data-card="${d[2]}"] .mark.blk`);
@@ -144,7 +144,7 @@ test('matchup: the full view row, blocker as main, the board highlight, opponent
       await tapCard(page, a[0]!); await tapCard(page, d[0]!); await tapCard(page, a[0]!);
     });
   });
-  await barButton(page, 'Done');
+  await barButton(page, 'Pause');
 
   // attacker full view: the row is the attacker, a divider, then its blocker (whose attachment shows as +1)
   await holdOn(page, a[0]!);
@@ -206,7 +206,7 @@ test('End combat asks first, from combat mode and from the footer', async ({ pag
 
   await resetBar(page); await barButton(page, 'Combat');
   await inOpenRow(page, 'p1.battlefield', async () => { await tapCard(page, a[0]!); });
-  await barButton(page, 'Done');
+  await barButton(page, 'Pause');
   await resetBar(page); await barButton(page, 'End combat');
   await expect(page.locator('.confirm-box.plain')).toContainText('This clears 1 attacker.');
   await answerDialog(page, false);

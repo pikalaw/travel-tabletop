@@ -78,7 +78,7 @@ test('one device: starting combat blinds the hand, so both players can look at t
   await resetBar(page); await barButton(page, 'Combat');
   await expect(page.locator('.board')).toContainText('hand (hidden)');
   await expect(page.locator('.board')).toHaveClass(/\bpersp-p1\b/); // still the active player's side
-  await barButton(page, 'Done');
+  await barButton(page, 'Pause');
   await expect(page.getByRole('button', { name: 'Unblind to Player 1' })).toBeVisible();
   errs.expectNone();
 });
@@ -108,7 +108,7 @@ test('combat and attach modes: a crowded slot opens first, from its strip or fro
   await expect(row).toHaveClass(OPEN);
   await expect(page.locator('.bar.combat')).toHaveCount(1);
   await strip();
-  await barButton(page, 'Done');
+  await barButton(page, 'Pause');
 
   // attach mode: the strip opens the crowded slot instead of asking for a card
   await unblind(page, 'Player 1');

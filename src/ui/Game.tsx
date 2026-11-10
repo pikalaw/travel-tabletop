@@ -603,7 +603,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
           ? <><b>{bName}</b> blocks: tap the attacker</>
           : <>Tap {state.players[state.activePlayer].name}’s attackers, or a blocker then its attacker.</>}</span>
         <button class="btn warn" onClick={endCombat}>End combat</button>
-        <button class="btn primary" onClick={toNormal}>Done</button>
+        {/* Leaves combat mode with every mark kept; Combat comes back to it, End combat ends it. */}
+        <button class="btn primary" onClick={toNormal}>Pause</button>
       </div>
     );
   } else if (attaching && state.cards[attaching.cardId]) {
