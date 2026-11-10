@@ -447,7 +447,22 @@ export function CountersSheet({ ctx, P, send, onClose }: { ctx: BoardCtx; P: Pla
     </Sheet>
   );
 }
-export interface LogLine { text: string; time: string; alert?: boolean }
+/** `turn`: the game's turn once the action was done. `turnStart`: a new game or a pass turn. */
+export interface LogLine { text: string; time: string; turn: number; turnStart?: boolean; alert?: boolean }
+
+/**
+ * Numbers log lines turn.n, oldest first. A turn start gets no number; the sheet sets it apart.
+ * After an undo back into an earlier turn, that turn's count carries on, so no number repeats.
+ */
+export function numberLines(lines: readonly LogLine[]): { line: LogLine; label: string }[] {
+  const count = new Map<number, number>();
+  return lines.map((line) => {
+    if (line.turnStart) return { line, label: '' };
+    const n = (count.get(line.turn) || 0) + 1;
+    count.set(line.turn, n);
+    return { line, label: `${line.turn}.${n}` };
+  });
+}
 
 export function LogSheet({ lines, onClose, onExport }: { lines: readonly LogLine[]; onClose: () => void; onExport: () => void }) {
   return (
@@ -461,13 +476,14 @@ export function LogSheet({ lines, onClose, onExport }: { lines: readonly LogLine
         </button>
       }
     >
-      <ol class="log-list" reversed>
-        {[...lines].reverse().map((l) => (
-          <li class={l.alert ? 'alert' : ''}>
+      <ul class="log-list numbered">
+        {numberLines(lines).reverse().map(({ line: l, label }) => (
+          <li class={label ? (l.alert ? 'alert' : '') : 'turn-start'}>
+            {label ? <span class="num">{label}</span> : null}
             <span class="ts">{l.time}</span> {l.text}
           </li>
         ))}
-      </ol>
+      </ul>
     </Sheet>
   );
 }

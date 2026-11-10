@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { initialUi, uiReducer, logLines, type UiAction, type UiState } from '../src/ui/gameUi';
+import { numberLines, type LogLine } from '../src/ui/Overlays';
 import type { LogEntry } from '../src/types/storage';
 
 const run = (s: UiState, ...as: UiAction[]) => as.reduce(uiReducer, s);
@@ -64,10 +65,29 @@ describe('log lines from a stored log', () => {
     ]);
     expect(lines[0]!.time).toMatch(/\d/);
   });
+  it('marks a new game and each pass turn as a turn start', () => {
+    const cmd = (type: string) => ({ type, actor: 'p1', payload: {} }) as unknown as NonNullable<LogEntry['command']>;
+    const lines = logLines([
+      entry(1, 'command', { text: 'New game', command: cmd('startGame') }),
+      entry(2, 'command', { text: 'tapped', command: cmd('tap') }),
+      entry(3, 'command', { text: 'Turn 2', turn: 2, command: cmd('passTurn') }),
+    ]);
+    expect(lines.map((l) => [l.turn, !!l.turnStart])).toEqual([[1, true], [1, false], [2, true]]);
+  });
   it('keeps the whole log, from the start of the game', () => {
     const many = Array.from({ length: 2500 }, (_, i) => entry(i + 1, 'command', { text: `line ${i + 1}` }));
     const lines = logLines(many);
     expect(lines).toHaveLength(2500);
     expect(lines[0]!.text).toBe('line 1');
+  });
+});
+
+describe('log line numbers', () => {
+  const L = (text: string, turn: number, turnStart = false): LogLine => ({ text, turn, turnStart, time: '' });
+  it('numbers turn.n; a turn start gets none; an undo back into a turn carries its count on', () => {
+    const labels = numberLines([
+      L('New game', 1, true), L('a', 1), L('b', 1), L('Turn 2', 2, true), L('c', 2), L('Undo', 1), L('d', 1), L('Turn 2', 2, true), L('e', 2),
+    ]).map((x) => x.label);
+    expect(labels).toEqual(['', '1.1', '1.2', '', '2.1', '1.3', '1.4', '', '2.2']);
   });
 });

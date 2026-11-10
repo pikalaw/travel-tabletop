@@ -18,5 +18,10 @@ test('a resumed game\'s log sheet shows what happened before', async ({ page }) 
   const items = sheet.locator('.log-list li');
   await expect(items.first()).toContainText(before);
   await expect(items.last()).toContainText('New game');
+  // numbered turn.n; the game's start is a turn start, set apart and unnumbered
+  await expect(items.last()).toHaveClass(/turn-start/);
+  await expect(items.last().locator('.num')).toHaveCount(0);
+  await expect(items.first().locator('.num')).toHaveText(/^1\.\d+$/);
+  await page.screenshot({ path: 'test-results/log-sheet.png' });
   errs.expectNone();
 });

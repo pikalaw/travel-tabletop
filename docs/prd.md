@@ -120,6 +120,7 @@ Both players can inspect and move cards into and out of either library; every in
 | Action | What it does | Alert to the other player |
 | --- | --- | --- |
 | Draw N | Top N to hand (only from your own library) | No (logged quietly) |
+| Drag the top card to its owner's hand | A draw, the same as Draw 1 | No (logged quietly) |
 | Mill N | Top N to graveyard | No (logged quietly) |
 | Look at top N | Private tray of the top N; drag each to top, bottom, hand, graveyard or anywhere; drop back in the tray to reorder | Yes |
 | Reveal top N | The same tray, opened on both devices | Yes |
@@ -127,6 +128,7 @@ Both players can inspect and move cards into and out of either library; every in
 | Look through | Browse the other player's library | Yes |
 | Shuffle | Shuffles at random | Yes |
 | Drop on top or bottom | Drag a card onto the library's upper or lower half | Yes |
+| Any other move out of a library | e.g. a card other than the top one, or to another zone | Yes |
 | Top face up | Toggle: the top card stays visible to both | No (logged) |
 
 - Peek covers scry, surveil, Ponder-style effects and explore without special code.
@@ -265,7 +267,7 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 
 ## Action log
 
-Every game produces a complete record of what happened, kept for review and as future LLM training data. The footer ticker shows the latest action, and Recent actions lists every line since the game began, newest first, with times, including after the game is resumed (on the device that hosts it).
+Every game produces a complete record of what happened, kept for review and as future LLM training data. The footer ticker shows the latest action, and Recent actions lists every line since the game began, newest first, with times, including after the game is resumed (on the device that hosts it). Lines are numbered by turn and action (7.1, 7.2…). Each turn's start ("Turn 7: Lawrence", and the new game line) is unnumbered and stands out as a light band with dark text; alerts are in the warning colour.
 
 For every action the record captures:
 

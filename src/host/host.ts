@@ -3,10 +3,10 @@
 // persists after every command, and notifies listeners (the local UI and the remote guest).
 
 import { apply, emptyState, randomNeeded, STATE_COMMANDS, SCHEMA_VERSION } from '../engine/engine';
-import { visibleTo, zoneKind, findZone, isZone } from '../engine/view';
+import { visibleTo, zoneKind, zoneOwner, findZone, isZone } from '../engine/view';
 import { describeCommand, describeNotice, ALERT_NOTICES } from './describe';
 import { SNAPSHOT_CAP } from './replay';
-import { NOTICE_KINDS, type Command, type Notice, type NoticeKind } from '../types/commands';
+import { NOTICE_KINDS, type Command, type Movement, type Notice, type NoticeKind } from '../types/commands';
 import type { Actor, GameState, ZoneId } from '../types/state';
 import type { LogEntry } from '../types/storage';
 import type { Commit, Persistence } from '../storage/db';
@@ -132,8 +132,12 @@ export class Host {
     this.state = after;
     this.version++;
     const text = describeCommand(filled, before, after, res.moved);
+    // A library change the other player should notice. Dragging the top card into its owner's hand
+    // is a draw, as routine as the draw command, so it is not one.
+    const drawn = (m: Movement) => m.from && m.to && zoneKind(m.to) === 'hand' && zoneOwner(m.to) === zoneOwner(m.from)
+      && before.zones[m.from][0] === m.id;
     const alert = filled.type === 'shuffle' || res.moved.some((m) =>
-      (m.from && zoneKind(m.from) === 'library' && filled.type === 'move') ||
+      (m.from && zoneKind(m.from) === 'library' && filled.type === 'move' && !drawn(m)) ||
       (m.to && zoneKind(m.to) === 'library'));
     this.lastText = text;
     this.lastAlert = alert;

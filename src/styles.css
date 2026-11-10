@@ -305,6 +305,11 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .log-list { margin: 0; padding-left: 22px; font-size: 13px; display: grid; gap: 3px; -webkit-user-select: text; user-select: text; }
 .log-list li.alert { color: var(--warn); }
 .log-list .ts { color: var(--ink-3); font-size: 11px; }
+.log-list.numbered { list-style: none; padding-left: 0; }
+.log-list .num { display: inline-block; min-width: 3.2em; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+/* A new turn stands out: a light band across the list, dark text. */
+.log-list li.turn-start { background: #e8d9a8; color: #1a1408; font-weight: 600; padding: 3px 8px; border-radius: 6px; margin: 4px 0; }
+.log-list li.turn-start .ts { color: #5a4a20; }
 .token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
 .token-item { touch-action: none; cursor: grab; }
 .token-item img, .token-item .card-face { width: 100%; aspect-ratio: 63/88; border-radius: 5px; display: block; }

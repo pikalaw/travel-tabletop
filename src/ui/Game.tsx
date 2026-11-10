@@ -97,7 +97,13 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
 
   // ----- session events -----
   useEffect(() => {
-    const addLine = (text: string, alert: boolean | undefined) => setLines((ls) => [...ls, { text, alert: !!alert, time: clockTime() }]);
+    // A live line that raised the turn is a pass turn (an undo lowers it; a new game remounts this screen).
+    let turn = session.state.turn;
+    const addLine = (text: string, alert: boolean | undefined) => {
+      const now = session.state.turn, turnStart = now > turn;
+      turn = now;
+      setLines((ls) => [...ls, { text, alert: !!alert, time: clockTime(), turn: now, turnStart }]);
+    };
     const offState = session.subscribe((info) => {
       setTick((t) => t + 1);
       if (info?.text) {

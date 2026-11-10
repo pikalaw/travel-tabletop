@@ -24,6 +24,20 @@ describe('host', () => {
     expect([...h.state.zones['p1.library']].sort()).toEqual([...order].sort());
   });
 
+  it('dragging the top card into its owner hand is a draw, not an alert; other library moves alert', () => {
+    const h = newHost();
+    const lib = () => h.state.zones['p1.library'];
+    const move = (cardId: string, to: string) => h.dispatch({ type: 'move', actor: 'p1', payload: { cardId, from: 'p1.library', to } });
+    move(lib()[0]!, 'p1.hand');
+    expect(h.lastAlert).toBe(false);
+    move(lib()[3]!, 'p1.hand'); // not the top card: a tutor, say
+    expect(h.lastAlert).toBe(true);
+    move(lib()[0]!, 'p2.hand');
+    expect(h.lastAlert).toBe(true);
+    move(lib()[0]!, 'p1.battlefield');
+    expect(h.lastAlert).toBe(true);
+  });
+
   it('randomness notices carry host results', () => {
     const h = newHost();
     const r = h.dispatch({ type: 'rollDie', actor: 'p1', payload: { sides: 20 } });
