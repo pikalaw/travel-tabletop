@@ -63,7 +63,7 @@ test('two devices: the guest leaves and reconnects; the host resumes after a rel
   await expect(G.getByText('Joined game')).toBeVisible();
   await H.locator('.status').click();
   await H.waitForSelector('.sheet');
-  await pairByText(H, G, async () => { await G.getByText('Reconnect').click(); });
+  await pairByText(H, G, async () => { await G.getByRole('button', { name: /^Reconnect to/ }).click(); });
   await G.waitForSelector('.board', { timeout: 20_000 });
   await expect(G.locator('.c12 [data-card]')).toHaveCount(1); // the host's land
   await expect(G.locator('.c32 [data-card]')).toHaveCount(1); // its own card

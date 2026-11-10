@@ -14,7 +14,7 @@ import { CardFrame } from './CardFrame';
 import { useRulings, RulingsPanel } from './Rulings';
 import type { CardInstance, GameState, PlayerId, ZoneId } from '../types/state';
 import type { Deck } from '../types/storage';
-import type { AwayLine } from './gameUi';
+import { roleOf, type AwayLine } from './gameUi';
 
 /** Send a command or notice through the session. */
 export type Send = (type: string, payload: object) => unknown;
@@ -348,7 +348,7 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
 }
 
 /** Player counters, both players. */
-export function CountersSheet({ ctx, P, send, onClose }: { ctx: BoardCtx; P: PlayerId; send: Send; onClose: () => void }) {
+export function CountersSheet({ ctx, send, onClose }: { ctx: BoardCtx; send: Send; onClose: () => void }) {
   const st = ctx.state;
   const [adding, setAdding] = useState({
     p1: '',
@@ -361,7 +361,7 @@ export function CountersSheet({ ctx, P, send, onClose }: { ctx: BoardCtx; P: Pla
       value,
     });
   const list = (pl: PlayerId) => (
-    <div class={`ctr-panel ${pl}`}>
+    <div class={`ctr-panel ${roleOf(st, pl)}`}>
       <h3>{st.players[pl].name}</h3>
       {st.players[pl].counters.map((c) => (
         <div class="ctr-row">
@@ -441,8 +441,9 @@ export function CountersSheet({ ctx, P, send, onClose }: { ctx: BoardCtx; P: Pla
   return (
     <Sheet title="Player counters" onClose={onClose} tall>
       <div class="ctr-panels">
-        {list(other(P))}
-        {list(P)}
+        {/* The player whose turn it is first, as on the board's counters. */}
+        {list(st.activePlayer)}
+        {list(other(st.activePlayer))}
       </div>
     </Sheet>
   );

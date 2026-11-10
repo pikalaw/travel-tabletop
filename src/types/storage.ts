@@ -87,6 +87,8 @@ export interface ImageRecord {
 
 /** The choices on the setup screen, kept with a hosted game so it can be resumed. */
 export interface GameSetup {
+  /** Optional; Home shows "<player 1> vs <player 2>" without one. Not remembered for the next game. */
+  name?: string;
   life?: number;
   p1?: { name: string; deckIds: string[] };
   /** One device: the second player's decks. Hosting: the guest's name and cards, once joined. */
@@ -99,9 +101,8 @@ export interface GameRecord {
   role: 'host';
   setup: GameSetup;
   state: GameState;
+  /** When the game last changed (a command or an undo); the home screen sorts by it. */
   updatedAt: number;
-  /** When the game was last started or opened; the home screen sorts by it (older records: updatedAt). */
-  openedAt?: number;
   over: boolean;
 }
 

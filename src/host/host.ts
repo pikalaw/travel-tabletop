@@ -205,7 +205,7 @@ export class Host {
     notice.alert = ALERT_NOTICES.has(kind);
     const entry = this.entry('notice', actor, { notice, text: notice.text });
     notice.seq = entry.seq;
-    this.save({ state: this.state, log: [entry] });
+    this.save({ log: [entry] });
     this.emitNotice(notice);
     // Closing a search shuffles that library.
     if (kind === 'searchClose' && isZone(payload.zone) && zoneKind(payload.zone) === 'library') {
@@ -229,10 +229,11 @@ export class Host {
     };
   }
 
-  private log(entries: LogEntry[]): void { this.save({ state: this.state, log: entries }); }
+  private log(entries: LogEntry[]): void { this.save({ log: entries }); }
 
   /** Queue a save after the previous one, so commits reach storage in order. */
-  protected save(c: { state: GameState; push?: Commit['push']; drop?: number[]; log?: LogEntry[] }): void {
+  /** `state` only when the game changed, so a log-only line (notice, refusal) doesn't count as play. */
+  protected save(c: { state?: GameState; push?: Commit['push']; drop?: number[]; log?: LogEntry[] }): void {
     const persist = this.persist;
     if (!persist) return;
     const job = () => persist.commit({ state: c.state, push: c.push, drop: c.drop || [], log: c.log || [] });

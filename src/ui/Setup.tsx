@@ -44,6 +44,7 @@ export function Setup({ go, startGame }: { go: Go; startGame: StartGame }) {
   const [names, setNames] = useState<Record<PlayerId, string>>({ p1: 'Player 1', p2: 'Player 2' });
   const [pick, setPick] = useState<Record<PlayerId, string[]>>({ p1: [], p2: [] });
   const [life, setLife] = useState(20);
+  const [gameName, setGameName] = useState('');
   const [stage, setStage] = useState<'form' | 'host' | 'join'>('form');
   const [err, setErr] = useState('');
   useEffect(() => {
@@ -58,11 +59,12 @@ export function Setup({ go, startGame }: { go: Go; startGame: StartGame }) {
   }, []);
   const decksOf = (ids: string[]) => ids.map((id) => decks.find((d) => d.id === id)).filter((d): d is Deck => !!d);
   const saveSetup = () => setMeta('lastSetup', { names, pick, life } satisfies LastSetup);
+  const named = (s: GameSetup): GameSetup => (gameName.trim() ? { ...s, name: gameName.trim() } : s);
 
   const startSame = async () => {
     if (!pick.p1.length || !pick.p2.length) { setErr('Each player needs at least one deck.'); return; }
     await saveSetup();
-    const setup: GameSetup = { p1: { name: names.p1, deckIds: pick.p1 }, p2: { name: names.p2, deckIds: pick.p2 }, life };
+    const setup = named({ p1: { name: names.p1, deckIds: pick.p1 }, p2: { name: names.p2, deckIds: pick.p2 }, life });
     await startGame({ kind: 'same-device', setup });
   };
 
@@ -72,7 +74,7 @@ export function Setup({ go, startGame }: { go: Go; startGame: StartGame }) {
         <header class="page-head"><button class="btn ghost" onClick={() => setStage('form')}>← Back</button><h1>Host a game</h1></header>
         {err ? <p class="error">{err}</p> : null}
         <HostPairFlow onTransport={async (t) => {
-          const setup: GameSetup = { p1: { name: names.p1, deckIds: pick.p1 }, life };
+          const setup = named({ p1: { name: names.p1, deckIds: pick.p1 }, life });
           try { await startGame({ kind: 'host', setup, transport: t, onError: setErr }); } catch (e) { setErr(errText(e)); }
         }} />
       </div>
@@ -110,6 +112,12 @@ export function Setup({ go, startGame }: { go: Go; startGame: StartGame }) {
         <button class={`btn ${mode === 'join' ? 'on' : 'ghost'}`} onClick={() => setMode('join')}>Join (two devices)</button>
       </div>
       {err ? <p class="error">{err}</p> : null}
+      {mode !== 'join' ? (
+        <label class="game-name">Game name <span class="muted small">(optional)</span>
+          <input value={gameName} maxLength={60} placeholder={mode === 'same' ? `${names.p1} vs ${names.p2}` : `${names.p1} vs …`}
+            onInput={(e) => setGameName(e.currentTarget.value)} />
+        </label>
+      ) : null}
       <div class="setup-grid">
         {playerForm('p1', mode === 'same' ? 'Player 1' : 'You')}
         {mode === 'same' ? playerForm('p2', 'Player 2') : null}
@@ -125,7 +133,7 @@ export function Setup({ go, startGame }: { go: Go; startGame: StartGame }) {
         {mode === 'host' ? <button class="btn primary big" onClick={async () => { if (!pick.p1.length) { setErr('Choose at least one deck.'); return; } await saveSetup(); setErr(''); setStage('host'); }}>Next: pair the guest</button> : null}
         {mode === 'join' ? <button class="btn primary big" onClick={async () => { if (!pick.p1.length) { setErr('Choose at least one deck.'); return; } await saveSetup(); setErr(''); setStage('join'); }}>Next: scan the host's code</button> : null}
       </div>
-      {mode === 'same' ? <p class="muted small">Hands start blinded. Use “Unblind to …” to see your hand; the board switches to that player's side.</p> : null}
+      {mode === 'same' ? <p class="muted small">Hands start blinded. Use Unblind and pick your name to see your hand; the board switches to that player's side.</p> : null}
     </div>
   );
 }

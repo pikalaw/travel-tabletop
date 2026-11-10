@@ -16,7 +16,7 @@ import { Host } from '../host/host';
 import { LocalSession, GuestSession, type Session } from '../client/session';
 import { deckSpec, buildHello, guestHandshake, hostHandshake } from '../client/net';
 import { ensureFixtures } from '../storage/fixtures';
-import { listDecks, gamePersistence, getGame, loadSnapshots, loadLog, getMeta, setMeta, markOpened, tidyFinished } from '../storage/db';
+import { listDecks, gamePersistence, getGame, loadSnapshots, loadLog, getMeta, setMeta, tidyFinished } from '../storage/db';
 import type { Deck, GameRecord, GameSetup, GuestGameMeta } from '../types/storage';
 import type { GameMode, GameState } from '../types/state';
 import type { DeckSpec } from '../types/protocol';
@@ -24,7 +24,7 @@ import type { StatePayloads } from '../types/commands';
 
 const errText = (e: unknown) => String((e as Error | null)?.message || e);
 
-type GameMeta = Pick<GameRecord, 'mode' | 'role' | 'setup' | 'openedAt'>;
+type GameMeta = Pick<GameRecord, 'mode' | 'role' | 'setup'>;
 /** `history`: the stored log's lines of the game resumed, shown only while that game is on screen (not after a rematch). */
 interface OpenGame { session: Session; rematch: (() => void) | undefined; pairing: PairingControl | null; history: { gameId: string; lines: LogLine[] } | null }
 
@@ -87,7 +87,7 @@ export function App({ update = null }: AppProps) {
 
   const startGame: StartGame = async (opts) => {
     if (opts.kind === 'same-device') {
-      const meta: GameMeta = { mode: 'same-device', role: 'host', setup: opts.setup, openedAt: Date.now() };
+      const meta: GameMeta = { mode: 'same-device', role: 'host', setup: opts.setup };
       const host = makeHost(meta);
       const payload = await startPayload(opts.setup, newGameId(), 'same-device');
       host.dispatch({ type: 'startGame', actor: 'host', payload });
@@ -96,7 +96,7 @@ export function App({ update = null }: AppProps) {
       return;
     }
     if (opts.kind === 'host') {
-      const meta: GameMeta = { mode: 'networked', role: 'host', setup: opts.setup, openedAt: Date.now() };
+      const meta: GameMeta = { mode: 'networked', role: 'host', setup: opts.setup };
       const host = makeHost(meta);
       const session = new LocalSession(host, { mode: 'host', me: 'p1' });
       hostHandshake(session, opts.transport, {
@@ -144,7 +144,6 @@ export function App({ update = null }: AppProps) {
       };
     }
     const rematch = session instanceof LocalSession && meta ? async () => {
-      meta.openedAt = Date.now(); // the persistence writes from this object, so the new game is the newest
       const p2 = meta.setup.p2;
       const payload = await startPayload(meta.setup, newGameId(), session.state.mode, p2?.spec ? { name: p2.name, spec: { cards: p2.spec.cards, commanders: p2.spec.commanders || [] } } : null);
       session.host.dispatch({ type: 'startGame', actor: 'host', payload });
@@ -158,8 +157,7 @@ export function App({ update = null }: AppProps) {
     if (!rec) return;
     const snaps = await loadSnapshots(id);
     const log = await loadLog(id);
-    const meta: GameMeta = { mode: rec.mode, role: rec.role, setup: rec.setup, openedAt: Date.now() };
-    await markOpened(id);
+    const meta: GameMeta = { mode: rec.mode, role: rec.role, setup: rec.setup };
     const host = makeHost(meta, rec.state, snaps, log.length ? log[log.length - 1]!.seq : 0);
     const session = new LocalSession(host, { mode: rec.mode === 'networked' ? 'host' : 'same-device', me: 'p1' });
     openGame(session, meta, undefined, { gameId: id, lines: logLines(log) });

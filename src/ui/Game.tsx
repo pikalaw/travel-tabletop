@@ -14,7 +14,7 @@ import {
   CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, AwaySheet, Sheet, zoneTitle, gameTokens,
   type FullRow, type LogLine, type MenuItem,
 } from './Overlays';
-import { initialUi, uiReducer, clockTime, type SheetState } from './gameUi';
+import { initialUi, uiReducer, clockTime, roleOf, type SheetState } from './gameUi';
 import { fullModel } from './fullModel';
 import { CardViewer, type CardView } from './CardViewer';
 import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone } from '../engine/view';
@@ -44,7 +44,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   const same = session.kind === 'same-device';
   const [, setTick] = useState(0);
   const [ui, dispatch] = useReducer(uiReducer, undefined, () => initialUi(same, session.me, session.state.activePlayer || 'p1'));
-  const { viewer, persp, openSlots, mode, sheet, full, match, shown, confirmFor, label } = ui;
+  const { viewer, persp, openSlots, mode, sheet, full, match, shown, choosing, label } = ui;
   const setSheet = (s: SheetState | null) => dispatch({ type: 'sheet', sheet: s });
   const openSlot = (zone: ZoneId) => dispatch({ type: 'openSlot', zone });
   const closeSlot = (zone: ZoneId) => dispatch({ type: 'closeSlot', zone });
@@ -492,8 +492,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   }
 
   // ----- same-device blind / unblind -----
-  /** Check it is really that player in front of the screen, then unblind. */
-  function unblind(pl: PlayerId) { dispatch({ type: 'confirmFor', player: pl }); }
 
   function doUnblind(pl: PlayerId) {
     const away = awayLines.current.slice(seen.current[pl]).filter((l) => l.actor !== pl).map((l) => ({ text: l.text, alert: l.alert }));
@@ -670,12 +668,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         <button class={`btn ${pointMode ? 'on' : ''}`} onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}>{pointMode ? 'Tap a card…' : 'Point'}</button>
         {openSlots.length ? <button class="btn" onClick={() => dispatch({ type: 'closeSlots' })}>{openSlots.length > 1 ? 'Close slots' : 'Close slot'}</button> : null}
         {same && viewer !== 'nobody' ? <button class="btn warn" onClick={blind}>Blind my hand</button> : null}
-        {same && viewer === 'nobody' ? (
-          <>
-            <button class="btn p1c" onClick={() => unblind('p1')}>Unblind to {state.players.p1.name}</button>
-            <button class="btn p2c" onClick={() => unblind('p2')}>Unblind to {state.players.p2.name}</button>
-          </>
-        ) : null}
+        {same && viewer === 'nobody' ? <button class="btn primary" onClick={() => dispatch({ type: 'choosing', open: true })}>Unblind</button> : null}
         <span class="spacer" />
         <button class="btn" onClick={() => setSheet({ kind: 'menu' })} aria-label="Menu">☰</button>
       </div>
@@ -689,7 +682,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     switch (sheet.kind) {
       case 'zone': case 'peek': case 'search': case 'inspect': case 'reveal':
         sheetEl = <CardSheet ctx={ctx} sheet={sheet} onClose={close} onRandom={(z) => send('randomPick', { zone: z })} />; break;
-      case 'counters': sheetEl = <CountersSheet ctx={ctx} P={P} send={send} onClose={close} />; break;
+      case 'counters': sheetEl = <CountersSheet ctx={ctx} send={send} onClose={close} />; break;
       case 'log': sheetEl = <LogSheet lines={lines} onClose={close} onExport={() => void exportLog()} />; break;
       case 'tokens': sheetEl = <TokensSheet ctx={ctx} tokens={tokens} onClose={close} />; break;
       case 'dice': sheetEl = <DiceSheet ctx={ctx} P={P} send={send} onClose={close} />; break;
@@ -752,14 +745,14 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         </div>
         {footer}
       </footer>
-      {confirmFor ? (
-        <ConfirmPlayer pl={confirmFor} name={state.players[confirmFor].name}
-          onOk={() => { const pl = confirmFor; dispatch({ type: 'confirmFor', player: null }); doUnblind(pl); }}
-          onCancel={() => dispatch({ type: 'confirmFor', player: null })} />
+      {choosing ? (
+        <ChoosePlayer state={state}
+          onPick={(pl) => { dispatch({ type: 'choosing', open: false }); doUnblind(pl); }}
+          onCancel={() => dispatch({ type: 'choosing', open: false })} />
       ) : null}
       {shown ? <RevealScreen ctx={ctx} shown={shown} onClose={() => dispatch({ type: 'shown', shown: null })} /> : null}
       {pointer ? (
-        <div class={`pointer-ring ${pointer.actor}`}
+        <div class={`pointer-ring ${roleOf(state, pointer.actor)}`}
           style={`left:${pointer.rect.left - 4}px;top:${pointer.rect.top - 4}px;width:${pointer.rect.width + 8}px;height:${pointer.rect.height + 8}px`} />
       ) : null}
     </div>
@@ -786,18 +779,21 @@ function RevealScreen({ ctx, shown, onClose }: { ctx: BoardCtx; shown: { actor: 
   );
 }
 
-/** "Are you sure you are …?" before unblinding, in that player's colour (the colour of their button). */
-function ConfirmPlayer({ pl, name, onOk, onCancel }: { pl: PlayerId; name: string; onOk: () => void; onCancel: () => void }) {
+/**
+ * One device: who is unblinding? Picking a name is the deliberate step, so there is no second
+ * confirmation. The player whose turn it is comes first, in the turn colour; the other below, in blue.
+ */
+function ChoosePlayer({ state, onPick, onCancel }: { state: GameState; onPick: (pl: PlayerId) => void; onCancel: () => void }) {
   const outside = useOutsideTap(onCancel);
+  const a = state.activePlayer;
   return (
-    <div class="confirm-screen" role="dialog" aria-label={`Are you sure you are ${name}?`} {...outside}>
-      <div class={`confirm-box ${pl}`}>
-        <h3>Are you sure you are {name}?</h3>
+    <div class="confirm-screen" role="dialog" aria-label="Who is unblinding?" {...outside}>
+      <div class="confirm-box plain chooser">
+        <h3>Who are you?</h3>
         <p>Your hand will be shown face up.</p>
-        <div class="confirm-actions">
-          <button class="btn" onClick={onCancel}>Cancel</button>
-          <button class="btn yes" onClick={onOk} autoFocus>Yes, I’m {name}</button>
-        </div>
+        <button class="btn pick atk" onClick={() => onPick(a)}><b>{state.players[a].name}</b><span>Taking turn {state.turn}</span></button>
+        <button class="btn pick def" onClick={() => onPick(other(a))}><b>{state.players[other(a)].name}</b><span>Defending</span></button>
+        <div class="confirm-actions"><button class="btn" onClick={onCancel}>Cancel</button></div>
       </div>
     </div>
   );

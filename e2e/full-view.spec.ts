@@ -110,7 +110,7 @@ test('one device: passing the turn blinds the hand', async ({ page }) => {
   await barButton(page, 'Pass turn');
   await answerDialog(page, true);
   await expect(page.locator('.turn-label')).toContainText('Turn 2', { ignoreCase: true });
-  await expect(page.getByRole('button', { name: 'Unblind to Player 2' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Unblind', exact: true })).toBeVisible();
   await expect(page.locator('.board')).toContainText('hand (hidden)');
   errs.expectNone();
 });

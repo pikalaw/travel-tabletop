@@ -5,7 +5,7 @@ import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sha256Bytes } from '../src/storage/sha256';
 import {
-  closeDb, db, defIdFor, deleteGame, deleteGames, FINISHED_KEEP, gamePersistence, markOpened, tidyFinished, getDeck, getDef, getDefs, getGame, getImage, getMeta, isCardDef, isDeck,
+  closeDb, db, defIdFor, deleteGame, deleteGames, FINISHED_KEEP, gamePersistence, tidyFinished, getDeck, getDef, getDefs, getGame, getImage, getMeta, isCardDef, isDeck,
   isGameRecord, isGameState, listDecks, listGames, loadLog, loadSnapshots, putDeck, putDef, putImage, setMeta, sha256,
 } from '../src/storage/db';
 import { artUrl, loadArt, sizeFor } from '../src/storage/art';
@@ -142,19 +142,25 @@ describe('art', () => {
 describe('finished games', () => {
   const base = records.games[0]!.state as GameState;
   const state = (id: string, over: boolean): GameState => ({ ...structuredClone(base), gameId: id, result: over ? { winner: 'p1', reason: 'concede' } : null });
-  async function save(id: string, over: boolean, openedAt: number, snaps = 0) {
-    const p = gamePersistence({ mode: 'same-device', role: 'host', setup: {}, openedAt });
+  const at = (t: number) => vi.spyOn(Date, 'now').mockReturnValue(t);
+  async function save(id: string, over: boolean, playedAt: number, snaps = 0) {
+    at(playedAt);
+    const p = gamePersistence({ mode: 'same-device', role: 'host', setup: {} });
     const st = state(id, over);
     await p.commit({ state: st, drop: [], log: [] });
     for (let k = 1; k <= snaps; k++) await p.commit({ state: st, push: { key: k, state: st }, drop: [], log: [] });
+    return p;
   }
-  it('lists games most recently opened first; opening one moves it up but keeps when it was played', async () => {
-    await save('a', false, 1); await save('b', true, 3); await save('c', false, 2);
+  it('lists games most recently played first; a log-only line is not play', async () => {
+    const a = await save('a', false, 1); await save('b', true, 3); await save('c', false, 2);
     expect((await listGames()).map((g) => g.id)).toEqual(['b', 'c', 'a']);
-    const played = (await getGame('a'))!.updatedAt;
-    await markOpened('a');
+    at(10);
+    const entry: LogEntry = { gameId: 'a', seq: 9, ts: 't', mode: 'same-device', turn: 1, kind: 'notice', actor: 'p1', schemaVersion: 1 };
+    await a.commit({ drop: [], log: [entry] });
+    expect((await getGame('a'))!.updatedAt).toBe(1);
+    expect((await loadLog('a')).map((e) => e.seq)).toEqual([9]);
+    await a.commit({ state: state('a', false), drop: [], log: [] });
     expect((await listGames()).map((g) => g.id)).toEqual(['a', 'b', 'c']);
-    expect((await getGame('a'))!.updatedAt).toBe(played);
   });
   it('tidying keeps the newest finished games and one undo snapshot each; games in progress are untouched', async () => {
     for (let i = 0; i < FINISHED_KEEP + 2; i++) await save(`f${i}`, true, 100 + i, 3);

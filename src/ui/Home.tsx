@@ -1,6 +1,7 @@
 // The home screen: new game, decks, games in progress, a joined game, and updates.
 
 import { useEffect, useState } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
 import { confirmBox } from './Dialogs';
 import { listGames, deleteGame, deleteGames, getMeta, setMeta, staleDecks, FINISHED_KEEP } from '../storage/db';
 import { APP_VERSION, BUILD_ID } from '../version';
@@ -22,7 +23,7 @@ export interface HomeProps {
 }
 
 export function Home({ go, resume, rejoin, update, notice }: HomeProps) {
-  const [games, setGames] = useState<GameRecord[]>([]); // most recently opened first
+  const [games, setGames] = useState<GameRecord[]>([]); // most recently played first
   const [guestGame, setGuestGame] = useState<GuestGameMeta | null>(null);
   const [stale, setStale] = useState<Deck[]>([]);
   const refresh = () => {
@@ -65,7 +66,7 @@ export function Home({ go, resume, rejoin, update, notice }: HomeProps) {
         <>
           <h2>Games in progress</h2>
           <ul class="game-list">{playing.map((g) => (
-            <GameRow g={g} detail={`turn ${g.state.turn}`} open="Resume" onOpen={() => resume(g.id)} onDelete={() => remove(g)} />
+            <GameRow g={g} detail={<>turn {g.state.turn}</>} open="Resume" onOpen={() => resume(g.id)} onDelete={() => remove(g)} />
           ))}</ul>
         </>
       ) : null}
@@ -76,7 +77,7 @@ export function Home({ go, resume, rejoin, update, notice }: HomeProps) {
             <button class="btn ghost" onClick={() => void removeAll()}>Delete all</button>
           </div>
           <ul class="game-list">{finished.map((g) => (
-            <GameRow g={g} detail={`${resultText(g)} · ${g.state.turn} ${g.state.turn === 1 ? 'turn' : 'turns'}`} open="Open" onOpen={() => resume(g.id)} onDelete={() => remove(g)} />
+            <GameRow g={g} detail={<>{result(g)} · {g.state.turn} {g.state.turn === 1 ? 'turn' : 'turns'}</>} open="Open" onOpen={() => resume(g.id)} onDelete={() => remove(g)} />
           ))}</ul>
           <p class="muted small">The last {FINISHED_KEEP} finished games are kept; older ones are deleted with their logs.</p>
         </>
@@ -84,11 +85,10 @@ export function Home({ go, resume, rejoin, update, notice }: HomeProps) {
       {guestGame ? (
         <>
           <h2>Joined game</h2>
-          <ul class="game-list"><li>
-            <span>Guest in {guestGame.hostName}'s game</span>
-            <button class="btn" onClick={() => rejoin(guestGame)}>Reconnect</button>
-            <button class="btn ghost" onClick={async () => { await setMeta('guestGame', null); refresh(); }}>Forget</button>
-          </li></ul>
+          <ul class="game-list"><Row label={`Reconnect to ${guestGame.hostName}'s game`} onOpen={() => rejoin(guestGame)}
+            remove="Forget" onRemove={async () => { await setMeta('guestGame', null); refresh(); }}>
+            <span class="game-title">Guest in {guestGame.hostName}'s game</span>
+          </Row></ul>
         </>
       ) : null}
       <p class="muted small foot">Version {APP_VERSION} (build {BUILD_ID}). Card images you import come from Scryfall; sample cards are placeholders.</p>
@@ -96,19 +96,39 @@ export function Home({ go, resume, rejoin, update, notice }: HomeProps) {
   );
 }
 
-/** "Claire won (concession)", or "Game over" when a game was ended with no winner. */
-function resultText(g: GameRecord): string {
+/** "Claire won (concession)" with the winner's name in gold, or "Game over" when a game was ended with no winner. */
+function result(g: GameRecord) {
   const r = g.state.result;
-  if (!r?.winner) return 'Game over';
-  return `${g.state.players[r.winner].name} won${r.reason === 'concede' ? ' (concession)' : ''}`;
+  if (!r?.winner) return <>Game over</>;
+  return <><b class="winner">{g.state.players[r.winner].name}</b> won{r.reason === 'concede' ? ' (concession)' : ''}</>;
 }
 
-function GameRow({ g, detail, open, onOpen, onDelete }: { g: GameRecord; detail: string; open: string; onOpen: () => void; onDelete: () => void }) {
+const TRASH = (
+  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+  </svg>
+);
+
+/** A list row: tapping it opens it; the trash icon removes it. */
+function Row({ label, onOpen, remove, onRemove, children }: { label: string; onOpen: () => void; remove: string; onRemove: () => void; children: ComponentChildren }) {
   return (
     <li>
-      <span>{g.state.players.p1.name} vs {g.state.players.p2.name} · {g.mode === 'networked' ? 'two devices' : 'one device'} · {detail} · {new Date(g.openedAt ?? g.updatedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-      <button class="btn" onClick={onOpen}>{open}</button>
-      <button class="btn ghost" onClick={onDelete}>Delete</button>
+      <button class="row-open" aria-label={label} onClick={onOpen}>{children}<span class="chev" aria-hidden="true">›</span></button>
+      <button class="btn ghost icon" aria-label={remove} title={remove} onClick={onRemove}>{TRASH}</button>
     </li>
+  );
+}
+
+/** A saved game: its name (or "<player 1> vs <player 2>"), then how it was played, how far it got, and when. */
+function GameRow({ g, detail, open, onOpen, onDelete }: { g: GameRecord; detail: ComponentChildren; open: string; onOpen: () => void; onDelete: () => void }) {
+  const players = `${g.state.players.p1.name} vs ${g.state.players.p2.name}`;
+  const title = g.setup.name || players;
+  return (
+    <Row label={`${open} ${title}`} onOpen={onOpen} remove="Delete" onRemove={onDelete}>
+      <span class="game-title">{title}</span>
+      <span class="game-detail">
+        {g.setup.name ? `${players} · ` : ''}{g.mode === 'networked' ? 'two devices' : 'one device'} · {detail} · {new Date(g.updatedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+      </span>
+    </Row>
   );
 }

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { startOneDevice, playFromHand, idsIn, tapCard, barButton, resetBar, answerDialog, watchErrors } from './helpers';
+import { startOneDevice, playFromHand, idsIn, tapCard, barButton, resetBar, answerDialog, unblind, watchErrors } from './helpers';
 
 const box = (page: Page) => page.locator('.confirm-box.plain');
 
@@ -91,26 +91,31 @@ test('home and deck dialogs: delete a game, rename and delete a deck', async ({ 
   expect(native).toEqual([]);
 });
 
-test('unblinding asks "Are you sure you are …?" in that player’s colour', async ({ page }) => {
+test('Unblind opens a chooser: whose turn it is on top in red, the other below in blue; reload blinds', async ({ page }) => {
   await startOneDevice(page, { unblindTo: null });
   const bg = (sel: string) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).backgroundColor);
-  await page.getByRole('button', { name: 'Unblind to Player 2' }).click();
-  await expect(page.locator('.confirm-box h3')).toHaveText('Are you sure you are Player 2?');
-  expect(await bg('.confirm-box')).toBe(await bg('.btn.p2c'));
-  await page.locator('.confirm-box').getByRole('button', { name: 'Cancel' }).click();
+  const unblindBtn = page.getByRole('button', { name: 'Unblind', exact: true });
+  await unblindBtn.click();
+  const picks = page.locator('.chooser .btn.pick');
+  await expect(picks).toHaveCount(2);
+  await expect(picks.nth(0)).toContainText('Player 1'); await expect(picks.nth(0)).toContainText('Taking turn 1');
+  await expect(picks.nth(1)).toContainText('Player 2'); await expect(picks.nth(1)).toContainText('Defending');
+  expect(await bg('.chooser .btn.pick.atk')).toBe('rgb(255, 123, 95)');
+  expect(await bg('.chooser .btn.pick.def')).toBe('rgb(122, 167, 255)');
+  await page.screenshot({ path: 'test-results/chooser.png' });
+  await page.locator('.chooser').getByRole('button', { name: 'Cancel' }).click();
   await expect(page.locator('.c52 .slot-label')).toContainText('(HIDDEN)', { ignoreCase: true });
 
-  await page.getByRole('button', { name: 'Unblind to Player 1' }).click();
-  expect(await bg('.confirm-box')).toBe(await bg('.btn.p1c'));
-  await page.locator('.confirm-box .btn.yes').click();
+  await unblind(page, 'Player 2');
+  await expect(page.locator('.c52 .slot-label')).toContainText('Player 2');
   await expect(page.locator('.c52 .slot-label')).not.toContainText('hidden', { ignoreCase: true });
 
   // a reload resumes the game blinded
   await page.reload(); await page.waitForSelector('.board');
   await expect(page.locator('.c52 .slot-label')).toContainText('hidden', { ignoreCase: true });
   // a tap outside the dialog cancels
-  await page.getByRole('button', { name: 'Unblind to Player 2' }).click();
+  await unblindBtn.click();
   await page.mouse.click(10, 10);
-  await expect(page.locator('.confirm-box')).toHaveCount(0);
+  await expect(page.locator('.chooser')).toHaveCount(0);
   await expect(page.locator('.c52 .slot-label')).toContainText('hidden', { ignoreCase: true });
 });

@@ -47,7 +47,7 @@ test('only the active player, or a blinded table, sees Pass turn', async ({ page
   await expect(pass).toHaveCount(1); // Player 1 is active
   await resetBar(page); await barButton(page, 'Pass turn'); await answerDialog(page, true);
   // blinded by the pass: the table may pass
-  await expect(page.getByRole('button', { name: 'Unblind to Player 2' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Unblind', exact: true })).toBeVisible();
   await expect(pass).toHaveCount(1);
   // Player 1 unblinds during Player 2's turn: no Pass turn, in the footer or the menu
   await unblind(page, 'Player 1');
@@ -79,7 +79,7 @@ test('one device: starting combat blinds the hand, so both players can look at t
   await expect(page.locator('.board')).toContainText('hand (hidden)');
   await expect(page.locator('.board')).toHaveClass(/\bpersp-p1\b/); // still the active player's side
   await barButton(page, 'Pause');
-  await expect(page.getByRole('button', { name: 'Unblind to Player 1' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Unblind', exact: true })).toBeVisible();
   errs.expectNone();
 });
 

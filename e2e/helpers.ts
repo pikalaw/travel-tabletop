@@ -87,10 +87,10 @@ export async function inOpenRow(page: Page, zone: string, act: () => Promise<voi
   if (crowded) { await strip(); await expect(row).not.toHaveClass(/(^|\s)open(\s|$)/); }
 }
 
-/** Unblind to a player (same-device mode), answering "Are you sure you are …?". */
+/** Unblind to a player (same-device mode): Unblind, then that player's name in the chooser. */
 export async function unblind(page: Page, name: string) {
-  await page.getByRole('button', { name: `Unblind to ${name}` }).click();
-  await page.locator('.confirm-box .btn.yes').click();
+  await page.getByRole('button', { name: 'Unblind', exact: true }).click();
+  await page.locator('.chooser .btn.pick', { has: page.locator('b', { hasText: new RegExp(`^${name}$`) }) }).click();
   await page.waitForTimeout(300);
 }
 

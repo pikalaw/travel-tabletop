@@ -119,8 +119,7 @@ export function isGameState(x: unknown): x is GameState {
 
 export function isGameRecord(x: unknown): x is GameRecord {
   return isObj(x) && isStr(x.id) && (x.mode === 'networked' || x.mode === 'same-device') && x.role === 'host'
-    && isObj(x.setup) && isGameState(x.state) && isNum(x.updatedAt) && typeof x.over === 'boolean'
-    && (x.openedAt === undefined || isNum(x.openedAt));
+    && isObj(x.setup) && isGameState(x.state) && isNum(x.updatedAt) && typeof x.over === 'boolean';
 }
 
 export function isSnapshotRecord(x: unknown): x is SnapshotRecord {
@@ -255,19 +254,10 @@ export async function getGame(id: string): Promise<GameRecord | undefined> {
   return keep('game', isGameRecord)(g) ? g : undefined;
 }
 
-const opened = (g: GameRecord) => g.openedAt ?? g.updatedAt;
-
-/** Most recently opened first. */
+/** Most recently played first. */
 export async function listGames(): Promise<GameRecord[]> {
   const all = (await (await db()).getAll('games')).filter(keep('game', isGameRecord));
-  return all.sort((a, b) => opened(b) - opened(a));
-}
-
-/** Record that a saved game was opened, without changing when it was last played. */
-export async function markOpened(id: string): Promise<void> {
-  const d = await db();
-  const g = await d.get('games', id);
-  if (keep('game', isGameRecord)(g)) await d.put('games', { ...g, openedAt: Date.now() });
+  return all.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function deleteGame(id: string): Promise<void> {
@@ -289,7 +279,7 @@ export async function deleteGames(ids: readonly string[]): Promise<void> {
   await sweep();
 }
 
-/** Finished games kept on the device; beyond this, the least recently opened are deleted. */
+/** Finished games kept on the device; beyond this, the least recently played are deleted. */
 export const FINISHED_KEEP = 20;
 
 /**
@@ -375,7 +365,8 @@ export async function loadLog(gameId: string): Promise<LogEntry[]> {
 
 /** What the host hands to persistence after each command. */
 export interface Commit {
-  state: GameState;
+  /** The game, when it changed (a command or an undo); left out for log-only lines, so `updatedAt` is when it was last played. */
+  state?: GameState | undefined;
   push?: { key: number; state: GameState } | undefined;
   drop: number[];
   log: LogEntry[];
@@ -386,13 +377,14 @@ export interface Persistence {
 }
 
 /** Host persistence: one transaction per command (state, snapshot and log together). */
-export function gamePersistence(meta: Pick<GameRecord, 'mode' | 'role' | 'setup' | 'openedAt'>): Persistence {
+export function gamePersistence(meta: Pick<GameRecord, 'mode' | 'role' | 'setup'>): Persistence {
   return {
     async commit({ state, push, drop, log }) {
       const tx = (await db()).transaction(['games', 'snapshots', 'logs'], 'readwrite');
-      void tx.objectStore('games').put({ ...meta, id: state.gameId, state, updatedAt: Date.now(), over: !!state.result });
-      if (push) void tx.objectStore('snapshots').put({ gameId: state.gameId, key: push.key, state: push.state });
-      for (const key of drop) void tx.objectStore('snapshots').delete([state.gameId, key]);
+      if (state) void tx.objectStore('games').put({ ...meta, id: state.gameId, state, updatedAt: Date.now(), over: !!state.result });
+      const gameId = state?.gameId;
+      if (gameId && push) void tx.objectStore('snapshots').put({ gameId, key: push.key, state: push.state });
+      if (gameId) for (const key of drop) void tx.objectStore('snapshots').delete([gameId, key]);
       for (const e of log) void tx.objectStore('logs').put(e);
       await tx.done;
     },

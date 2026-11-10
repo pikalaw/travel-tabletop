@@ -66,8 +66,11 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
 
   // player counters
   await page.locator('.counters-cell').click();
-  await page.locator('.ctr-panel.p1 .ctr-row').getByRole('button', { name: '−' }).first().click();
-  await expect(page.locator('.ctr-panel.p1 .ctr-val').first()).toHaveText('19');
+  // the player whose turn it is comes first, in the turn colour
+  await expect(page.locator('.ctr-panel').first()).toHaveClass(/\batk\b/);
+  await expect(page.locator('.ctr-panel.atk h3')).toHaveText('Player 1');
+  await page.locator('.ctr-panel.atk .ctr-row').getByRole('button', { name: '−' }).first().click();
+  await expect(page.locator('.ctr-panel.atk .ctr-val').first()).toHaveText('19');
   await page.locator('.sheet').getByRole('button', { name: 'Done' }).click();
 
   // blind, then unblind to Player 2: the board switches to their side

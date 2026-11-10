@@ -1,7 +1,8 @@
 // The game screen's local state: one reducer, so modes that exclude each other can never be on
 // together. Nothing here is shared with the other device; it is how this screen is being used.
 
-import type { PlayerId, Viewer, ZoneId } from '../types/state';
+import type { Actor, GameState, PlayerId, Viewer, ZoneId } from '../types/state';
+import { other } from '../engine/view';
 import type { CardSheetState, LogLine } from './Overlays';
 import type { LogEntry } from '../types/storage';
 
@@ -42,8 +43,8 @@ export interface UiState {
   match: string | null;
   /** The reveal screen. */
   shown: { actor: PlayerId; cardIds: string[] } | null;
-  /** Player asked "Are you sure you are …?" before unblinding. */
-  confirmFor: PlayerId | null;
+  /** One device: the "who is unblinding?" chooser is open. */
+  choosing: boolean;
   /** Name of the labeled counter in the footer. */
   label: string;
 }
@@ -58,7 +59,7 @@ export type UiAction =
   | { type: 'full'; full: FullState | null }
   | { type: 'match'; cardId: string | null }
   | { type: 'shown'; shown: UiState['shown'] }
-  | { type: 'confirmFor'; player: PlayerId | null }
+  | { type: 'choosing'; open: boolean }
   | { type: 'label'; label: string }
   /** Show the board to `player`; `away` is what happened while they were not looking. */
   | { type: 'unblind'; player: PlayerId; away: { name: string; lines: AwayLine[] } | null }
@@ -75,7 +76,7 @@ export function initialUi(same: boolean, me: PlayerId, activePlayer: PlayerId): 
     full: null,
     match: null,
     shown: null,
-    confirmFor: null,
+    choosing: false,
     label: 'loyalty',
   };
 }
@@ -93,7 +94,7 @@ export function uiReducer(s: UiState, a: UiAction): UiState {
     case 'full': return { ...s, full: a.full };
     case 'match': return { ...s, match: a.cardId };
     case 'shown': return { ...s, shown: a.shown };
-    case 'confirmFor': return { ...s, confirmFor: a.player };
+    case 'choosing': return { ...s, choosing: a.open };
     case 'label': return { ...s, label: a.label };
     case 'unblind':
       return {
@@ -107,6 +108,11 @@ export function uiReducer(s: UiState, a: UiAction): UiState {
     case 'blind':
       return { ...s, viewer: 'nobody', sheet: s.sheet && PRIVATE_TRAYS.has(s.sheet.kind) ? null : s.sheet };
   }
+}
+
+/** A player's role this turn, for the turn colours: `atk` (red) for whoever's turn it is, `def` (blue) for the other; '' for the table. */
+export function roleOf(state: GameState, actor: Actor): 'atk' | 'def' | '' {
+  return actor === state.activePlayer ? 'atk' : actor === other(state.activePlayer) ? 'def' : '';
 }
 
 /** A log line's time of day, as the log sheet shows it. */
