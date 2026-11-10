@@ -45,6 +45,7 @@ export function Setup({ go, startGame }: { go: Go; startGame: StartGame }) {
   const [pick, setPick] = useState<Record<PlayerId, string[]>>({ p1: [], p2: [] });
   const [life, setLife] = useState(20);
   const [gameName, setGameName] = useState('');
+  const [guestFirst, setGuestFirst] = useState(false); // hosting: the host goes first unless chosen otherwise
   const [stage, setStage] = useState<'form' | 'host' | 'join'>('form');
   const [err, setErr] = useState('');
   useEffect(() => {
@@ -74,7 +75,7 @@ export function Setup({ go, startGame }: { go: Go; startGame: StartGame }) {
         <header class="page-head"><button class="btn ghost" onClick={() => setStage('form')}>← Back</button><h1>Host a game</h1></header>
         {err ? <p class="error">{err}</p> : null}
         <HostPairFlow onTransport={async (t) => {
-          const setup = named({ p1: { name: names.p1, deckIds: pick.p1 }, life });
+          const setup = named({ p1: { name: names.p1, deckIds: pick.p1 }, life, ...(guestFirst ? { first: 'p2' as const } : {}) });
           try { await startGame({ kind: 'host', setup, transport: t, onError: setErr }); } catch (e) { setErr(errText(e)); }
         }} />
       </div>
@@ -122,6 +123,13 @@ export function Setup({ go, startGame }: { go: Go; startGame: StartGame }) {
         {playerForm('p1', mode === 'same' ? 'Player 1 (goes first)' : 'You')}
         {mode === 'same' ? playerForm('p2', 'Player 2') : null}
       </div>
+      {mode === 'host' ? (
+        // The guest's name arrives only when they join, so this is a choice, not a swap of names.
+        <div class="first-pick">Goes first
+          <span class="seg"><button class={`btn ${guestFirst ? 'ghost' : 'on'}`} onClick={() => setGuestFirst(false)}>Me</button>
+            <button class={`btn ${guestFirst ? 'on' : 'ghost'}`} onClick={() => setGuestFirst(true)}>Guest</button></span>
+        </div>
+      ) : null}
       {mode === 'same' ? (
         // Player 1 goes first, so swapping the players' names and decks changes who starts.
         <div class="swap-row">

@@ -77,7 +77,7 @@ export function App({ update = null }: AppProps) {
     const p1 = await deckSpec(pick(setup.p1?.deckIds));
     const p2 = guest ? guest.spec : await deckSpec(pick(setup.p2?.deckIds));
     return {
-      gameId, mode, startingLife: setup.life ?? 20,
+      gameId, mode, startingLife: setup.life ?? 20, ...(setup.first ? { first: setup.first } : {}),
       players: {
         p1: { name: setup.p1?.name || 'Player 1', cards: p1.cards, commanders: p1.commanders || [] },
         p2: { name: guest ? guest.name : setup.p2?.name || 'Player 2', cards: p2.cards, commanders: p2.commanders || [] },

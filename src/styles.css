@@ -88,6 +88,7 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .import { display: grid; gap: 12px; }
 
 .game-name { display: grid; gap: 4px; margin: 0 0 12px; color: var(--ink-2); }
+.first-pick { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; color: var(--ink-2); }
 .swap-row { display: flex; justify-content: center; margin: 10px 0 0; }
 .setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
 .player-form { border: 1px solid var(--cell-line); border-radius: var(--radius); padding: 10px 12px 12px; display: grid; gap: 8px; }

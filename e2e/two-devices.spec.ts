@@ -88,3 +88,15 @@ test('two devices: the guest leaves and reconnects; the host resumes after a rel
   const kinds = new Set(lines.map((l) => l.kind));
   for (const k of ['command', 'snapshot', 'undo']) expect(kinds.has(k)).toBe(true);
 });
+
+test('two devices: the host can let the guest go first', async ({ browser }) => {
+  const H = await (await browser.newContext({ viewport: { width: 844, height: 390 } })).newPage();
+  const G = await (await browser.newContext({ viewport: { width: 844, height: 390 } })).newPage();
+  const eh = watchErrors(H), eg = watchErrors(G);
+  await startTwoDevices(H, G, { guestFirst: true });
+  for (const pg of [H, G]) await expect(pg.locator('.turn-label')).toContainText('Claire', { ignoreCase: true });
+  // the guest has Pass turn; the host doesn't
+  await expect(G.locator('.bar').first().getByRole('button', { name: 'Pass turn', exact: true })).toHaveCount(1);
+  await expect(H.locator('.bar').first().getByRole('button', { name: 'Pass turn', exact: true })).toHaveCount(0);
+  eh.expectNone(); eg.expectNone();
+});

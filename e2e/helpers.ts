@@ -231,10 +231,11 @@ export async function pairByText(H: Page, G: Page, guestStart: () => Promise<voi
 }
 
 /** Start a two-device game: host "Larry", guest "Claire" (with the Grove deck). */
-export async function startTwoDevices(H: Page, G: Page) {
+export async function startTwoDevices(H: Page, G: Page, opts: { guestFirst?: boolean } = {}) {
   for (const pg of [H, G]) { await pg.goto('index.html'); await pg.getByRole('button', { name: 'New game' }).click(); }
   await H.getByText('Host (two devices)').click();
   await H.locator('.player-form input').first().fill('Larry');
+  if (opts.guestFirst) await H.locator('.first-pick').getByRole('button', { name: 'Guest' }).click();
   await H.getByText('Next: pair the guest').click();
   const codes = await pairByText(H, G, async () => {
     await G.getByText('Join (two devices)').click();

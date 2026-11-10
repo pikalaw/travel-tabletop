@@ -90,6 +90,8 @@ export interface GameSetup {
   /** Optional; Home shows "<player 1> vs <player 2>" without one. Not remembered for the next game. */
   name?: string;
   life?: number;
+  /** Hosting: who takes the first turn (the host is p1, the guest p2); p1 when left out. A rematch keeps it. */
+  first?: PlayerId;
   p1?: { name: string; deckIds: string[] };
   /** One device: the second player's decks. Hosting: the guest's name and cards, once joined. */
   p2?: { name: string; deckIds?: string[]; spec?: { cards: CardSpec[]; commanders?: CardSpec[] } };
