@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { toast } from './toast';
+import { TipButton } from './TipButton';
 import { UndoIcon, EyeIcon, EyeOffIcon, SwordsIcon, EndCombatIcon, PauseIcon, CloseIcon, HourglassIcon, PawnIcon, DieIcon, PointIcon, UntapIcon } from './icons';
 import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
@@ -611,18 +612,18 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     footer = (
       <div class="bar">
         {/* No Tap button (a tap on the picture taps) and no Attack button (drag the ⚔ Attack tag on, the mark off). */}
-        {a.reveal ? <button class="btn" onClick={() => revealCard(card, fullZone)}>Reveal</button> : null}
-        {a.block ? <button class="btn" onClick={() => { startCombat({ cardId: card.id, zone: fullZone }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Block</button> : null}
-        {a.detach ? <button class="btn" onClick={() => send('detach', { cardId: card.id, from: fullZone })}>Detach</button> : null}
-        {a.attach ? <button class="btn" onClick={() => { dispatch({ type: 'mode', mode: { kind: 'attach', cardId: card.id, zone: fullZone } }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Attach</button> : null}
-        {a.makeLead ? <button class="btn" onClick={() => send('setLead', { cardId: card.id, from: fullZone })}>Make lead</button> : null}
-        {groupSize > 0 ? <button class="btn" onClick={detachAll}>Detach all</button> : null}
+        {a.reveal ? <TipButton class="btn" tip="Show this card to the other player once; it stays in your hand." onClick={() => revealCard(card, fullZone)}>Reveal</TipButton> : null}
+        {a.block ? <TipButton class="btn" tip="Block with this creature: combat mode opens with it picked; then tap the attacker." onClick={() => { startCombat({ cardId: card.id, zone: fullZone }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Block</TipButton> : null}
+        {a.detach ? <TipButton class="btn" tip="Detach this card from the card it is attached to." onClick={() => send('detach', { cardId: card.id, from: fullZone })}>Detach</TipButton> : null}
+        {a.attach ? <TipButton class="btn" tip="Attach this card to another: tap the card on the battlefield to attach it to." onClick={() => { dispatch({ type: 'mode', mode: { kind: 'attach', cardId: card.id, zone: fullZone } }); dispatch({ type: 'full', full: null }); setSheet(null); }}>Attach</TipButton> : null}
+        {a.makeLead ? <TipButton class="btn" tip="Make this the card the group is attached to; the group's combat marks move to it." onClick={() => send('setLead', { cardId: card.id, from: fullZone })}>Make lead</TipButton> : null}
+        {groupSize > 0 ? <TipButton class="btn" tip="Detach every card attached to this group (asks first)." onClick={detachAll}>Detach all</TipButton> : null}
         {a.counters ? <CounterChips label={label} attack={showAttack} /> : null}
         {/* Rarely used, so last. */}
-        {a.flip ? <button class="btn" onClick={() => send('flip', { cardId: card.id, from: fullZone })}>Flip</button> : null}
-        {a.faceDown ? <button class="btn" onClick={() => send('setFaceDown', { cardId: card.id, from: fullZone, value: !card.faceDown })}>{card.faceDown ? 'Face up' : 'Face down'}</button> : null}
+        {a.flip ? <TipButton class="btn" tip="Turn to the card's other face, for double-faced cards; both players see it." onClick={() => send('flip', { cardId: card.id, from: fullZone })}>Flip</TipButton> : null}
+        {a.faceDown ? <TipButton class="btn" tip={card.faceDown ? 'Turn the card face up for both players.' : 'Turn the card face down: only its owner sees it (morph, manifest, foretell).'} onClick={() => send('setFaceDown', { cardId: card.id, from: fullZone, value: !card.faceDown })}>{card.faceDown ? 'Face up' : 'Face down'}</TipButton> : null}
         <span class="spacer" />
-        <button class="btn icon primary" onClick={closeFull} aria-label="Close" title="Close"><CloseIcon /></button>
+        <TipButton class="btn icon primary" label="Close" tip="Close the card view." onClick={closeFull}><CloseIcon /></TipButton>
       </div>
     );
   } else if (combat) {
@@ -636,11 +637,11 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
           : combat.vigilance
             ? <>Vigilance: the next attacker you tap stays untapped.</>
             : <>Tap {state.players[state.activePlayer].name}’s attackers, or a blocker then its attacker.</>}</span>
-        <button class={`btn${combat.vigilance ? ' on' : ''}`} aria-pressed={combat.vigilance}
-          onClick={() => dispatch({ type: 'mode', mode: { ...combat, vigilance: !combat.vigilance } })}>Vigilance</button>
-        <button class="btn icon" onClick={endCombat} aria-label="End combat" title="End combat"><EndCombatIcon /></button>
+        <TipButton class={`btn${combat.vigilance ? ' on' : ''}`} aria-pressed={combat.vigilance} tip="The next attacker you tap stays untapped, for a creature with vigilance."
+          onClick={() => dispatch({ type: 'mode', mode: { ...combat, vigilance: !combat.vigilance } })}>Vigilance</TipButton>
+        <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton>
         {/* Leaves combat mode with every mark kept; Combat comes back to it, End combat ends it. */}
-        <button class="btn icon primary" onClick={toNormal} aria-label="Pause" title="Pause: back to normal play, marks kept"><PauseIcon /></button>
+        <TipButton class="btn icon primary" label="Pause" tip="Pause combat: back to normal play, for instants and abilities; the marks stay." onClick={toNormal}><PauseIcon /></TipButton>
       </div>
     );
   } else if (attaching && state.cards[attaching.cardId]) {
@@ -649,7 +650,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       <div class="bar">
         <span class="attach-hint">Attach <b>{canSeeFace(state, c, findZone(state, c.id) || attaching.zone, viewer) ? c.name : 'card'}</b>: tap the card to attach it to</span>
         <span class="spacer" />
-        <button class="btn primary" onClick={toNormal}>Cancel</button>
+        <TipButton class="btn primary" tip="Stop attaching; nothing changes." onClick={toNormal}>Cancel</TipButton>
       </div>
     );
   } else if (lib && libOwner && libActions) {
@@ -657,16 +658,16 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     const setN = (n: number) => dispatch({ type: 'libraryN', n });
     footer = (
       <div class="bar lib">
-        <span class="stepper"><button class="btn round" onClick={() => setN(libN - 1)}>−</button><b>{libN}</b><button class="btn round" onClick={() => setN(libN + 1)}>+</button></span>
-        {mine ? <button class="btn" onClick={libActions.draw}>Draw {libN}</button> : null}
-        <button class="btn" onClick={libActions.mill}>Mill {libN}</button>
-        <button class="btn" onClick={libActions.peek}>Look at top {libN}</button>
-        <button class="btn" onClick={libActions.reveal}>Reveal top {libN}</button>
-        <button class="btn" onClick={libActions.search}>{mine ? 'Search' : 'Look through'}</button>
-        <button class="btn" onClick={libActions.shuffle}>Shuffle</button>
-        <button class={`btn ${state.players[libOwner].libraryTopFaceUp ? 'on' : ''}`} onClick={libActions.topUp}>Top face up</button>
+        <span class="stepper"><TipButton class="btn round" tip="How many cards the buttons act on: one fewer." onClick={() => setN(libN - 1)}>−</TipButton><b>{libN}</b><TipButton class="btn round" tip="How many cards the buttons act on: one more." onClick={() => setN(libN + 1)}>+</TipButton></span>
+        {mine ? <TipButton class="btn" tip={`Draw the top ${libN} into your hand.`} onClick={libActions.draw}>Draw {libN}</TipButton> : null}
+        <TipButton class="btn" tip={`Put the top ${libN} into the graveyard.`} onClick={libActions.mill}>Mill {libN}</TipButton>
+        <TipButton class="btn" tip={`Look at the top ${libN} privately, then drag each where it goes (scry, surveil).`} onClick={libActions.peek}>Look at top {libN}</TipButton>
+        <TipButton class="btn" tip={`Show the top ${libN} to both players.`} onClick={libActions.reveal}>Reveal top {libN}</TipButton>
+        <TipButton class="btn" tip={mine ? 'Search your library; it is shuffled when you close it.' : 'Look through this library (the other player is told).'} onClick={libActions.search}>{mine ? 'Search' : 'Look through'}</TipButton>
+        <TipButton class="btn" tip="Shuffle this library." onClick={libActions.shuffle}>Shuffle</TipButton>
+        <TipButton class={`btn ${state.players[libOwner].libraryTopFaceUp ? 'on' : ''}`} tip="Play with the top card face up, for both players to see." onClick={libActions.topUp}>Top face up</TipButton>
         <span class="spacer" />
-        <button class="btn primary" onClick={toNormal}>Done</button>
+        <TipButton class="btn primary" tip="Back to the main footer." onClick={toNormal}>Done</TipButton>
       </div>
     );
   } else {
@@ -675,22 +676,22 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       // turn, so the everyday ones never move. Undo sits at the far right by the menu, away from the
       // rest, and asks first: there is no redo, so a stray tap would cost an action.
       <div class="bar">
-        {same && viewer !== 'nobody' ? <button class="btn icon warn" onClick={blind} aria-label="Blind my hand" title="Blind my hand"><EyeOffIcon /></button> : null}
-        {same && viewer === 'nobody' ? <button class="btn icon primary" onClick={() => dispatch({ type: 'choosing', open: true })} aria-label="Unblind" title="Unblind"><EyeIcon /></button> : null}
-        <button class="btn icon" onClick={() => startCombat(null)} aria-label="Combat" title="Combat"><SwordsIcon /></button>
-        {canPass ? <button class="btn icon pass" onClick={passTurn} aria-label="Pass turn" title="End the turn"><HourglassIcon /></button> : null}
-        {hasCombatMarks ? <button class="btn icon" onClick={endCombat} aria-label="End combat" title="End combat"><EndCombatIcon /></button> : null}
-        {matchSet?.size ? <button class="btn on" onClick={() => dispatch({ type: 'match', cardId: null })}>Clear highlight</button> : null}
+        {same && viewer !== 'nobody' ? <TipButton class="btn icon warn" label="Blind my hand" tip="Hide your hand before passing the device." onClick={blind}><EyeOffIcon /></TipButton> : null}
+        {same && viewer === 'nobody' ? <TipButton class="btn icon primary" label="Unblind" tip="Show your hand: pick your name." onClick={() => dispatch({ type: 'choosing', open: true })}><EyeIcon /></TipButton> : null}
+        <TipButton class="btn icon" label="Combat" tip="Combat: tap creatures to mark attackers and blockers." onClick={() => startCombat(null)}><SwordsIcon /></TipButton>
+        {canPass ? <TipButton class="btn icon pass" label="Pass turn" tip="End the turn and pass it to the other player (asks first)." onClick={passTurn}><HourglassIcon /></TipButton> : null}
+        {hasCombatMarks ? <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton> : null}
+        {matchSet?.size ? <TipButton class="btn on" tip="Stop highlighting the combat matchup." onClick={() => dispatch({ type: 'match', cardId: null })}>Clear highlight</TipButton> : null}
         {/* No ⚔ Attack chip here: attackers are marked in combat mode. */}
         <CounterChips label={label} attack={false} />
-        <button class="btn icon token-btn" data-trash onClick={() => setSheet({ kind: 'tokens' })} aria-label="Tokens" title="Tokens (drop a token here to remove it)"><PawnIcon /></button>
-        <button class="btn icon" onClick={() => setSheet({ kind: 'dice' })} aria-label="Dice" title="Dice and random"><DieIcon /></button>
-        <button class={`btn icon ${pointMode ? 'on' : ''}`} aria-pressed={pointMode} onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}
-          aria-label="Point" title={pointMode ? 'Tap a card to point at it' : 'Point at a card'}><PointIcon /></button>
-        <button class="btn icon" onClick={untapAll} aria-label="Untap all" title="Untap all"><UntapIcon /></button>
+        <TipButton class="btn icon token-btn" data-trash label="Tokens" tip="Tokens: drag one onto the battlefield. Drop a token here to remove it." onClick={() => setSheet({ kind: 'tokens' })}><PawnIcon /></TipButton>
+        <TipButton class="btn icon" label="Dice" tip="Dice, a coin flip, or a random card." onClick={() => setSheet({ kind: 'dice' })}><DieIcon /></TipButton>
+        <TipButton class={`btn icon ${pointMode ? 'on' : ''}`} aria-pressed={pointMode} label="Point" tip="Point: tap a card or slot to highlight it for the other player."
+          onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}><PointIcon /></TipButton>
+        <TipButton class="btn icon" label="Untap all" tip="Untap all your cards (asks first)." onClick={untapAll}><UntapIcon /></TipButton>
         <span class="spacer" />
-        <button class="btn icon" onClick={undo} aria-label="Undo" title="Undo the last change"><UndoIcon /></button>
-        <button class="btn icon" onClick={() => setSheet({ kind: 'menu' })} aria-label="Menu">☰</button>
+        <TipButton class="btn icon" label="Undo" tip="Undo the last change, by either player (asks first; there is no redo)." onClick={undo}><UndoIcon /></TipButton>
+        <TipButton class="btn icon" label="Menu" tip="More: re-pair, export the log, concede, rematch, leave." onClick={() => setSheet({ kind: 'menu' })}>☰</TipButton>
       </div>
     );
   }
@@ -823,10 +824,10 @@ function ChoosePlayer({ state, onPick, onCancel }: { state: GameState; onPick: (
 function CounterChips({ label, attack = true }: { label: string; attack?: boolean }) {
   return (
     <span class="chips">
-      <span class="chip plus" data-counter="plus" title="Drag onto a card">+1/+1</span>
-      <span class="chip minus" data-counter="minus" title="Drag onto a card">−1/−1</span>
-      <span class="chip label" data-counter="label" title="Drag onto a card; tap to rename">{label}</span>
-      {attack ? <span class="chip attack" data-counter="attack" title="Drag onto a creature to mark it attacking">⚔ Attack</span> : null}
+      <span class="chip plus" data-counter="plus" data-tip="Drag onto a card to add a +1/+1 counter.">+1/+1</span>
+      <span class="chip minus" data-counter="minus" data-tip="Drag onto a card to add a −1/−1 counter.">−1/−1</span>
+      <span class="chip label" data-counter="label" data-tip={`Drag onto a card to add a ${label} counter; tap to rename it.`}>{label}</span>
+      {attack ? <span class="chip attack" data-counter="attack" data-tip="Drag onto a creature to mark it attacking (it taps); drag the mark off to stop.">⚔ Attack</span> : null}
     </span>
   );
 }

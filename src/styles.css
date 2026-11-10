@@ -493,3 +493,9 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
 .confirm-box.chooser .btn.pick span { font-size: 14px; }
 .confirm-box.chooser .btn.pick.atk { background: var(--hot); }
 .confirm-box.chooser .btn.pick.def { background: var(--cool); margin-top: 10px; }
+
+/* The tip a long press on a button or tag shows (data-tip, gestures.ts). */
+.tip-bubble { position: fixed; z-index: 2000; max-width: min(280px, calc(100vw - 16px)); padding: 7px 10px; border-radius: 8px;
+  background: #f3ead2; color: #17130a; font-size: 13px; line-height: 1.3; box-shadow: 0 6px 20px rgba(0,0,0,.5); pointer-events: none; }
+/* A held button or tag shows its tip; the phone's own callout and text selection would get in the way. */
+.bar, .bar * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

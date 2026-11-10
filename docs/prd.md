@@ -82,7 +82,7 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 
 **Gestures**
 
-1. **Tap** acts as in the table. **Long-press** (about half a second) opens the full-screen view of a card whose face you can see. **Drag** moves a card, a counter or a tag.
+1. **Tap** acts as in the table. **Long-press** (about half a second) opens the full-screen view of a card whose face you can see. On a footer button or tag, a long-press shows a one-line tip saying what it does; lifting the finger hides it, and nothing else happens (the button isn't pressed, the tag isn't dragged). A tap presses as usual, with no tip. **Drag** moves a card, a counter or a tag.
    - In the full-screen view, a **sideways swipe** on the card goes to the previous or next card in the same slot. A group counts as one stop, and the stop is always its lead (right-most) card, so swiping through a slot shows each group's lead in turn; the thumbnails reach the attachments. Cards whose face you can't see are skipped, and in a library tray only the tray's cards count. Faint **←** and **→** signs at the sides show when there is a card that way; they are signs, not buttons. The arrow keys do the same on a keyboard.
    - **Dragging the card up** in the full-screen view returns to the board with the card's whole group under the finger, to drop on any slot. **Swiping it down** just closes the view, the same as Close.
    - **Two-finger spread** (the zoom-in gesture) on the board opens the full-screen view, like a long-press. On a collapsed slot it opens the slot's first card (the lead card of its first group); on an open slot, or a slot whose cards fit, it opens the card under the fingers.

@@ -7,6 +7,8 @@
 //   data-tap="name"                         anything else that reacts to a tap
 //   data-drop="zone"                        a drop target slot; data-layout="row|pile|library|tray|append"
 //   data-trash                              a drop target that removes tokens / counters
+//   data-tip="text"                         hold to show the text as a tip (see TipButton); lifting hides
+//                                           it, and a held button or tag does nothing else
 // Horizontal scrollers (the footer bar, open slots, trays) are panned here rather than by the
 // browser, so scrolling does not depend on touch-action handling: a mostly horizontal movement
 // that starts inside one scrolls it (and cancels the tap); any other movement on a card drags it.
@@ -60,6 +62,23 @@ interface Gesture {
   ox: number; oy: number;
   /** Attached cards dragged along with their card. */
   group: HTMLElement[];
+  /** The element whose tip a hold shows, and the tip while it is shown. */
+  tip: HTMLElement | null;
+  bubble: HTMLElement | null;
+}
+
+/** Show `el`'s tip above it, kept on screen. */
+function showTip(el: HTMLElement): HTMLElement {
+  const b = document.createElement('div');
+  b.className = 'tip-bubble';
+  b.setAttribute('role', 'tooltip');
+  b.textContent = el.dataset.tip || '';
+  document.body.appendChild(b);
+  const r = el.getBoundingClientRect(), w = b.offsetWidth, hgt = b.offsetHeight;
+  const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8);
+  const top = r.top - hgt - 8 >= 8 ? r.top - hgt - 8 : r.bottom + 8;
+  Object.assign(b.style, { left: `${left}px`, top: `${top}px` });
+  return b;
 }
 
 export interface Gestures {
@@ -77,6 +96,7 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
   let g: Gesture | null = null; // current gesture
   let glide = 0; // animation frame of a running fling
   let swallowClick = false; // the click that follows a pan must not press a button
+  const swallowNext = () => { swallowClick = true; setTimeout(() => { swallowClick = false; }, 400); };
   // Every finger currently down, for two-finger gestures.
   const pts = new Map<number, { x: number; y: number }>();
   let spread: { a: number; b: number; d0: number; card: HTMLElement | null; row: HTMLElement | null; fired: boolean } | null = null;
@@ -89,6 +109,7 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
     if (!g) return;
     clearTimeout(g.timer);
     g.ghost?.remove();
+    g.bubble?.remove();
     g.hover?.classList.remove('drop-hover', 'drop-top', 'drop-bottom');
     document.body.classList.remove('dragging');
     g = null;
@@ -115,15 +136,23 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
     if (el && !root.contains(el)) el = null;
     let sc = t.closest<HTMLElement>(SCROLL_SEL);
     if (sc && (!root.contains(sc) || sc.scrollWidth <= sc.clientWidth + 1)) sc = null;
-    if (!el && !sc) return;
+    let tip = t.closest<HTMLElement>('[data-tip]');
+    if (tip && !root.contains(tip)) tip = null;
+    if (!el && !sc && !tip) return;
     cancelAnimationFrame(glide);
     if (g) clear();
     g = { el, sc, sl0: sc ? sc.scrollLeft : 0, id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
-          dragging: false, panning: false, long: false, ghost: null, hover: null, timer: undefined, v: 0, t: e.timeStamp, gw: 0, gh: 0, ox: 0, oy: 0, group: [] };
-    // A card, or a token in the Tokens sheet, opens full screen on a long-press.
+          dragging: false, panning: false, long: false, ghost: null, hover: null, timer: undefined, v: 0, t: e.timeStamp, gw: 0, gh: 0, ox: 0, oy: 0, group: [],
+          tip, bubble: null };
+    // A long-press opens a card (or a token in the Tokens sheet) full screen, or shows a tip. Either
+    // way it is the whole gesture: the finger moving or lifting afterwards does nothing more.
     if (el?.dataset.card || el?.dataset.tokenDef) {
       g.timer = setTimeout(() => {
         if (g && !g.dragging) { g.long = true; navigator.vibrate?.(15); h.onLongPress(el!); }
+      }, LONG_MS);
+    } else if (tip) {
+      g.timer = setTimeout(() => {
+        if (g && !g.dragging && !g.panning) { g.long = true; navigator.vibrate?.(15); g.bubble = showTip(tip!); }
       }, LONG_MS);
     }
   };
@@ -238,7 +267,7 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
     pts.delete(e.pointerId);
     if (spread && (e.pointerId === spread.a || e.pointerId === spread.b)) {
       spread = null;
-      swallowClick = true; setTimeout(() => { swallowClick = false; }, 400);
+      swallowNext();
       return true;
     }
     return false;
@@ -250,9 +279,13 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
     for (const el of [cur.el, ...cur.group]) el?.classList.remove('drag-source');
     if (cur.panning) {
       clear();
-      swallowClick = true; setTimeout(() => { swallowClick = false; }, 400);
+      swallowNext();
       fling(cur.sc!, e.timeStamp - cur.t > 80 ? 0 : cur.v);
-    } else if (!cur.el) clear();
+    } else if (!cur.el) {
+      clear();
+      // A button held for its tip is not pressed, whether or not the browser sends a click.
+      if (cur.long) swallowNext();
+    }
     else if (cur.dragging) {
       const t = targetAt(e.clientX, e.clientY);
       const drop = t ? describeDrop(t, e.clientX, e.clientY, cur.el) : null;
@@ -287,8 +320,11 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
 
   const cancel = (e: PointerEvent) => { if (endSpread(e)) return; if (g && e.pointerId === g.id) { for (const el of [g.el, ...g.group]) el?.classList.remove('drag-source'); clear(); } };
   const context = (e: MouseEvent) => {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-card]');
-    if (el && root.contains(el)) { e.preventDefault(); clear(); h.onLongPress(el); }
+    const t = e.target as HTMLElement;
+    const el = t.closest<HTMLElement>('[data-card]');
+    if (el && root.contains(el)) { e.preventDefault(); clear(); h.onLongPress(el); return; }
+    // A long press on a phone opens the context menu; a held tip shows instead.
+    if (t.closest('[data-tip]')) e.preventDefault();
   };
   // While dragging, stop the page from scrolling under the finger.
   const touchmove = (e: TouchEvent) => { if (g?.dragging || g?.panning || spread) e.preventDefault(); };
@@ -308,7 +344,7 @@ export function attachGestures(root: HTMLElement, h: GestureHandlers): Gestures 
     cancelAnimationFrame(glide);
     if (g) clear();
     const cur: Gesture & { el: HTMLElement } = { el, sc: null, sl0: 0, id: pointerId, x0, y0, x, y, dragging: false, panning: false, long: false,
-      ghost: null, hover: null, timer: undefined, v: 0, t: performance.now(), gw: 0, gh: 0, ox: 0, oy: 0, group: [] };
+      ghost: null, hover: null, timer: undefined, v: 0, t: performance.now(), gw: 0, gh: 0, ox: 0, oy: 0, group: [], tip: null, bubble: null };
     g = cur;
     startDrag(cur);
     return true;
