@@ -119,7 +119,8 @@ export function isGameState(x: unknown): x is GameState {
 
 export function isGameRecord(x: unknown): x is GameRecord {
   return isObj(x) && isStr(x.id) && (x.mode === 'networked' || x.mode === 'same-device') && x.role === 'host'
-    && isObj(x.setup) && isGameState(x.state) && isNum(x.updatedAt) && typeof x.over === 'boolean';
+    && isObj(x.setup) && isGameState(x.state) && isNum(x.updatedAt) && typeof x.over === 'boolean'
+    && (x.openedAt === undefined || isNum(x.openedAt));
 }
 
 export function isSnapshotRecord(x: unknown): x is SnapshotRecord {
@@ -254,21 +255,57 @@ export async function getGame(id: string): Promise<GameRecord | undefined> {
   return keep('game', isGameRecord)(g) ? g : undefined;
 }
 
-/** Most recently played first. */
+const opened = (g: GameRecord) => g.openedAt ?? g.updatedAt;
+
+/** Most recently opened first. */
 export async function listGames(): Promise<GameRecord[]> {
   const all = (await (await db()).getAll('games')).filter(keep('game', isGameRecord));
-  return all.sort((a, b) => b.updatedAt - a.updatedAt);
+  return all.sort((a, b) => opened(b) - opened(a));
+}
+
+/** Record that a saved game was opened, without changing when it was last played. */
+export async function markOpened(id: string): Promise<void> {
+  const d = await db();
+  const g = await d.get('games', id);
+  if (keep('game', isGameRecord)(g)) await d.put('games', { ...g, openedAt: Date.now() });
 }
 
 export async function deleteGame(id: string): Promise<void> {
+  await deleteGames([id]);
+}
+
+/** Delete games with their snapshots and logs in one step, then sweep the cards nothing uses. */
+export async function deleteGames(ids: readonly string[]): Promise<void> {
+  if (!ids.length) return;
   const tx = (await db()).transaction(['games', 'snapshots', 'logs'], 'readwrite');
-  void tx.objectStore('games').delete(id);
-  for (const store of ['snapshots', 'logs'] as const) {
-    let cur = await tx.objectStore(store).index('gameId').openCursor(IDBKeyRange.only(id));
-    while (cur) { void cur.delete(); cur = await cur.continue(); }
+  for (const id of ids) {
+    void tx.objectStore('games').delete(id);
+    for (const store of ['snapshots', 'logs'] as const) {
+      let cur = await tx.objectStore(store).index('gameId').openCursor(IDBKeyRange.only(id));
+      while (cur) { void cur.delete(); cur = await cur.continue(); }
+    }
   }
   await tx.done;
   await sweep();
+}
+
+/** Finished games kept on the device; beyond this, the least recently opened are deleted. */
+export const FINISHED_KEEP = 20;
+
+/**
+ * Tidy finished games (run at start-up and on leaving a game): delete those beyond FINISHED_KEEP,
+ * and keep only each one's newest undo snapshot, which is all "undo to continue" needs.
+ */
+export async function tidyFinished(): Promise<void> {
+  const over = (await listGames()).filter((g) => g.over);
+  await deleteGames(over.slice(FINISHED_KEEP).map((g) => g.id));
+  const tx = (await db()).transaction('snapshots', 'readwrite');
+  for (const g of over.slice(0, FINISHED_KEEP)) {
+    const keys = await tx.store.index('gameId').getAllKeys(IDBKeyRange.only(g.id));
+    const newest = Math.max(...keys.map((k) => k[1]));
+    for (const k of keys) if (k[1] !== newest) void tx.store.delete(k);
+  }
+  await tx.done;
 }
 
 // ---------- Cleanup ----------
@@ -349,7 +386,7 @@ export interface Persistence {
 }
 
 /** Host persistence: one transaction per command (state, snapshot and log together). */
-export function gamePersistence(meta: Pick<GameRecord, 'mode' | 'role' | 'setup'>): Persistence {
+export function gamePersistence(meta: Pick<GameRecord, 'mode' | 'role' | 'setup' | 'openedAt'>): Persistence {
   return {
     async commit({ state, push, drop, log }) {
       const tx = (await db()).transaction(['games', 'snapshots', 'logs'], 'readwrite');

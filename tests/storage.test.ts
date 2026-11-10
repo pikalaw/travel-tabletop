@@ -5,7 +5,7 @@ import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sha256Bytes } from '../src/storage/sha256';
 import {
-  closeDb, db, defIdFor, deleteGame, gamePersistence, getDeck, getDef, getDefs, getGame, getImage, getMeta, isCardDef, isDeck,
+  closeDb, db, defIdFor, deleteGame, deleteGames, FINISHED_KEEP, gamePersistence, markOpened, tidyFinished, getDeck, getDef, getDefs, getGame, getImage, getMeta, isCardDef, isDeck,
   isGameRecord, isGameState, listDecks, listGames, loadLog, loadSnapshots, putDeck, putDef, putImage, setMeta, sha256,
 } from '../src/storage/db';
 import { artUrl, loadArt, sizeFor } from '../src/storage/art';
@@ -136,5 +136,38 @@ describe('art', () => {
     expect(sizeFor(100, 2)).toBe('small');
     expect(sizeFor(300, 2)).toBe('normal');
     expect(sizeFor(400, 2)).toBe('large');
+  });
+});
+
+describe('finished games', () => {
+  const base = records.games[0]!.state as GameState;
+  const state = (id: string, over: boolean): GameState => ({ ...structuredClone(base), gameId: id, result: over ? { winner: 'p1', reason: 'concede' } : null });
+  async function save(id: string, over: boolean, openedAt: number, snaps = 0) {
+    const p = gamePersistence({ mode: 'same-device', role: 'host', setup: {}, openedAt });
+    const st = state(id, over);
+    await p.commit({ state: st, drop: [], log: [] });
+    for (let k = 1; k <= snaps; k++) await p.commit({ state: st, push: { key: k, state: st }, drop: [], log: [] });
+  }
+  it('lists games most recently opened first; opening one moves it up but keeps when it was played', async () => {
+    await save('a', false, 1); await save('b', true, 3); await save('c', false, 2);
+    expect((await listGames()).map((g) => g.id)).toEqual(['b', 'c', 'a']);
+    const played = (await getGame('a'))!.updatedAt;
+    await markOpened('a');
+    expect((await listGames()).map((g) => g.id)).toEqual(['a', 'b', 'c']);
+    expect((await getGame('a'))!.updatedAt).toBe(played);
+  });
+  it('tidying keeps the newest finished games and one undo snapshot each; games in progress are untouched', async () => {
+    for (let i = 0; i < FINISHED_KEEP + 2; i++) await save(`f${i}`, true, 100 + i, 3);
+    await save('live', false, 1, 3);
+    await tidyFinished();
+    const left = await listGames();
+    expect(left.filter((g) => g.over)).toHaveLength(FINISHED_KEEP);
+    expect(left.map((g) => g.id)).not.toContain('f0');
+    expect(left.map((g) => g.id)).not.toContain('f1');
+    expect((await loadSnapshots('f5')).map((s) => s.key)).toEqual([3]);
+    expect((await loadSnapshots('f0'))).toEqual([]);
+    expect((await loadSnapshots('live')).map((s) => s.key)).toEqual([1, 2, 3]);
+    await deleteGames(left.filter((g) => g.over).map((g) => g.id));
+    expect((await listGames()).map((g) => g.id)).toEqual(['live']);
   });
 });

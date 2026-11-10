@@ -263,7 +263,9 @@ A deck is a named group of cards, each a front and back image. Before a two-devi
 - **Concede** ends the game; a banner names the winner, and the log records the result.
 - **Rematch** starts a new game with the same decks.
 - **Resume.** The home screen lists games in progress on this device, with Resume and Delete, and a joined game (on a guest device) with Reconnect and Forget. The host reopens its saved game and re-pairs with the guest.
-- **Game links.** During a game the address bar holds a link to it (#game=\<id>). Opening that link, or reloading the page, reopens the game on the device that has it, with hands blinded on one device. On a guest device it opens the reconnect screen. Any other device says the game isn't saved there, since a game is kept only on its host; a finished game's link says it has ended. Game ids carry the date plus 80 random bits, so ids from different devices never clash in practice.
+- **Finished games.** Below the games in progress, the home screen lists finished games with the result ("Claire won (concession)", or "Game over" with no winner) and the number of turns, each with Open and Delete, and a **Delete all** button that asks first. Open shows the game as it ended: the board, the result, the whole log and Export log. Undo there continues the game, which goes back to the games in progress (only that one step: a finished game keeps just its last undo). The 20 most recently opened finished games are kept; older ones are deleted with their logs.
+- **Order.** Both lists put the most recently opened game first; the time shown is when it was last opened.
+- **Game links.** During a game the address bar holds a link to it (#game=\<id>). Opening that link, or reloading the page, reopens the game on the device that has it, with hands blinded on one device. On a guest device it opens the reconnect screen. Any other device says the game isn't saved there, since a game is kept only on its host. A finished game's link opens that finished game. Game ids carry the date plus 80 random bits, so ids from different devices never clash in practice.
 
 ## Action log
 

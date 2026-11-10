@@ -33,16 +33,16 @@ test('game links: format, reopening, hash changes, other devices, ended and malf
   await expect(other.locator('.board')).toHaveCount(0);
   await ctx.close();
 
-  // end the game, then open its link: a notice
+  // end the game, then open its link: the finished game opens, with its result
   await resetBar(page);
   await page.locator('.bar [aria-label="Menu"]').click();
   await page.getByText('Player 1 concedes').click();
   await answerDialog(page, true);
   await page.goto('about:blank'); await page.goto(url);
-  await expect(page.locator('.notice.warn')).toBeVisible();
+  await expect(page.locator('.result-banner')).toContainText('Player 2 wins');
 
   // a malformed link goes home
-  await page.goto('index.html#game=<bad>');
+  await page.goto('about:blank'); await page.goto('index.html#game=<bad>');
   await expect(page.getByRole('button', { name: 'New game' })).toBeVisible();
   expect(errors).toEqual([]);
 });

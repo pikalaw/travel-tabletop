@@ -100,6 +100,8 @@ export interface GameRecord {
   setup: GameSetup;
   state: GameState;
   updatedAt: number;
+  /** When the game was last started or opened; the home screen sorts by it (older records: updatedAt). */
+  openedAt?: number;
   over: boolean;
 }
 

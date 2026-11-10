@@ -317,7 +317,8 @@ One IndexedDB database `mtg-tabletop`, version 2. Version 1 is v1's layout; vers
 - **Card ids.** `defId = sha256("name|frontHash|backHash")`, first 20 hex characters (back hash empty when there is none). Identical imports produce identical ids on every device, which is what the handshake compares.
 - **Images.** `front` and `back` are the normal-size hashes; `sizes.front` and `sizes.back` hold the small and large hashes. Single-faced cards have `back: null` and are drawn with the bundled `back.svg`. Missing sizes fall back to normal.
 - **Choosing a size.** `sizeFor(cssHeight)`: with px = cssHeight × devicePixelRatio, small up to 230 px, normal up to 720 px, large above. The full-screen views always use large.
-- **Games.** `games.over` is set when `state.result` is. Deleting a game deletes its snapshots and logs. Resuming loads the record, its snapshots (sorted by key) and the last log seq.
+- **Games.** `games.over` is set when `state.result` is. `openedAt` is set when a game starts (and on a rematch) and by `markOpened` on resume, which leaves `updatedAt` alone; it travels in the persistence meta, so every commit keeps it. `listGames` sorts by `openedAt ?? updatedAt`, newest first; Home splits the list into in progress and finished. Deleting games (`deleteGames(ids)`, one transaction, then one sweep) deletes their snapshots and logs. Resuming loads the record, its snapshots (sorted by key) and the last log seq; a finished game resumes the same way.
+- **Finished-game tidy.** `tidyFinished()` runs at start-up and when leaving a game (Home is shown after it). It deletes finished games beyond `FINISHED_KEEP` (20), the least recently opened first, and deletes every undo snapshot of each kept finished game but the newest, which is all undoing the end needs. A finished game is then its record, one snapshot and its log, about 0.5 MB for a typical game rather than about 3 MB.
 - **Cleanup sweep.** A card is stored once and shared by every deck and game that uses it, so deleting a deck or a game never deletes cards directly. `sweep()` runs after every import, restore, sample-deck rebuild, deck delete (one or many: `deleteDecks`, used by Delete all decks) and game delete. In one transaction it collects the card ids used by any deck, saved game or undo snapshot, then deletes every other card, every image no remaining card refers to (`hashesOf`: front, back and their sizes), and every rulings record no remaining card's oracle id names. A deck that is in a saved game can be deleted; its cards stay until the game is deleted too. Imports, restores and the sample decks store cards before the deck that uses them, so they run under `holdSweep`; a sweep asked for meanwhile waits until the last of them ends. If any record fails its type guard, the sweep deletes nothing.
 - **Persistence request.** `navigator.storage.persist()` after decks are added; `persisted()` and `estimate()` feed the Decks screen's status line.
 
@@ -386,9 +387,9 @@ interface LogEntry {
 
 **Game links** (`link.ts`). The game screen keeps `#game=<id>` in the address bar with `history.replaceState` and clears it on leaving. On startup and on `hashchange` (when no game is open), `#game=<id>` (id matching `[0-9A-Za-z-]{1,64}`) is resolved in order:
 
-1. a saved game that isn't over and has `turn > 0` is resumed;
+1. a saved game with `turn > 0`, in progress or finished, is resumed;
 2. an id matching `meta.guestGame` opens the reconnect screen;
-3. otherwise the home screen shows "That game has ended." (a record exists) or "That game isn't saved on this device…".
+3. otherwise the home screen shows "That game isn't saved on this device…".
 
 During a game, a changed hash is put back.
 

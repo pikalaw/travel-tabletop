@@ -62,6 +62,8 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .home .hero h1 { font-family: Georgia, "Times New Roman", serif; font-size: 34px; margin: 0 0 6px; letter-spacing: .5px; }
 .home-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; }
 .foot { margin-top: 40px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 22px 0 8px; }
+.section-head h2 { margin: 0; }
 .game-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .game-list li { display: flex; align-items: center; gap: 8px; background: var(--panel); border-radius: var(--radius); padding: 8px 10px; flex-wrap: wrap; }
 .game-list li span { flex: 1; min-width: 200px; font-size: 14px; }

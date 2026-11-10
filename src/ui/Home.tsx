@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { confirmBox } from './Dialogs';
-import { listGames, deleteGame, getMeta, setMeta, staleDecks } from '../storage/db';
+import { listGames, deleteGame, deleteGames, getMeta, setMeta, staleDecks, FINISHED_KEEP } from '../storage/db';
 import { APP_VERSION, BUILD_ID } from '../version';
 import type { Deck, GameRecord, GuestGameMeta } from '../types/storage';
 import type { Go } from './routes';
@@ -22,15 +22,27 @@ export interface HomeProps {
 }
 
 export function Home({ go, resume, rejoin, update, notice }: HomeProps) {
-  const [games, setGames] = useState<GameRecord[]>([]);
+  const [games, setGames] = useState<GameRecord[]>([]); // most recently opened first
   const [guestGame, setGuestGame] = useState<GuestGameMeta | null>(null);
   const [stale, setStale] = useState<Deck[]>([]);
   const refresh = () => {
     void staleDecks().then(setStale);
-    void listGames().then((gs) => setGames(gs.filter((g) => !g.over && g.state.turn > 0)));
+    void listGames().then((gs) => setGames(gs.filter((g) => g.state.turn > 0)));
     void getMeta('guestGame').then((g) => setGuestGame(isGuestGame(g) ? g : null));
   };
   useEffect(() => { refresh(); }, []);
+  const playing = games.filter((g) => !g.over), finished = games.filter((g) => g.over);
+  async function remove(g: GameRecord) {
+    if (!(await confirmBox({ title: 'Delete this game?', body: 'The saved game and its action log are removed from this device.', ok: 'Delete', danger: true }))) return;
+    await deleteGame(g.id);
+    refresh();
+  }
+  async function removeAll() {
+    const n = finished.length;
+    if (!(await confirmBox({ title: `Delete ${n === 1 ? 'the finished game' : `all ${n} finished games`}?`, body: 'Their boards and action logs are removed from this device. Export any logs you want to keep first.', ok: 'Delete all', danger: true }))) return;
+    await deleteGames(finished.map((g) => g.id));
+    refresh();
+  }
   return (
     <div class="page home">
       <div class="hero">
@@ -49,16 +61,24 @@ export function Home({ go, resume, rejoin, update, notice }: HomeProps) {
         <button class="btn primary big" onClick={() => go('setup')}>New game</button>
         <button class="btn big" onClick={() => go('decks')}>Decks</button>
       </div>
-      {games.length ? (
+      {playing.length ? (
         <>
           <h2>Games in progress</h2>
-          <ul class="game-list">{games.map((g) => (
-            <li>
-              <span>{g.state.players.p1.name} vs {g.state.players.p2.name} · {g.mode === 'networked' ? 'two devices' : 'one device'} · turn {g.state.turn} · {new Date(g.updatedAt).toLocaleString()}</span>
-              <button class="btn" onClick={() => resume(g.id)}>Resume</button>
-              <button class="btn ghost" onClick={async () => { if (await confirmBox({ title: 'Delete this game?', body: 'The saved game and its action log are removed from this device.', ok: 'Delete', danger: true })) { await deleteGame(g.id); refresh(); } }}>Delete</button>
-            </li>
+          <ul class="game-list">{playing.map((g) => (
+            <GameRow g={g} detail={`turn ${g.state.turn}`} open="Resume" onOpen={() => resume(g.id)} onDelete={() => remove(g)} />
           ))}</ul>
+        </>
+      ) : null}
+      {finished.length ? (
+        <>
+          <div class="section-head">
+            <h2>Finished games</h2>
+            <button class="btn ghost" onClick={() => void removeAll()}>Delete all</button>
+          </div>
+          <ul class="game-list">{finished.map((g) => (
+            <GameRow g={g} detail={`${resultText(g)} · ${g.state.turn} ${g.state.turn === 1 ? 'turn' : 'turns'}`} open="Open" onOpen={() => resume(g.id)} onDelete={() => remove(g)} />
+          ))}</ul>
+          <p class="muted small">The last {FINISHED_KEEP} finished games are kept; older ones are deleted with their logs.</p>
         </>
       ) : null}
       {guestGame ? (
@@ -73,5 +93,22 @@ export function Home({ go, resume, rejoin, update, notice }: HomeProps) {
       ) : null}
       <p class="muted small foot">Version {APP_VERSION} (build {BUILD_ID}). Card images you import come from Scryfall; sample cards are placeholders.</p>
     </div>
+  );
+}
+
+/** "Claire won (concession)", or "Game over" when a game was ended with no winner. */
+function resultText(g: GameRecord): string {
+  const r = g.state.result;
+  if (!r?.winner) return 'Game over';
+  return `${g.state.players[r.winner].name} won${r.reason === 'concede' ? ' (concession)' : ''}`;
+}
+
+function GameRow({ g, detail, open, onOpen, onDelete }: { g: GameRecord; detail: string; open: string; onOpen: () => void; onDelete: () => void }) {
+  return (
+    <li>
+      <span>{g.state.players.p1.name} vs {g.state.players.p2.name} · {g.mode === 'networked' ? 'two devices' : 'one device'} · {detail} · {new Date(g.openedAt ?? g.updatedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+      <button class="btn" onClick={onOpen}>{open}</button>
+      <button class="btn ghost" onClick={onDelete}>Delete</button>
+    </li>
   );
 }
