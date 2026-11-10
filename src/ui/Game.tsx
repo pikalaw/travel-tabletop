@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { toast } from './toast';
+import { UndoIcon, EyeIcon, EyeOffIcon, SwordsIcon, HourglassIcon, PawnIcon, DieIcon, PointIcon, UntapIcon } from './icons';
 import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
 import { Board } from './Board';
@@ -654,23 +655,27 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     );
   } else {
     footer = (
+      // Most used first, as icons where a symbol is clear. Undo sits apart at the edge: there is no
+      // redo, so a stray tap on it costs an action. Buttons shown only sometimes come after End turn,
+      // so the everyday ones never move.
       <div class="bar">
-        <button class="btn" onClick={() => send('undo', {})} title="Undo the last action">Undo</button>
-        <button class="btn" onClick={() => send('untapAll', { player: actingPlayer })}>Untap all</button>
-        {canPass ? <button class="btn" onClick={passTurn}>Pass turn</button> : null}
-        <button class="btn" onClick={() => startCombat(null)}>Combat</button>
+        <button class="btn icon undo" onClick={() => send('undo', {})} aria-label="Undo" title="Undo the last action"><UndoIcon /></button>
+        {same && viewer !== 'nobody' ? <button class="btn icon warn" onClick={blind} aria-label="Blind my hand" title="Blind my hand"><EyeOffIcon /></button> : null}
+        {same && viewer === 'nobody' ? <button class="btn icon primary" onClick={() => dispatch({ type: 'choosing', open: true })} aria-label="Unblind" title="Unblind"><EyeIcon /></button> : null}
+        <button class="btn icon" onClick={() => startCombat(null)} aria-label="Combat" title="Combat"><SwordsIcon /></button>
+        {canPass ? <button class="btn icon pass" onClick={passTurn} aria-label="Pass turn" title="End the turn"><HourglassIcon /></button> : null}
         {hasCombatMarks ? <button class="btn warn" onClick={endCombat}>End combat</button> : null}
         {matchSet?.size ? <button class="btn on" onClick={() => dispatch({ type: 'match', cardId: null })}>Clear highlight</button> : null}
+        {openSlots.length ? <button class="btn" onClick={() => dispatch({ type: 'closeSlots' })}>{openSlots.length > 1 ? 'Close slots' : 'Close slot'}</button> : null}
         {/* No ⚔ Attack chip here: attackers are marked in combat mode. */}
         <CounterChips label={label} attack={false} />
-        <button class="btn token-btn" data-trash onClick={() => setSheet({ kind: 'tokens' })} title="Tokens (drop a token here to remove it)">Tokens</button>
-        <button class="btn" onClick={() => setSheet({ kind: 'dice' })}>Dice</button>
-        <button class={`btn ${pointMode ? 'on' : ''}`} onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}>{pointMode ? 'Tap a card…' : 'Point'}</button>
-        {openSlots.length ? <button class="btn" onClick={() => dispatch({ type: 'closeSlots' })}>{openSlots.length > 1 ? 'Close slots' : 'Close slot'}</button> : null}
-        {same && viewer !== 'nobody' ? <button class="btn warn" onClick={blind}>Blind my hand</button> : null}
-        {same && viewer === 'nobody' ? <button class="btn primary" onClick={() => dispatch({ type: 'choosing', open: true })}>Unblind</button> : null}
+        <button class="btn icon token-btn" data-trash onClick={() => setSheet({ kind: 'tokens' })} aria-label="Tokens" title="Tokens (drop a token here to remove it)"><PawnIcon /></button>
+        <button class="btn icon" onClick={() => setSheet({ kind: 'dice' })} aria-label="Dice" title="Dice and random"><DieIcon /></button>
+        <button class={`btn icon ${pointMode ? 'on' : ''}`} aria-pressed={pointMode} onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}
+          aria-label="Point" title={pointMode ? 'Tap a card to point at it' : 'Point at a card'}><PointIcon /></button>
+        <button class="btn icon" onClick={() => send('untapAll', { player: actingPlayer })} aria-label="Untap all" title="Untap all"><UntapIcon /></button>
         <span class="spacer" />
-        <button class="btn" onClick={() => setSheet({ kind: 'menu' })} aria-label="Menu">☰</button>
+        <button class="btn icon" onClick={() => setSheet({ kind: 'menu' })} aria-label="Menu">☰</button>
       </div>
     );
   }

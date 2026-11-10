@@ -43,7 +43,7 @@ test('touch: swipes scroll bars and rows without pressing; taps press; drag up p
 
   // a tap still presses a button
   await bar.evaluate((e) => { e.scrollLeft = 0; });
-  await bar.getByText('Dice').tap();
+  await bar.getByRole('button', { name: 'Dice', exact: true }).tap();
   await expect(page.locator('.sheet')).toHaveCount(1);
   await page.locator('.sheet').getByRole('button', { name: 'Done' }).first().tap();
   await expect(page.locator('.sheet')).toHaveCount(0);
@@ -81,6 +81,6 @@ test('touch: swipes scroll bars and rows without pressing; taps press; drag up p
   await hand.locator('[data-card]').first().tap();
   await page.waitForTimeout(400);
   await expect(page.locator('.fullcard')).toHaveCount(0);
-  await expect(bar).toContainText('Undo');
+  await expect(bar.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(1); // still the main footer
   expect(errors).toEqual([]);
 });

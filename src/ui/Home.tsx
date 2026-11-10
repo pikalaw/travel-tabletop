@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { confirmBox } from './Dialogs';
+import { TrashIcon } from './icons';
 import { listGames, deleteGame, deleteGames, getMeta, setMeta, staleDecks, FINISHED_KEEP } from '../storage/db';
 import { APP_VERSION, BUILD_ID } from '../version';
 import type { Deck, GameRecord, GuestGameMeta } from '../types/storage';
@@ -103,18 +104,12 @@ function result(g: GameRecord) {
   return <><b class="winner">{g.state.players[r.winner].name}</b> won{r.reason === 'concede' ? ' (concession)' : ''}</>;
 }
 
-const TRASH = (
-  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
-  </svg>
-);
-
 /** A list row: tapping it opens it; the trash icon removes it. */
 function Row({ label, onOpen, remove, onRemove, children }: { label: string; onOpen: () => void; remove: string; onRemove: () => void; children: ComponentChildren }) {
   return (
     <li>
       <button class="row-open" aria-label={label} onClick={onOpen}>{children}<span class="chev" aria-hidden="true">›</span></button>
-      <button class="btn ghost icon" aria-label={remove} title={remove} onClick={onRemove}>{TRASH}</button>
+      <button class="btn ghost icon" aria-label={remove} title={remove} onClick={onRemove}><TrashIcon /></button>
     </li>
   );
 }

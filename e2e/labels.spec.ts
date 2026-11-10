@@ -18,6 +18,7 @@ test('labels: hand, counters, opponent hand, ticker; whose turn; only the active
   await playFromHand(page, 'p2.battlefield');
   // the full view's ⚔ Attack chip, dropped on the other player's creature, is refused
   await longPress(page, page.locator('[data-drop="p2.battlefield"] [data-card]').first());
+  await page.locator('[data-counter="attack"]').scrollIntoViewIfNeeded();
   await drag(page, page.locator('[data-counter="attack"]'), page.locator('.card-frame-pic'));
   await barButton(page, 'Close');
   await expect(page.locator('[data-drop="p2.battlefield"] .mark.atk')).toHaveCount(0);

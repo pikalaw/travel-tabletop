@@ -133,7 +133,7 @@ export function Setup({ go, startGame }: { go: Go; startGame: StartGame }) {
         {mode === 'host' ? <button class="btn primary big" onClick={async () => { if (!pick.p1.length) { setErr('Choose at least one deck.'); return; } await saveSetup(); setErr(''); setStage('host'); }}>Next: pair the guest</button> : null}
         {mode === 'join' ? <button class="btn primary big" onClick={async () => { if (!pick.p1.length) { setErr('Choose at least one deck.'); return; } await saveSetup(); setErr(''); setStage('join'); }}>Next: scan the host's code</button> : null}
       </div>
-      {mode === 'same' ? <p class="muted small">Hands start blinded. Use Unblind and pick your name to see your hand; the board switches to that player's side.</p> : null}
+      {mode === 'same' ? <p class="muted small">Hands start blinded. Tap the eye in the footer and pick your name to see your hand; the board switches to that player's side.</p> : null}
     </div>
   );
 }
