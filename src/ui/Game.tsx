@@ -223,6 +223,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
       toNormal();
       return;
     }
+    // The life counters stay usable in combat mode: combat damage changes life.
+    if (combat && el.dataset.tap === 'counters') { setSheet({ kind: 'counters' }); return; }
     if (combat) { combatTap(el, combat.blocker); return; }
     if (pointMode) {
       const cardId = el.dataset.card || null;
@@ -643,7 +645,8 @@ export function Game({ session, onExit, onRematch, pairing }: GameProps) {
         <button class="btn" onClick={() => startCombat(null)}>Combat</button>
         {hasCombatMarks ? <button class="btn warn" onClick={endCombat}>End combat</button> : null}
         {matchSet?.size ? <button class="btn on" onClick={() => dispatch({ type: 'match', cardId: null })}>Clear highlight</button> : null}
-        <CounterChips label={label} attack={showAttack} />
+        {/* No ⚔ Attack chip here: attackers are marked in combat mode. */}
+        <CounterChips label={label} attack={false} />
         <button class="btn token-btn" data-trash onClick={() => setSheet({ kind: 'tokens' })} title="Tokens (drop a token here to remove it)">Tokens</button>
         <button class="btn" onClick={() => setSheet({ kind: 'dice' })}>Dice</button>
         <button class={`btn ${pointMode ? 'on' : ''}`} onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}>{pointMode ? 'Tap a card…' : 'Point'}</button>

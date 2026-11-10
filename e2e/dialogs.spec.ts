@@ -12,7 +12,7 @@ test('the browser never shows its own dialog', async ({ page }) => {
   const [a] = await idsIn(page, 'p1.battlefield');
 
   // End combat: counts the marks; Keep fighting keeps them, Clear marks clears them
-  await barButton(page, 'Combat'); await tapCard(page, a!); await barButton(page, 'Done');
+  await barButton(page, 'Combat'); await tapCard(page, a!); await barButton(page, 'Pause');
   await resetBar(page); await barButton(page, 'End combat');
   await expect(box(page)).toContainText('End combat?');
   await expect(box(page)).toContainText('This clears 1 attacker.');

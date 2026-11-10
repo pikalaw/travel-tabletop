@@ -18,7 +18,14 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   await field.first().click();
   await expect(page.locator('.c32 .card.tapped')).toHaveCount(1);
 
-  await drag(page, '.chip.plus', field.first());
+  // Up out of the footer first, as a finger does: a mostly sideways start on the footer scrolls it.
+  const chip = (await page.locator('.chip.plus').boundingBox())!;
+  const cx = chip.x + chip.width / 2, cy = chip.y + chip.height / 2;
+  await page.mouse.move(cx, cy); await page.mouse.down();
+  await page.mouse.move(cx, cy - 60, { steps: 4 });
+  const to = (await field.first().boundingBox())!;
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+  await page.mouse.up();
   await expect(page.locator('.c32 .badge.plus')).toHaveText('+1');
 
   // library footer: draw 2

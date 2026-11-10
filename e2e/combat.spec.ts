@@ -86,11 +86,10 @@ test('combat in open slots: attack chip, mark placement on a tapped card, tap on
   }
   await expect(me).toHaveClass(OPEN); await expect(opp).toHaveClass(OPEN);
 
-  await resetBar(page);
-  const chip = page.locator('[data-counter="attack"]');
-  await chip.scrollIntoViewIfNeeded();
-  await drag(page, chip, page.locator(`[data-card="${a[0]}"]`));
+  await resetBar(page); await barButton(page, 'Combat');
+  await tapCard(page, a[0]!);
   await expect(marks(page, a[0]!)).toContainText('⚔');
+  await barButton(page, 'Pause');
   await tapCard(page, a[0]!);
   await expect(page.locator(`[data-card="${a[0]}"].tapped`)).toHaveCount(1);
   // on a tapped card the mark sits at the top-left of the picture
@@ -211,4 +210,18 @@ test('End combat asks first, from combat mode and from the footer', async ({ pag
   await expect(page.locator('.confirm-box.plain')).toContainText('This clears 1 attacker.');
   await answerDialog(page, false);
   expect(await count()).toBe(1);
+});
+
+test('combat mode: the life counters still open, and changing life keeps combat mode', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page);
+  await resetBar(page); await barButton(page, 'Combat');
+  await expect(page.locator('.bar.combat')).toHaveCount(1);
+  await page.locator('[data-tap="counters"]').click();
+  const sheet = page.locator('.sheet');
+  await expect(sheet).toBeVisible();
+  await sheet.locator('.btn.round').first().click(); // −1 on the first counter: Player 1's life
+  await expect(page.locator('.ticker-text')).toContainText('life 20 → 19');
+  await expect(page.locator('.bar.combat')).toHaveCount(1);
+  errs.expectNone();
 });

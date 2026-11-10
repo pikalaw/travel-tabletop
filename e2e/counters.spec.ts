@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { OPEN, drag, longPress, point, startOneDevice, playFromHand, resetBar, barButton, unblind, touchSwipe } from './helpers';
+import { OPEN, drag, longPress, point, startOneDevice, playFromHand, resetBar, barButton, unblind, touchSwipe, tapCard } from './helpers';
 
 async function dragXY(page: Page, a: { x: number; y: number }, b: { x: number; y: number }) {
   await page.mouse.move(a.x, a.y); await page.mouse.down();
@@ -101,11 +101,15 @@ for (const [name, vp] of [['portrait', { width: 412, height: 840 }], ['landscape
     await startOneDevice(page);
     await playFromHand(page, 'p1.battlefield');
     const card = page.locator('[data-drop="p1.battlefield"] [data-card]').first();
-    for (const k of ['plus', 'minus', 'attack']) {
+    for (const k of ['plus', 'minus']) {
       const chip = page.locator(`[data-counter="${k}"]`);
       await chip.scrollIntoViewIfNeeded();
       await drag(page, chip, card);
     }
+    // an attack mark too, from combat mode
+    await resetBar(page); await barButton(page, 'Combat');
+    await tapCard(page, (await card.getAttribute('data-card'))!);
+    await barButton(page, 'Pause');
     // Open the full view with a right-click: in a small landscape card, a long-press point can
     // land on a counter's grab area, which starts a drag instead.
     const c = await point(page, card);
@@ -119,19 +123,29 @@ for (const [name, vp] of [['portrait', { width: 412, height: 840 }], ['landscape
   });
 }
 
-test('the attack chip shows only to the player whose turn it is (or to a blinded table)', async ({ page }) => {
+test('the attack chip is only in the full view, for the player whose turn it is (or a blinded table)', async ({ page }) => {
   const chip = page.locator('[data-counter="attack"]');
-  await startOneDevice(page, { unblindTo: null });
-  await expect(chip).toHaveCount(1);
-  await unblind(page, 'Player 1');
-  await expect(chip).toHaveCount(1);
+  await startOneDevice(page);
+  await playFromHand(page, 'p1.battlefield', 1);
+  const card = page.locator('[data-drop="p1.battlefield"] [data-card]').first();
+  const id = (await card.getAttribute('data-card'))!;
+  // the main footer has no chip: attackers are marked in combat mode
+  await expect(chip).toHaveCount(0);
+  const inFull = async (n: number) => {
+    await longPress(page, page.locator(`.board [data-card="${id}"]`));
+    await expect(chip).toHaveCount(n);
+    await barButton(page, 'Close');
+  };
+  await inFull(1);
   await resetBar(page); await barButton(page, 'Pass turn');
   await page.locator('.confirm-box .btn.yes').click();
-  // passing the turn blinds the table, which sees the chip
-  await expect(chip).toHaveCount(1);
+  await inFull(1); // passing the turn blinds the table, which sees the chip
   await unblind(page, 'Player 1');
-  await expect(chip).toHaveCount(0);
+  await inFull(0);
   await barButton(page, 'Blind my hand');
   await unblind(page, 'Player 2');
-  await expect(chip).toHaveCount(1);
+  // Player 2 is shown what happened while away, over the half of the board the card is on
+  const away = page.locator('.sheet');
+  if (await away.count()) await away.getByRole('button', { name: 'Done' }).click();
+  await inFull(1);
 });

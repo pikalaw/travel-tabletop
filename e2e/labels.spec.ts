@@ -16,9 +16,10 @@ test('labels: hand, counters, opponent hand, ticker; whose turn; only the active
 
   await playFromHand(page, 'p1.battlefield');
   await playFromHand(page, 'p2.battlefield');
-  const chip = page.locator('[data-counter="attack"]');
-  await chip.scrollIntoViewIfNeeded();
-  await drag(page, chip, page.locator('[data-drop="p2.battlefield"] [data-card]').first());
+  // the full view's ⚔ Attack chip, dropped on the other player's creature, is refused
+  await longPress(page, page.locator('[data-drop="p2.battlefield"] [data-card]').first());
+  await drag(page, page.locator('[data-counter="attack"]'), page.locator('.card-frame-pic'));
+  await barButton(page, 'Close');
   await expect(page.locator('[data-drop="p2.battlefield"] .mark.atk')).toHaveCount(0);
   await expect(page.locator('.toast', { hasText: 'Only Player 1’s creatures can attack this turn.' })).toHaveCount(1);
 
@@ -26,7 +27,7 @@ test('labels: hand, counters, opponent hand, ticker; whose turn; only the active
   const c = await point(page, page.locator('[data-drop="p1.battlefield"] [data-card]').first(), 0.4, 0.6);
   await page.mouse.click(c.x, c.y); await page.waitForTimeout(200);
   await expect(page.locator('[data-drop="p1.battlefield"] .mark.atk')).toHaveCount(1);
-  await barButton(page, 'Done');
+  await barButton(page, 'Pause');
   await resetBar(page); await barButton(page, 'Pass turn');
   await answerDialog(page, true);
   // blinded by the pass, the board faces the next player; Player 1 then looks during Player 2's turn
