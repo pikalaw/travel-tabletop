@@ -111,7 +111,10 @@ export interface GameRecord {
 export interface SnapshotRecord {
   gameId: string;
   key: number;
+  /** The board before a move. */
   state: GameState;
+  /** That move's log line, so Undo can name it (older snapshots have none). */
+  text?: string;
 }
 
 export interface MetaRecord {
@@ -127,7 +130,7 @@ export interface GuestGameMeta {
   deckIds: string[];
 }
 
-export type LogKind = 'command' | 'notice' | 'rejected' | 'undo' | 'snapshot';
+export type LogKind = 'command' | 'notice' | 'rejected' | 'undo' | 'redo' | 'snapshot';
 
 export interface LoggedCard {
   id: string;

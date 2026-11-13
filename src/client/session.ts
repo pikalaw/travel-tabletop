@@ -6,7 +6,7 @@ import type { Host } from '../host/host';
 import { asGuestMessage, asHostMessage } from './net';
 import type { Actor, GameState, PlayerId } from '../types/state';
 import type { Notice } from '../types/commands';
-import type { HelloMessage, RefuseMessage, RejectedMessage, StateMessage } from '../types/protocol';
+import type { HelloMessage, History, RefuseMessage, RejectedMessage, StateMessage } from '../types/protocol';
 import type { Transport } from '../transport/transport';
 
 export type SessionKind = 'same-device' | 'host' | 'guest';
@@ -41,6 +41,8 @@ export interface Session {
   readonly lastAlert: boolean;
   readonly status: SessionStatus;
   readonly notices: Notice[];
+  /** What Undo would take back and Redo would bring back now. */
+  readonly history: History;
   subscribe(fn: (c: SessionChange) => void): () => void;
   onNotice(fn: (n: Notice) => void): () => void;
   onReject(fn: (r: Rejection) => void): () => void;
@@ -80,7 +82,7 @@ export class LocalSession extends Emitter implements Session {
     host.on('state', (state, info) => {
       this.changed(info);
       this.forward({
-        type: 'state', version: host.version, state, text: info.text, alert: info.alert, actor: info.actor,
+        type: 'state', version: host.version, state, text: info.text, alert: info.alert, actor: info.actor, history: host.history(),
         ...(info.actor === this.guestPlayer && info.clientSeq !== undefined ? { clientSeq: info.clientSeq } : {}),
       } satisfies StateMessage);
     });
@@ -95,6 +97,7 @@ export class LocalSession extends Emitter implements Session {
   get version() { return this.host.version; }
   get lastText() { return this.host.lastText; }
   get lastAlert() { return this.host.lastAlert; }
+  get history() { return this.host.history(); }
 
   send(type: string, payload: unknown, actor: Actor = this.me): SendResult {
     const res = this.host.dispatch({ type, actor, payload });
@@ -134,7 +137,7 @@ export class LocalSession extends Emitter implements Session {
 
   /** Full state to the guest (after welcome or reconnect). */
   sendFullState(): void {
-    this.forward({ type: 'state', version: this.host.version, state: this.host.state, text: this.host.lastText, alert: false } satisfies StateMessage);
+    this.forward({ type: 'state', version: this.host.version, state: this.host.state, text: this.host.lastText, alert: false, history: this.host.history() } satisfies StateMessage);
   }
 }
 
@@ -148,6 +151,8 @@ export class GuestSession extends Emitter implements Session {
   lastAlert = false;
   status: SessionStatus = 'open';
   notices: Notice[] = [];
+  /** From the host's latest state message; unknown (nothing offered) until the first one. */
+  history: History = { undo: null, redo: null };
   private transport: Transport | null = null;
   private clientSeq = 1;
 
@@ -179,6 +184,7 @@ export class GuestSession extends Emitter implements Session {
         this.version = msg.version;
         this.lastText = msg.text || this.lastText;
         this.lastAlert = !!msg.alert;
+        if (msg.history) this.history = msg.history;
         this.changed({ version: msg.version, text: msg.text, alert: msg.alert, actor: msg.actor });
       } else if (msg.type === 'notice') {
         this.notices.push(msg.notice);

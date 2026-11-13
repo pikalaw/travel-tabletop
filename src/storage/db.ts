@@ -123,10 +123,10 @@ export function isGameRecord(x: unknown): x is GameRecord {
 }
 
 export function isSnapshotRecord(x: unknown): x is SnapshotRecord {
-  return isObj(x) && isStr(x.gameId) && isNum(x.key) && isGameState(x.state);
+  return isObj(x) && isStr(x.gameId) && isNum(x.key) && isGameState(x.state) && (x.text === undefined || isStr(x.text));
 }
 
-const LOG_KINDS = new Set(['command', 'notice', 'rejected', 'undo', 'snapshot']);
+const LOG_KINDS = new Set(['command', 'notice', 'rejected', 'undo', 'redo', 'snapshot']);
 export function isLogEntry(x: unknown): x is LogEntry {
   return isObj(x) && isStr(x.gameId) && isNum(x.seq) && isStr(x.ts) && isNum(x.turn) && isStr(x.kind) && LOG_KINDS.has(x.kind)
     && isStr(x.actor) && isNum(x.schemaVersion);
@@ -353,9 +353,9 @@ export async function sweep(): Promise<SweepResult | null> {
   return out;
 }
 
-export async function loadSnapshots(gameId: string): Promise<{ key: number; state: GameState }[]> {
+export async function loadSnapshots(gameId: string): Promise<{ key: number; state: GameState; text?: string }[]> {
   const rows = (await (await db()).getAllFromIndex('snapshots', 'gameId', gameId)).filter(keep('snapshot', isSnapshotRecord));
-  return rows.sort((a, b) => a.key - b.key).map((r) => ({ key: r.key, state: r.state }));
+  return rows.sort((a, b) => a.key - b.key).map((r) => ({ key: r.key, state: r.state, ...(r.text ? { text: r.text } : {}) }));
 }
 
 export async function loadLog(gameId: string): Promise<LogEntry[]> {
@@ -367,7 +367,7 @@ export async function loadLog(gameId: string): Promise<LogEntry[]> {
 export interface Commit {
   /** The game, when it changed (a command or an undo); left out for log-only lines, so `updatedAt` is when it was last played. */
   state?: GameState | undefined;
-  push?: { key: number; state: GameState } | undefined;
+  push?: { key: number; state: GameState; text?: string | undefined } | undefined;
   drop: number[];
   log: LogEntry[];
 }
@@ -383,7 +383,7 @@ export function gamePersistence(meta: Pick<GameRecord, 'mode' | 'role' | 'setup'
       const tx = (await db()).transaction(['games', 'snapshots', 'logs'], 'readwrite');
       if (state) void tx.objectStore('games').put({ ...meta, id: state.gameId, state, updatedAt: Date.now(), over: !!state.result });
       const gameId = state?.gameId;
-      if (gameId && push) void tx.objectStore('snapshots').put({ gameId, key: push.key, state: push.state });
+      if (gameId && push) void tx.objectStore('snapshots').put({ gameId, key: push.key, state: push.state, ...(push.text ? { text: push.text } : {}) });
       if (gameId) for (const key of drop) void tx.objectStore('snapshots').delete([gameId, key]);
       for (const e of log) void tx.objectStore('logs').put(e);
       await tx.done;

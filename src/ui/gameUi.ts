@@ -122,7 +122,7 @@ export const clockTime = (d: Date = new Date()): string => d.toLocaleTimeString(
  */
 export function logLines(entries: readonly LogEntry[]): LogLine[] {
   return entries
-    .filter((e) => e.text && (e.kind === 'command' || e.kind === 'notice' || e.kind === 'undo'))
+    .filter((e) => e.text && (e.kind === 'command' || e.kind === 'notice' || e.kind === 'undo' || e.kind === 'redo'))
     .map((e) => ({ text: e.text!, alert: !!(e.alert ?? e.notice?.alert), time: clockTime(new Date(e.ts)), turn: e.turn,
       turnStart: e.command?.type === 'passTurn' || e.command?.type === 'startGame' }));
 }

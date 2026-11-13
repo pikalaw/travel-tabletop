@@ -110,9 +110,9 @@ export const NOTICE_KINDS = [
 /** A notice sent through the same channel as commands. */
 export type NoticeCommand = { [K in NoticeKind]: Envelope & { type: K; payload: NoticePayloads[K] } }[NoticeKind];
 
-/** Undo is handled by the host, not the engine. */
+/** Undo and redo are handled by the host, not the engine. */
 export interface UndoCommand extends Envelope {
-  type: 'undo';
+  type: 'undo' | 'redo';
   payload?: Record<string, never>;
 }
 

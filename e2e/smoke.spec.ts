@@ -35,9 +35,17 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   await expect(hand).toHaveCount(8);
   await barButton(page, 'Done');
 
-  await page.getByRole('button', { name: 'Undo' }).click();
-  await expect(page.locator('.confirm-box.plain')).toContainText('Undo the last change?');
-  await answerDialog(page, true);
+  // Undo takes the draw back at once (no dialog) and says which move; Redo brings it back; Undo again
+  await expect(page.locator('.bar').first().getByRole('button', { name: 'Redo', exact: true })).toHaveCount(0);
+  await barButton(page, 'Undo');
+  await expect(page.locator('.confirm-box')).toHaveCount(0);
+  await expect(page.locator('.ticker-text')).toHaveText('Player 1 undid: Player 1 drew 2 cards');
+  await expect(hand).toHaveCount(6);
+  await barButton(page, 'Redo');
+  await expect(page.locator('.ticker-text')).toHaveText('Player 1 redid: Player 1 drew 2 cards');
+  await expect(hand).toHaveCount(8);
+  await expect(page.locator('.bar').first().getByRole('button', { name: 'Redo', exact: true })).toHaveCount(0);
+  await barButton(page, 'Undo');
   // Untap all asks first too; Cancel changes nothing
   await barButton(page, 'Untap all');
   await expect(page.locator('.confirm-box.plain')).toContainText('Untap all of Player 1’s cards?');

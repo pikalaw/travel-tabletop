@@ -4,7 +4,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { toast } from './toast';
 import { TipButton } from './TipButton';
-import { UndoIcon, EyeIcon, EyeOffIcon, SwordsIcon, EndCombatIcon, PauseIcon, CloseIcon, HourglassIcon, PawnIcon, DieIcon, PointIcon, UntapIcon } from './icons';
+import { UndoIcon, RedoIcon, EyeIcon, EyeOffIcon, SwordsIcon, EndCombatIcon, PauseIcon, CloseIcon, HourglassIcon, PawnIcon, DieIcon, PointIcon, UntapIcon } from './icons';
 import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
 import { Board } from './Board';
@@ -60,6 +60,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   const awayLines = useRef<{ actor: Actor; text: string; alert: boolean }[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
   const state = session.state;
+  const steps = session.history; // what Undo and Redo would do now
   // The address bar names this game, so the page can be bookmarked or reopened from history.
   useEffect(() => { setGameLink(state.gameId); return () => setGameLink(null); }, [state.gameId]);
 
@@ -310,11 +311,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     setCombat(blocker?.cardId === id ? null : { cardId: id, zone });
   }
 
-  /** Undo asks first: it takes back the latest change by either player, and there is no redo. */
-  function undo() {
-    void confirmBox({ title: 'Undo the last change?', body: 'This takes back the most recent change to the board, by either player. There’s no redo.', ok: 'Undo' })
-      .then((yes) => { if (yes) send('undo', {}); });
-  }
 
   function untapAll() {
     void confirmBox({ title: `Untap all of ${state.players[actingPlayer].name}’s cards?`, ok: 'Untap all' })
@@ -690,7 +686,10 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
           onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}><PointIcon /></TipButton>
         <TipButton class="btn icon" label="Untap all" tip="Untap all your cards (asks first)." onClick={untapAll}><UntapIcon /></TipButton>
         <span class="spacer" />
-        <TipButton class="btn icon" label="Undo" tip="Undo the last change, by either player (asks first; there is no redo)." onClick={undo}><UndoIcon /></TipButton>
+        {/* Shown only when there is something to do. No confirmation: Redo brings back what Undo took
+            back, and both are logged for both players. Each one's tip names the move. */}
+        {steps.undo ? <TipButton class="btn icon" label="Undo" tip={`Undo: ${steps.undo}`} onClick={() => send('undo', {})}><UndoIcon /></TipButton> : null}
+        {steps.redo ? <TipButton class="btn icon" label="Redo" tip={`Redo: ${steps.redo}`} onClick={() => send('redo', {})}><RedoIcon /></TipButton> : null}
         <TipButton class="btn icon" label="Menu" tip="More: re-pair, export the log, concede, rematch, leave." onClick={() => setSheet({ kind: 'menu' })}>☰</TipButton>
       </div>
     );

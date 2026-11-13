@@ -50,12 +50,15 @@ export function asGuestMessage(x: unknown): GuestToHost | RefuseMessage | null {
   return null;
 }
 
+const isNameOrNull = (v: unknown) => v === null || (isStr(v) && v.length <= 2000);
+const isHistory = (h: unknown) => isObj(h) && isNameOrNull(h.undo) && isNameOrNull(h.redo);
+
 /** A message the guest may receive from its host. Anything else is dropped. */
 export function asHostMessage(x: unknown): HostToGuest | null {
   if (!isObj(x)) return null;
   switch (x.type) {
     case 'state':
-      return isNum(x.version) && isGameState(x.state) ? x as unknown as StateMessage : null;
+      return isNum(x.version) && isGameState(x.state) && (x.history === undefined || isHistory(x.history)) ? x as unknown as StateMessage : null;
     case 'welcome':
       return isPlayer(x.player) && isNum(x.version) && isGameState(x.state) && (x.tokens === undefined || isStrArr(x.tokens)) ? x as unknown as WelcomeMessage : null;
     case 'notice':

@@ -20,6 +20,8 @@ export const cmdArb = fc.oneof(
   fc.record({ type: fc.constant('untapAll'), player: fc.constantFrom('p1', 'p2') }),
   fc.record({ type: fc.constant('passTurn') }),
   fc.record({ type: fc.constant('undo') }),
+  fc.record({ type: fc.constant('undo') }),
+  fc.record({ type: fc.constant('redo') }),
   fc.record({ type: fc.constant('play'), pick: fc.nat(), to: fc.constantFrom('p1.battlefield', 'p2.battlefield', 'p1.lands'), toIndex: fc.option(fc.nat(6), { nil: undefined }) }),
   fc.record({ type: fc.constant('play'), pick: fc.nat(), to: fc.constantFrom('p1.battlefield', 'p2.battlefield', 'p1.lands'), toIndex: fc.option(fc.nat(6), { nil: undefined }) }),
   fc.record({ type: fc.constant('play'), pick: fc.nat(), to: fc.constantFrom('p1.battlefield', 'p2.battlefield', 'p1.lands'), toIndex: fc.option(fc.nat(6), { nil: undefined }) }),
@@ -60,6 +62,7 @@ export function concretize(state: GameState, step: any): TestCommand {
     case 'untapAll': return { type: 'untapAll', actor: step.player, payload: { player: step.player } };
     case 'passTurn': return { type: 'passTurn', actor: 'p1', payload: {} };
     case 'undo': return { type: 'undo', actor: 'table', payload: {} };
+    case 'redo': return { type: 'redo', actor: 'table', payload: {} };
     case 'play': return { type: 'move', actor: 'p1', payload: { cardId: id, from, to: step.to, toIndex: step.toIndex } };
     case 'attach': {
       const field = FIELD.flatMap((z) => state.zones[z].map((c) => [c, z] as const));

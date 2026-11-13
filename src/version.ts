@@ -6,4 +6,4 @@ export const APP_VERSION: string = __APP_VERSION__;
 /** The first 7 characters of the commit that built this copy, or `dev`. */
 export const BUILD_ID: string = __BUILD_ID__;
 /** Bumped only when host and guest messages change shape. */
-export const PROTOCOL_VERSION = 6; // 2: detachAll; 3: setLead, attachments added farthest from the lead; 4: changed marks; 5: putAbility; 6: attack taps
+export const PROTOCOL_VERSION = 7; // 2: detachAll; 3: setLead, attachments added farthest from the lead; 4: changed marks; 5: putAbility; 6: attack taps; 7: redo, and state messages say what undo and redo would do

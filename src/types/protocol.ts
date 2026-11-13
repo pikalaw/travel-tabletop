@@ -55,7 +55,12 @@ export interface StateMessage {
   alert?: boolean;
   actor?: Actor;
   clientSeq?: number;
+  /** What Undo and Redo would take back or bring back now (protocol 7). */
+  history?: History;
 }
+
+/** The move the next Undo would take back and the next Redo would bring back, by log line; null: none. */
+export interface History { undo: string | null; redo: string | null }
 
 /** Host → guest: one of the guest's commands was not applied. */
 export interface RejectedMessage {

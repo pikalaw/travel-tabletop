@@ -11,6 +11,8 @@ function Icon({ children, size = 22 }: { children: ComponentChildren; size?: num
 }
 
 export const UndoIcon = () => <Icon><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></Icon>;
+/** Redo: the Undo arrow, mirrored. */
+export const RedoIcon = () => <Icon><path d="M15 14l5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" /></Icon>;
 
 const eye = <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>;
 /** Unblind: an open eye. */

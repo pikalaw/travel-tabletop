@@ -10,6 +10,7 @@ import { NOTICE_KINDS, type Command, type Movement, type Notice, type NoticeKind
 import type { Actor, GameState, ZoneId } from '../types/state';
 import type { LogEntry } from '../types/storage';
 import type { Commit, Persistence } from '../storage/db';
+import type { History } from '../types/protocol';
 
 export { SNAPSHOT_CAP };
 
@@ -37,9 +38,12 @@ export interface ChangeInfo {
   undo?: boolean;
 }
 
+/** One undo step: the board before a move, and that move's log line (missing for older saves). */
+export interface UndoStep { key: number; state: GameState; text?: string | undefined }
+
 export interface HostOptions {
   state?: GameState;
-  snapshots?: { key: number; state: GameState }[];
+  snapshots?: UndoStep[];
   logSeq?: number;
   persist?: Persistence | null;
   random?: (n: number) => number[];
@@ -58,7 +62,13 @@ type NoticeListener = (notice: Notice) => void;
 
 export class Host {
   state: GameState;
-  snapshots: { key: number; state: GameState }[];
+  /** Undo steps, oldest first; the last is what Undo takes back. Saved with the game. */
+  snapshots: UndoStep[];
+  /**
+   * Redo steps: each board an Undo stepped back from, with its move's line; the last is what Redo
+   * brings back. Only until the next move (which clears them) or leaving the game: not saved.
+   */
+  private future: { state: GameState; text?: string | undefined }[] = [];
   logSeq: number;
   /** Increments on every state change, including undo. */
   version = 0;
@@ -105,6 +115,7 @@ export class Host {
   dispatch(cmd: IncomingCommand): DispatchResult {
     if (!cmd || typeof cmd.type !== 'string') return { ok: false, error: 'invalid' };
     if (cmd.type === 'undo') return this.undo(cmd.actor);
+    if (cmd.type === 'redo') return this.redo(cmd.actor);
     if (NOTICE_TYPES.has(cmd.type)) return this.notice(cmd.type as NoticeKind, cmd.actor, cmd.payload);
     if (!STATE_COMMANDS.has(cmd.type)) return { ok: false, error: 'invalid', detail: `unknown ${cmd.type}` };
     const filled = { type: cmd.type, actor: cmd.actor, payload: cmd.payload || {} } as Command;
@@ -118,20 +129,21 @@ export class Host {
       return { ok: false, error: res.error, detail: res.detail };
     }
     const after = res.state;
-    // Snapshot the prior state for undo (not across a new game).
+    const text = describeCommand(filled, before, after, res.moved);
+    // Snapshot the prior state for undo, named by this move's line (not across a new game). Only
+    // moves get here: notices (dice, pointing, looks) never become undo steps. A move ends redo.
     let push: Commit['push'];
-    let drop: number[] = [];
+    let drop: number[];
     if (filled.type !== 'startGame') {
-      push = { key: this.nextSnapKey++, state: before };
-      this.snapshots.push(push);
-      while (this.snapshots.length > SNAPSHOT_CAP) drop.push(this.snapshots.shift()!.key);
+      push = { key: this.nextSnapKey++, state: before, text };
+      drop = this.pushStep(push);
     } else {
       drop = this.snapshots.map((s) => s.key);
       this.snapshots = [];
     }
+    this.future = [];
     this.state = after;
     this.version++;
-    const text = describeCommand(filled, before, after, res.moved);
     // A library change the other player should notice. Dragging the top card into its owner's hand
     // is a draw, as routine as the draw command, so it is not one.
     const drawn = (m: Movement) => m.from && m.to && zoneKind(m.to) === 'hand' && zoneOwner(m.to) === zoneOwner(m.from)
@@ -164,18 +176,52 @@ export class Host {
     return { ok: true, version: this.version };
   }
 
-  /** Revert the most recent state change, whoever made it. */
+  /** What Undo would take back and Redo would bring back now, by log line (null: nothing). */
+  history(): History {
+    const named = (s: { text?: string | undefined } | undefined) => (s ? s.text || 'the last change' : null);
+    return { undo: named(this.snapshots[this.snapshots.length - 1]), redo: named(this.future[this.future.length - 1]) };
+  }
+
+  /** Add an undo step, keeping at most SNAPSHOT_CAP; returns the keys of the steps dropped. */
+  private pushStep(step: UndoStep): number[] {
+    this.snapshots.push(step);
+    const drop: number[] = [];
+    while (this.snapshots.length > SNAPSHOT_CAP) drop.push(this.snapshots.shift()!.key);
+    return drop;
+  }
+
+  private nameOf(actor: Actor): string {
+    return actor === 'p1' || actor === 'p2' ? this.state.players[actor].name : 'Table';
+  }
+
+  /** Revert the most recent state change, whoever made it; Redo can bring it back until the next move. */
   undo(actor: Actor): DispatchResult {
     const snap = this.snapshots.pop();
     if (!snap) return { ok: false, error: 'invalid', detail: 'nothing to undo' };
     const undone = this.state.seq;
+    this.future.push({ state: this.state, text: snap.text });
     this.state = snap.state;
     this.version++;
-    const name = actor === 'p1' || actor === 'p2' ? this.state.players[actor].name : 'Table';
-    const text = `${name} undid the last action`;
+    const text = snap.text ? `${this.nameOf(actor)} undid: ${snap.text}` : `${this.nameOf(actor)} undid the last action`;
     this.lastText = text;
     this.lastAlert = false;
     this.save({ state: this.state, drop: [snap.key], log: [this.entry('undo', actor, { undoneSeq: undone, text })] });
+    this.emitState(this.state, { version: this.version, text, alert: false, actor, undo: true });
+    return { ok: true, version: this.version };
+  }
+
+  /** Bring back the move the last Undo took back, exactly as it was (a shuffle or a roll is not redone). */
+  redo(actor: Actor): DispatchResult {
+    const next = this.future.pop();
+    if (!next) return { ok: false, error: 'invalid', detail: 'nothing to redo' };
+    const push = { key: this.nextSnapKey++, state: this.state, text: next.text };
+    const drop = this.pushStep(push);
+    this.state = next.state;
+    this.version++;
+    const text = next.text ? `${this.nameOf(actor)} redid: ${next.text}` : `${this.nameOf(actor)} redid the last action`;
+    this.lastText = text;
+    this.lastAlert = false;
+    this.save({ state: this.state, push, drop, log: [this.entry('redo', actor, { text })] });
     this.emitState(this.state, { version: this.version, text, alert: false, actor, undo: true });
     return { ok: true, version: this.version };
   }

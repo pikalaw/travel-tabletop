@@ -106,8 +106,8 @@ describe('round trips', () => {
     const p = gamePersistence({ mode: 'same-device', role: 'host', setup: {} });
     const entry = (seq: number): LogEntry => ({ gameId: state.gameId, seq, ts: 't', mode: 'same-device', turn: 1, kind: 'command', actor: 'p1', schemaVersion: 1 });
     await p.commit({ state, push: { key: 1, state }, drop: [], log: [entry(1)] });
-    await p.commit({ state, push: { key: 2, state }, drop: [1], log: [entry(2), entry(3)] });
-    expect((await loadSnapshots(state.gameId)).map((s) => s.key)).toEqual([2]);
+    await p.commit({ state, push: { key: 2, state, text: 'Ann tapped Elf' }, drop: [1], log: [entry(2), entry(3)] });
+    expect((await loadSnapshots(state.gameId)).map((s) => [s.key, s.text])).toEqual([[2, 'Ann tapped Elf']]);
     expect((await loadLog(state.gameId)).map((e) => e.seq)).toEqual([1, 2, 3]);
     expect((await listGames()).map((g) => g.id)).toEqual([state.gameId]);
     expect((await getGame(state.gameId))?.over).toBe(!!state.result);

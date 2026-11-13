@@ -38,7 +38,7 @@ test('finished games: listed under games in progress, open with their result, un
   // open it: the result shows; undo continues the game, which goes back to games in progress
   await finished.first().getByRole('button', { name: 'Open' }).click();
   await expect(page.locator('.result-banner')).toContainText('Player 2 wins');
-  await resetBar(page); await page.locator('.bar').first().getByRole('button', { name: 'Undo', exact: true }).click(); await answerDialog(page, true);
+  await resetBar(page); await page.locator('.bar').first().getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(page.locator('.result-banner')).toHaveCount(0);
   await menu(page, 'Leave to home screen');
   await expect(page.locator('h2')).toHaveText(['Games in progress']);

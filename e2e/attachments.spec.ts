@@ -105,7 +105,7 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
   await expect(p2bf.locator('[data-card]')).toHaveCount(1);
   await expect(p2bf.locator('.card.tucked')).toHaveCount(0);
   await expect(ticker).toContainText('→ Player 2\'s graveyard');
-  await barButton(page, 'Undo'); await answerDialog(page, true);
+  await barButton(page, 'Undo');
   await expect(p2bf.locator('.card.tucked')).toHaveCount(1);
   errs.expectNone();
 });
@@ -138,6 +138,6 @@ test('Detach all asks first, then frees the whole group in one step; Undo brings
   await expect(page.locator('.ticker-text')).toContainText(/detached 2 cards from/);
   await expect(page.locator('.bar').first().getByRole('button', { name: 'Detach all' })).toHaveCount(0);
   await barButton(page, 'Close');
-  await barButton(page, 'Undo'); await answerDialog(page, true);
+  await barButton(page, 'Undo');
   await expect(bf.locator('.att-count')).toHaveText(['+2']);
 });

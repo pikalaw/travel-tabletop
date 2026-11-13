@@ -75,7 +75,7 @@ e2e/                       Playwright scenarios (see Testing)
 
 - `base: '/travel-tabletop/'`, the GitHub Pages project path; every asset URL and the service worker scope derive from it.
 - `plugins: [preact(), VitePWA({ … })]`, configured as in the next section.
-- `define`: `__APP_VERSION__` from `package.json` and `__BUILD_ID__` from the first 7 characters of `GITHUB_SHA` (or `dev` locally). `version.ts` exports them as `APP_VERSION` and `BUILD_ID`; `PROTOCOL_VERSION` is a literal, bumped when host and guest messages change (2: `detachAll`; 3: `setLead`, and new attachments go farthest from the lead; 4: `changed` marks; 5: `putAbility`; 6: `attack` takes `tap`).
+- `define`: `__APP_VERSION__` from `package.json` and `__BUILD_ID__` from the first 7 characters of `GITHUB_SHA` (or `dev` locally). `version.ts` exports them as `APP_VERSION` and `BUILD_ID`; `PROTOCOL_VERSION` is a literal, bumped when host and guest messages change (2: `detachAll`; 3: `setLead`, and new attachments go farthest from the lead; 4: `changed` marks; 5: `putAbility`; 6: `attack` takes `tap`; 7: `redo`, and `state` messages carry `history`).
 - `build.target: 'es2022'`, `build.sourcemap: true` (source maps are served, so errors on a device point at real lines).
 
 **Scripts** (`package.json`): `dev` (Vite dev server), `build` (`tsc --noEmit && vite build`), `preview` (serves `dist/` the way Pages will), `typecheck`, `lint`, `test` (Vitest), `e2e` (Playwright against `preview`).
@@ -216,7 +216,7 @@ interface CommandEnvelope { type: string; actor: Actor; clientSeq?: number; payl
 | `attack` / `block` / `endCombat` | see Combat marks |  |
 | `putAbility` | cardId (the source, in any zone), from, text | New item `a<n>` on top of the stack: `ability = { text, sourceId }` with the source's `defId` (its picture), name, deckId and owner, and face down if the source is. Text is trimmed; empty or over 2,000 characters is invalid. An item exists only on the stack: `move` to any other zone deletes it, and `attach` of an item is invalid. Added in protocol 5 |
 
-`undo` is handled by the host, not the engine (see Host). Randomness: `randomNeeded(state, cmd)` returns how many numbers the host must supply (all deck cards for `startGame`, the zone size for `shuffle`, else 0); the engine reads them from `cmd.random`, clamped to \[0, 1).
+`undo` and `redo` are handled by the host, not the engine (see Host). `replay` mirrors them: an undo puts the state it leaves on a redo list, a redo takes it back, and an applied command clears the list. Randomness: `randomNeeded(state, cmd)` returns how many numbers the host must supply (all deck cards for `startGame`, the zone size for `shuffle`, else 0); the engine reads them from `cmd.random`, clamped to \[0, 1).
 
 **Moving cards** (`move`). The host card's attachments travel with it when it goes to a battlefield zone (see Attachments); an attached card that moves is detached. The moved cards are removed from `from`. A token whose destination is not a battlefield zone or the stack is deleted, and so is an ability item whose destination is not the stack. Otherwise each card passes through `changeZone(card, from, to)`:
 
@@ -263,7 +263,7 @@ After every command `fixAttachments` restores these rules:
 
 `Host` (`host.ts`) owns the authoritative state. `dispatch(cmd)`:
 
-1. `undo` → pop the snapshot stack; the popped state becomes current. Logged as `kind: 'undo'` with `undoneSeq`. Nothing to undo is invalid. Undo works after a game has ended too (it is handled before the engine's game-over check).
+1. `undo` → pop the snapshot stack; the popped state becomes current, and the state it left goes on the redo list with the popped step's line. Logged as `kind: 'undo'` with `undoneSeq` and the text "\<actor> undid: \<line>" ("undid the last action" for a step saved without a line). Nothing to undo is invalid. Undo works after a game has ended too (it is handled before the engine's game-over check). `redo` → pop the redo list: push the current state as a new undo step with that line, and make the popped state current, exactly as it was. Logged as `kind: 'redo'`, "\<actor> redid: \<line>". Nothing to redo is invalid. Every applied command stores its ticker line with its undo step (`UndoStep { key, state, text }`) and clears the redo list; notices never touch either. The redo list is kept in memory only. `history()` gives `{ undo, redo }`: the lines the next Undo and Redo would act on, or null.
 2. Notice types → fill results, log, emit `notice`.
 3. State commands → fill `random` with `crypto.getRandomValues` (32-bit values ÷ 2³²), `apply`, and on error log a `rejected` entry and return `{ ok: false, error, detail }`.
 4. On success: push the prior state as a snapshot (capped at 100; `startGame` clears the stack instead), bump `version`, describe the command for the ticker, and compute `alert` (a `shuffle`, a `move` out of a library, or anything into a library; except a `move` of a library's top card into its owner's hand, which is a draw). Write a `command` log entry with per-card `visibleTo`, plus a `snapshot` entry after `startGame`, `passTurn`, `concede` and `endGame`. Persist, then emit `state` with { version, text, alert, actor, clientSeq }.
@@ -293,7 +293,7 @@ Persistence is serialized through one promise chain; each commit is one IndexedD
 | `welcome` | host → guest | player ('p2'), state, version, tokens |
 | `refuse` | either | reason: `version`, `cards` (with `missing` names), or `game`; detail |
 | `command` | guest → host | cmd { type, payload, clientSeq } |
-| `state` | host → guest | version, state, text, alert, actor, clientSeq (on the guest's own commands) |
+| `state` | host → guest | version, state, text, alert, actor, clientSeq (on the guest's own commands), history `{ undo, redo }` (protocol 7; the guest drops a message whose history isn't two strings or nulls) |
 | `rejected` | host → guest | clientSeq, reason, detail |
 | `notice` | host → guest | the filled notice { kind, actor, payload, text, alert, seq } |
 
@@ -309,7 +309,7 @@ One IndexedDB database `mtg-tabletop`, version 2. Version 1 is v1's layout; vers
 | `defs` | `id` | CardDef { id, name, front, back, scryfallId?, sizes?, text? }; `text` = { oracleId?, layout?, faces: [{ name, typeLine, oracleText, manaCost?, power?, toughness?, loyalty?, defense? }], record } |
 | `decks` | `id` | Deck { id, name, kind: 'deck' or 'token', cards (defIds, with repeats), commanders?, builtin?, starterId?, forDecks?, signature?, createdAt } |
 | `games` | `id` | { id, state, mode, role, setup, updatedAt, over } |
-| `snapshots` | \[gameId, key\] | { gameId, key, state }; index `gameId` |
+| `snapshots` | \[gameId, key\] | { gameId, key, state, text? }; index `gameId`; `text` is the move's line, so Undo can name it after a resume |
 | `logs` | \[gameId, seq\] | LogEntry; index `gameId` |
 | `rulings` | `oracleId` | { oracleId, rulings: [{ source, publishedAt, comment }], fetchedAt } |
 | `meta` | `key` | `fixtures` (sample-deck version), `lastSetup` { names, pick, life }, `guestGame`, `offlineNoticeShown` (new in v2; an extra key, so v1 records still read) |
@@ -357,7 +357,7 @@ Every host action writes log entries with a per-game increasing `seq`.
 ```typescript
 interface LogEntry {
   gameId: string; seq: number; ts: string; mode: 'networked' | 'same-device'; turn: number;
-  kind: 'command' | 'notice' | 'rejected' | 'undo' | 'snapshot';
+  kind: 'command' | 'notice' | 'rejected' | 'undo' | 'redo' | 'snapshot';
   actor: Actor; schemaVersion: number;
   command?: Command;          // as applied, with random filled in
   notice?: Notice;            // as filled in by the host

@@ -70,7 +70,30 @@ describe('host', () => {
     h.dispatch({ type: 'draw', actor: 'p1', payload: { player: 'p1', n: 2 } });
     h.dispatch({ type: 'coinFlip', actor: 'p2', payload: {} });
     h.dispatch({ type: 'undo', actor: 'table' });
-    expect(seen).toEqual(['2:Ann drew 2 cards', expect.stringMatching(/^notice:Bo flipped a coin: (heads|tails)$/), '3:Table undid the last action (undo)']);
+    expect(seen).toEqual(['2:Ann drew 2 cards', expect.stringMatching(/^notice:Bo flipped a coin: (heads|tails)$/), '3:Table undid: Ann drew 2 cards (undo)']);
+  });
+
+  it('redo brings back what undo took back, exactly; a new move ends redo; only moves are steps', () => {
+    const h = newHost();
+    const lines: string[] = [];
+    h.on('state', (_s, info) => lines.push(info.text));
+    expect(h.history()).toEqual({ undo: null, redo: null });
+    h.dispatch({ type: 'shuffle', actor: 'p1', payload: { zone: 'p1.library' } });
+    const shuffled = structuredClone(h.state);
+    h.dispatch({ type: 'rollDie', actor: 'p1', payload: { sides: 6 } }); // a notice: not an undo step
+    expect(h.history()).toEqual({ undo: 'Ann shuffled their library', redo: null });
+    h.dispatch({ type: 'undo', actor: 'p2' });
+    expect(h.history()).toEqual({ undo: null, redo: 'Ann shuffled their library' });
+    expect(h.dispatch({ type: 'redo', actor: 'p2' })).toMatchObject({ ok: true });
+    expect(h.state).toEqual(shuffled); // the same order, not a new shuffle
+    expect(h.history()).toEqual({ undo: 'Ann shuffled their library', redo: null });
+    expect(lines.slice(-2)).toEqual(['Bo undid: Ann shuffled their library', 'Bo redid: Ann shuffled their library']);
+    h.dispatch({ type: 'undo', actor: 'p1' });
+    h.dispatch({ type: 'draw', actor: 'p1', payload: { player: 'p1', n: 1 } }); // a new move
+    expect(h.history().redo).toBeNull();
+    expect(h.dispatch({ type: 'redo', actor: 'p1' })).toMatchObject({ ok: false });
+    // the log replays to the same board, undos and redos included
+    expect(checkInvariants(h.state)).toBeNull();
   });
 
   it('snapshot stack is capped', () => {
@@ -100,7 +123,7 @@ describe('host properties', () => {
     fc.assert(fc.property(fc.array(cmdArb, { maxLength: 40 }), fc.integer({ min: 1, max: 1e6 }), (steps, seed) => {
       const h = newHost(seed);
       for (const step of steps) {
-        if (step.type === 'undo') continue;
+        if (step.type === 'undo' || step.type === 'redo') continue;
         const before = structuredClone(h.state);
         const r = h.dispatch(concretize(h.state, step));
         if (r.ok && r.version) {
