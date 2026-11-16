@@ -210,7 +210,12 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .pile .drop-hint { display: none; }
 body.dragging .pile[data-layout="library"].drop-hover .drop-hint { display: block; position: absolute; left: 0; right: 0; text-align: center; font-size: 10px; font-weight: 700; padding: 2px; z-index: 2; background: rgba(0,0,0,.55); text-transform: uppercase; }
 .pile .drop-hint.top { top: 0; } .pile .drop-hint.bottom { bottom: 0; }
-.pile.drop-top .drop-hint.top, .pile.drop-bottom .drop-hint.bottom { background: #c9a65a; color: #111; }
+body.dragging .pile[data-layout="library"].drop-top .drop-hint.top, body.dragging .pile[data-layout="library"].drop-bottom .drop-hint.bottom { background: #c9a65a; color: #111; }
+/* Over a library, the highlight fades away from the end the card will go to: solid at the top for Top, at the bottom for Bottom. */
+body.dragging .pile[data-layout="library"].drop-hover:is(.drop-top, .drop-bottom) { outline: none; background: none; }
+body.dragging .pile[data-layout="library"].drop-hover:is(.drop-top, .drop-bottom)::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; border: 2px solid #c9a65a; background: rgba(201,166,90,.10); -webkit-mask-image: var(--fade); mask-image: var(--fade); }
+.pile.drop-top { --fade: linear-gradient(to bottom, #000, transparent); }
+.pile.drop-bottom { --fade: linear-gradient(to top, #000, transparent); }
 
 /* Cards */
 .card { position: relative; flex: none; display: flex; align-items: center; justify-content: center; touch-action: inherit; }
