@@ -1,5 +1,9 @@
 # Travel Tabletop
 
+<p align="center">
+  <img src="docs/images/board.jpg" width="360" alt="A two-player game on a phone: each player's lands, battlefield, exile, graveyard, Command and library, the shared stack between them, and the footer of actions">
+</p>
+
 A rules-free Magic: The Gathering playmat that runs as an offline web app (PWA) on phones,
 tablets and desktop browsers. Two players share one device, or play on two devices connected
 over the same local Wi-Fi network. No internet is needed during play.
