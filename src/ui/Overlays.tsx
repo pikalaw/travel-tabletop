@@ -347,103 +347,47 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
   );
 }
 
-/** Player counters, both players. */
-export function CountersSheet({ ctx, send, onClose }: { ctx: BoardCtx; send: Send; onClose: () => void }) {
+/** One player's counters: the stats box tapped on the board. */
+export function CountersSheet({ ctx, pl, send, onClose }: { ctx: BoardCtx; pl: PlayerId; send: Send; onClose: () => void }) {
   const st = ctx.state;
-  const [adding, setAdding] = useState({
-    p1: '',
-    p2: '',
-  });
-  const set = (pl: PlayerId, key: string, value: number) =>
-    send('setPlayerCounter', {
-      player: pl,
-      key,
-      value,
-    });
-  const list = (pl: PlayerId) => (
-    <div class={`ctr-panel ${roleOf(st, pl)}`}>
-      <h3>{st.players[pl].name}</h3>
-      {st.players[pl].counters.map((c) => (
-        <div class="ctr-row">
-          <span class="ctr-key">{c.key === 'life' ? 'Life' : c.key}</span>
-          <button class="btn round" onClick={() => set(pl, c.key, c.value - 1)}>
-            −
-          </button>
-          <button
-            class="ctr-val"
-            onClick={async () => {
-              const v = await promptBox({
-                title: `${st.players[pl].name}: ${c.key}`,
-                value: String(c.value),
-                numeric: true,
-                ok: 'Set',
-              });
-              if (v != null && v.trim() !== '' && Number.isFinite(Number(v))) set(pl, c.key, Number(v));
-            }}
-          >
-            {c.value}
-          </button>
-          <button class="btn round" onClick={() => set(pl, c.key, c.value + 1)}>
-            +
-          </button>
-          {c.key === 'life' ? (
-            <span class="ctr-x" />
-          ) : (
-            <button
-              class="btn ghost ctr-x"
-              title="Remove"
-              onClick={() =>
-                send('removePlayerCounter', {
-                  player: pl,
-                  key: c.key,
-                })
-              }
-            >
-              ×
-            </button>
-          )}
-        </div>
-      ))}
-      <form
-        class="ctr-add"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const k = adding[pl].trim();
-          if (k) {
-            send('addPlayerCounter', {
-              player: pl,
-              key: k,
-              value: 0,
-            });
-            setAdding({
-              ...adding,
-              [pl]: '',
-            });
-          }
-        }}
-      >
-        <input
-          placeholder="New counter (poison, energy…)"
-          value={adding[pl]}
-          onInput={(e) =>
-            setAdding({
-              ...adding,
-              [pl]: e.currentTarget.value,
-            })
-          }
-        />
-        <button class="btn" type="submit">
-          Add
-        </button>
-      </form>
-    </div>
-  );
+  const [adding, setAdding] = useState('');
+  const set = (key: string, value: number) => send('setPlayerCounter', { player: pl, key, value });
   return (
     <Sheet title="Player counters" onClose={onClose} tall>
-      <div class="ctr-panels">
-        {/* The player whose turn it is first, as on the board's counters. */}
-        {list(st.activePlayer)}
-        {list(other(st.activePlayer))}
+      <div class={`ctr-panel ${roleOf(st, pl)}`}>
+        <h3>{st.players[pl].name}</h3>
+        {st.players[pl].counters.map((c) => (
+          <div class="ctr-row">
+            <span class="ctr-key">{c.key === 'life' ? 'Life' : c.key}</span>
+            <button class="btn round" onClick={() => set(c.key, c.value - 1)}>−</button>
+            <button
+              class="ctr-val"
+              onClick={async () => {
+                const v = await promptBox({ title: `${st.players[pl].name}: ${c.key}`, value: String(c.value), numeric: true, ok: 'Set' });
+                if (v != null && v.trim() !== '' && Number.isFinite(Number(v))) set(c.key, Number(v));
+              }}
+            >
+              {c.value}
+            </button>
+            <button class="btn round" onClick={() => set(c.key, c.value + 1)}>+</button>
+            {c.key === 'life' ? (
+              <span class="ctr-x" />
+            ) : (
+              <button class="btn ghost ctr-x" title="Remove" onClick={() => send('removePlayerCounter', { player: pl, key: c.key })}>×</button>
+            )}
+          </div>
+        ))}
+        <form
+          class="ctr-add"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const k = adding.trim();
+            if (k) { send('addPlayerCounter', { player: pl, key: k, value: 0 }); setAdding(''); }
+          }}
+        >
+          <input placeholder="New counter (poison, energy…)" value={adding} onInput={(e) => setAdding(e.currentTarget.value)} />
+          <button class="btn" type="submit">Add</button>
+        </form>
       </div>
     </Sheet>
   );

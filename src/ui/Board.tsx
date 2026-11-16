@@ -28,14 +28,15 @@ export function cellsFor(P: PlayerId) {
 }
 /**
  * One player's stats, beside their battlefield: name (in the turn colour), "Turn N" for the player
- * whose turn it is, life, then any other counters. A tap opens Player counters.
+ * whose turn it is, life, then any other counters. The active player's box sits at the top of its
+ * cell, the other's at the bottom. A tap opens this player's counters.
  */
 function Stats({ ctx, pl }: { ctx: BoardCtx; pl: PlayerId }) {
   const st = ctx.state;
   const active = st.activePlayer === pl;
   const [life, ...rest] = st.players[pl].counters;
   return (
-    <div class={`counters-cell ${active ? 'role-atk' : 'role-def'}`} data-tap="counters">
+    <div class={`counters-cell ${active ? 'role-atk' : 'role-def'}`} data-tap="counters" data-player={pl}>
       {active ? <span class="turn-label">Turn {st.turn}</span> : null}
       <span class="ctr-name">{st.players[pl].name}</span>
       <span class="ctr-life">♥ {life!.value}</span>

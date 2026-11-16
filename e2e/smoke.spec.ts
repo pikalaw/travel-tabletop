@@ -87,10 +87,13 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   await drag(page, page.locator('.my-field .card:has(.mark.token)'), page.locator('.token-btn'));
   await expect(page.locator('.my-field .mark.token')).toHaveCount(0);
 
-  // player counters
+  // player counters: a stats box opens that player's counters only, in the turn colour
+  await page.locator('.opp-stats .counters-cell').click();
+  await expect(page.locator('.ctr-panel')).toHaveCount(1);
+  await expect(page.locator('.ctr-panel.def h3')).toHaveText('Player 2');
+  await page.locator('.sheet').getByRole('button', { name: 'Done' }).click();
   await page.locator('.my-stats .counters-cell').click();
-  // the player whose turn it is comes first, in the turn colour
-  await expect(page.locator('.ctr-panel').first()).toHaveClass(/\batk\b/);
+  await expect(page.locator('.ctr-panel')).toHaveCount(1);
   await expect(page.locator('.ctr-panel.atk h3')).toHaveText('Player 1');
   await page.locator('.ctr-panel.atk .ctr-row').getByRole('button', { name: '−' }).first().click();
   await expect(page.locator('.ctr-panel.atk .ctr-val').first()).toHaveText('19');

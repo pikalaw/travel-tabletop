@@ -240,7 +240,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       return;
     }
     // The life counters stay usable in combat mode: combat damage changes life.
-    if (combat && el.dataset.tap === 'counters') { setSheet({ kind: 'counters' }); return; }
+    if (combat && el.dataset.tap === 'counters') { setSheet({ kind: 'counters', player: el.dataset.player as PlayerId }); return; }
     if (combat) { combatTap(el, combat.blocker, combat.vigilance); return; }
     if (pointMode) {
       const cardId = el.dataset.card || null;
@@ -258,7 +258,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       return;
     }
     const tap = el.dataset.tap;
-    if (tap === 'counters') { setSheet({ kind: 'counters' }); return; }
+    if (tap === 'counters') { setSheet({ kind: 'counters', player: el.dataset.player as PlayerId }); return; }
     if (tap === 'ticker') { setSheet({ kind: 'log' }); return; }
     if (el.dataset.card) {
       const zone = zoneAttr(el);
@@ -702,7 +702,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     switch (sheet.kind) {
       case 'zone': case 'peek': case 'search': case 'inspect': case 'reveal':
         sheetEl = <CardSheet ctx={ctx} sheet={sheet} onClose={close} onRandom={(z) => send('randomPick', { zone: z })} />; break;
-      case 'counters': sheetEl = <CountersSheet ctx={ctx} send={send} onClose={close} />; break;
+      case 'counters': sheetEl = <CountersSheet ctx={ctx} pl={sheet.player} send={send} onClose={close} />; break;
       case 'log': sheetEl = <LogSheet lines={lines} onClose={close} onExport={() => void exportLog()} />; break;
       case 'tokens': sheetEl = <TokensSheet ctx={ctx} tokens={tokens} onClose={close} />; break;
       case 'dice': sheetEl = <DiceSheet ctx={ctx} P={P} send={send} onClose={close} />; break;

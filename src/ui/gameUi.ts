@@ -21,7 +21,8 @@ export type Mode =
 
 export type SheetState =
   | CardSheetState
-  | { kind: 'counters' | 'log' | 'tokens' | 'dice' | 'menu' | 'pair' }
+  | { kind: 'log' | 'tokens' | 'dice' | 'menu' | 'pair' }
+  | { kind: 'counters'; player: PlayerId }
   | { kind: 'away'; name: string; lines: AwayLine[] };
 
 /** One action in the "while you were away" list; alerts (library looks, dice, …) are highlighted. */

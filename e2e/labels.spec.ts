@@ -14,6 +14,14 @@ test('labels: hand, counters, opponent hand, ticker; whose turn; only the active
   await expect(page.locator('.opp-stats .counters-cell')).toHaveText(/^Player 2\s*♥ 20$/i);
   await expect(page.locator('.opp-lands .hand-label')).toHaveText(/Player 2: 7 in hand/i);
   await expect(page.locator('.ticker')).toContainText('Turn 1 · Player 1');
+  // the active player's box sits at the top of its cell, the other's at the bottom
+  const gap = (sel: string) => page.locator(sel).evaluate((cell) => {
+    const c = cell.getBoundingClientRect(), k = [...cell.querySelectorAll('.counters-cell > *')].map((e) => e.getBoundingClientRect());
+    return { top: k[0]!.top - c.top, bottom: c.bottom - k[k.length - 1]!.bottom };
+  });
+  const mine = await gap('.my-stats'), theirs = await gap('.opp-stats');
+  expect(mine.top).toBeLessThan(mine.bottom);
+  expect(theirs.bottom).toBeLessThan(theirs.top);
   await expect(page.locator('.board')).toHaveClass(/\bmy-turn\b/);
 
   await playFromHand(page, 'p1.battlefield');

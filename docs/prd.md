@@ -50,7 +50,7 @@ Each player sees the same layout from their own side: the opponent's half on top
 | Your hand (full width) | | |
 
 - **Shared zone.** The stack is one shared zone shown identically on both devices. It sits on the line between the two halves, half in each, like a pile in the middle of the table. Each library is three quarters of a battlefield's height, so its top and bottom drop halves stay easy to hit; Command takes the rest of the left column beside the stats.
-- **Stats.** Each player's stats sit beside their own battlefield, next to the centre line: their name, life and other counters. Tapping either opens Player counters.
+- **Stats.** Each player's stats sit beside their own battlefield, next to the centre line: their name, life and other counters. The active player's stats sit at the top of their slot and the other player's at the bottom. Tapping a player's stats opens that player's counters.
 - **Labels.** Each slot is labelled at its top left with its name and card count, e.g. "Claire · battlefield 7". Battlefield and lands slots carry the owner's name.
 - **Opponent's hand.** Never shown. Its card count appears right-aligned on the opponent's lands row ("Claire: 5 in hand"). While a card is being dragged, that count becomes a drop target: dropping a card on it puts the card at the end of the opponent's hand (for example, a creature bounced to its owner's hand).
 - **Own hand.** Labelled with its owner, "Lawrence's hand", or "Lawrence's hand (hidden)" while blinded, which also shows whose view the board is in.
@@ -188,7 +188,7 @@ Card counters, tokens, player counters and randomness are all manual tools; the 
 
 **Tokens.** The footer **Tokens** button opens the token picker: one list, sorted by name, of the tokens made for the decks in this game (each token once, from every token deck made for a deck in play; the built-in basic tokens belong to the sample decks). Long-press a token, or spread two fingers on it, to see it full screen (the same viewer as the deck page, in the same frame as the game's full view). There it takes the full view's gestures: swipe sideways for the previous or next token, swipe down to close, and drag it up to go back to the board with the token under your finger and drop it on a slot. Drag a token onto any battlefield or slot to create it there; a tap only shows that hint, so a token is never created by mistake. Dragging a token onto the Tokens button removes it. A token that leaves the battlefield disappears. Only tokens can be removed this way.
 
-**Player counters.** Each player's stats box, beside their battlefield, holds their key:value list: name, ♥ life, then any other counters; the active player's starts with "Turn N". Tapping either opens Player counters.
+**Player counters.** Each player's stats box, beside their battlefield, holds their key:value list: name, ♥ life, then any other counters; the active player's starts with "Turn N". Tapping a box opens Player counters for that player only.
 
 - `life` is a fixed entry for both players.
 - Each entry has − and + buttons, and tapping its value lets you type a new one.

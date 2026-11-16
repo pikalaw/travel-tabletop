@@ -256,6 +256,8 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 
 /* A player's stats, beside their battlefield: "Turn N" (the active player), name, life, other counters. */
 .counters-cell { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 4px 6px; cursor: pointer; overflow: hidden; }
+.counters-cell.role-def { justify-content: flex-end; } /* the active player's box at the top of its cell, the other's at the bottom */
+.counters-cell.role-atk { justify-content: flex-start; }
 .counters-cell .turn-label { font-size: 10px; letter-spacing: .3px; text-transform: uppercase; font-weight: 600; color: var(--hot); }
 /* A hand's size, right-aligned on a lands row (the other player's always, yours while blinded); that
    row's tap hints move to the bottom. */
@@ -324,7 +326,6 @@ body.dragging .hand-label.drop-hover { outline: 2px solid #c9a65a; outline-offse
 .sheet-hint { font-size: 12px; color: var(--ink-2); margin-bottom: 4px; }
 .sheet-row { position: relative; height: calc(100% - 20px); min-height: 90px; }
 .sheet-row .row { border-radius: 8px; background: rgba(255,255,255,.03); }
-.ctr-panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
 .ctr-panel h3 { margin: 4px 0 6px; font-size: 15px; }
 .ctr-panel.atk h3 { color: var(--hot); } .ctr-panel.def h3 { color: var(--cool); }
 .ctr-row { display: grid; grid-template-columns: 1fr 34px 64px 34px 34px; align-items: center; gap: 6px; margin-bottom: 6px; }
