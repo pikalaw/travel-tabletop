@@ -10,9 +10,10 @@ over the same local Wi-Fi network. No internet is needed during play.
 
 Strict TypeScript, built with Vite; Preact for the UI.
 
-> **Being rewritten.** Version 2 (TypeScript + Vite) is in progress on `main`; see
-> `docs/implementation-plan.md`. Until it goes live, the site serves nothing. The plain-JavaScript
-> version 1 is kept at the git tag `v1`.
+**Play it:** https://pikalaw.github.io/travel-tabletop/
+
+> **Version 2** (TypeScript + Vite, tag `v2`) is the current version and the one the site serves.
+> Version 1 (plain JavaScript, tag `v1`) is deprecated and no longer maintained.
 
 ## Run it
 
@@ -34,8 +35,9 @@ From then on it runs offline. Requirements: a current Safari on iOS / iPadOS, or
    images come from Scryfall and are stored on the device. Import needs internet; play does not.
    For a two-device game, import the same decks on both devices.
 2. **New game.**
-   - **One device:** pick decks for both players. Hands start blinded; tap
-     “Unblind to …” to see your hand, and the board turns to that player's side.
+   - **One device:** pick decks for both players, and swap who goes first if you like. Hands
+     start blinded; tap the eye and pick a player to see that hand, and the board turns to that
+     player's side. While blinded, the hand row folds away.
    - **Two devices:** one device picks Host, the other picks Join. The host shows a QR code and
      the guest scans it. The guest then shows a code and the host scans that. Pasting the text
      codes works too. Both devices must be on the same Wi-Fi, and the network must let its devices
@@ -55,14 +57,17 @@ From then on it runs offline. Requirements: a current Safari on iOS / iPadOS, or
    - **Coloured left borders** mark cards just changed in play: red for the active player's
      changes, blue for the other player's. The previous turn's borders stay until the active
      player's first change. Only the active player can pass the turn.
-   - **Tap a library** for draw, mill, look at the top N, reveal, search and shuffle. Looking at
-     or searching any library alerts the other player.
-   - **Footer:** undo (reverts the last action, whoever took it), untap all, pass turn, counters
-     (drag +1/+1, −1/−1 or a labeled counter onto a card; drag one off to remove it), tokens
-     (drag onto a battlefield; drag a token onto the Tokens button to remove it), dice and random
-     picks, and point (tap a card to highlight it on both screens).
-   - **Player counters:** tap the bottom-left cell. Life is fixed; add poison, energy, commander
-     damage and so on.
+   - **Tap a library** to look at or reveal the top N, search, shuffle, or play with the top card
+     face up. To draw or mill, drag the top card to a hand or graveyard. Looking at or searching
+     any library alerts the other player.
+   - **Footer:** blind / unblind, combat (tap creatures to mark attackers and blockers), pass
+     turn, counters (drag +1/+1, −1/−1 or a labeled counter onto a card; drag one off to remove
+     it), tokens (drag onto a battlefield; drag a token onto the Tokens button to remove it), dice
+     and random picks, point (tap a card to highlight it on both screens), untap all, undo and
+     redo (undo reverts the last action, whoever took it), and the menu. Long-press any button
+     for what it does.
+   - **Player counters:** tap a player's stats beside their battlefield. Life is fixed; add
+     poison, energy, commander damage and so on.
 4. **Log.** Every action is recorded on the host. Menu → Export action log downloads a JSON
    Lines file: a manifest line, then one entry per command, notice, undo and snapshot. The file
    replays to the exact game (see `src/host/replay.ts`).
