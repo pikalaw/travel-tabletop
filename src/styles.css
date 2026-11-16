@@ -129,12 +129,23 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
   grid-template-columns: minmax(54px, 16%) 1fr minmax(54px, 16%);
   /* Battlefields get the most room, then the hand, then the lands. Both sides match. The land
      rows' floor keeps land cards tappable on a phone held sideways. */
-  grid-template-rows: minmax(43px, 0.55fr) 1.4fr 1.4fr minmax(43px, 0.55fr) 1fr;
+  grid-template-rows: minmax(43px, 0.55fr) 1.4fr 1.4fr minmax(43px, 0.55fr) minmax(43px, 1fr);
   grid-template-areas: "c11 c12 c13" "c21 c22 c23" "c31 c32 c33" "c41 c42 c43" "c51 c52 c53";
+  /* Blinding and unblinding resize the hand row: glide rather than jump. Both row lists keep the
+     same form (minmax on the outer rows) so the browser can interpolate between them. */
+  transition: grid-template-rows 0.25s ease;
 }
 @media (orientation: landscape) {
   .board { grid-template-columns: minmax(58px, 11%) 1fr minmax(58px, 11%); }
 }
+/* A blinded hand (one device) is only card backs: its row shrinks to a lands row's height, and the
+   battlefields get the room. It stays a full-width drop target. */
+.board.hand-hidden { grid-template-rows: minmax(43px, 0.55fr) 1.4fr 1.4fr minmax(43px, 0.55fr) minmax(43px, 0.55fr); }
+/* The counters cell shares that row, so it goes compact: each player's name over their life, no
+   turn label (the colours and the board tint still say whose turn it is), no extra counters. */
+.board.hand-hidden .counters-cell { justify-content: center; gap: 3px; padding: 2px 5px; }
+.board.hand-hidden .counters-cell .turn-label, .board.hand-hidden .ctr-small { display: none; }
+.board.hand-hidden .ctr-life { font-size: 14px; }
 .c11 { grid-area: c11; } .c12 { grid-area: c12; } .c13 { grid-area: c13; }
 .c21 { grid-area: c21; } .c22 { grid-area: c22; } .c23 { grid-area: c23; }
 .c31 { grid-area: c31; } .c32 { grid-area: c32; } .c33 { grid-area: c33; }

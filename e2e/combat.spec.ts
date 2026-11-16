@@ -117,7 +117,8 @@ test('combat in open slots: attack chip, mark placement on a tapped card, tap on
 
   // dragging 🛡 off removes that pair
   const s = await point(page, `[data-card="${d[2]}"] .mark.blk`);
-  await dragXY(page, s, { x: s.x, y: s.y + 200 });
+  const cb = (await page.locator(`[data-card="${d[2]}"]`).boundingBox())!;
+  await dragXY(page, s, { x: s.x, y: cb.y + cb.height + 40 }); // past the card's own edge, however tall it is
   await expect(marks(page, d[2]!).locator('.mark.blk')).toHaveCount(0);
   // full view: dragging ⚔ off the attacker frees its blocker
   const c = await point(page, `[data-card="${a[0]}"]`);

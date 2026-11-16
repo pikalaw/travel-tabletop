@@ -106,8 +106,20 @@ test('Unblind opens a chooser: whose turn it is on top in red, the other below i
   await page.locator('.chooser').getByRole('button', { name: 'Cancel' }).click();
   await expect(page.locator('.c52 .slot-label')).toContainText('(HIDDEN)', { ignoreCase: true });
 
+  // blinded, the hand row is as short as a lands row, and the counters go compact
+  const height = (sel: string) => page.locator(sel).evaluate((e) => e.getBoundingClientRect().height);
+  await expect(page.locator('.board')).toHaveClass(/\bhand-hidden\b/);
+  expect(Math.abs((await height('.c52')) - (await height('.c42')))).toBeLessThan(2);
+  await expect(page.locator('.counters-cell .turn-label')).toBeHidden();
+  const blindField = await height('.c32');
   await unblind(page, 'Player 2');
   await expect(page.locator('.c52 .slot-label')).toContainText('Player 2');
+  // unblinded, it grows back (after its glide) and the battlefields give the room back
+  await expect(page.locator('.board')).not.toHaveClass(/\bhand-hidden\b/);
+  await page.waitForTimeout(400);
+  expect(await height('.c52')).toBeGreaterThan((await height('.c42')) + 20);
+  expect(await height('.c32')).toBeLessThan(blindField);
+  await expect(page.locator('.counters-cell .turn-label')).toBeVisible();
   await expect(page.locator('.c52 .slot-label')).not.toContainText('hidden', { ignoreCase: true });
 
   // a reload resumes the game blinded

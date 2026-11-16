@@ -70,7 +70,7 @@ export function Board({ ctx, P, openSlots }: { ctx: BoardCtx; P: PlayerId; openS
     <Row ctx={ctx} zone={zone} ids={st.zones[zone]} open={openSlots.includes(zone)} label={label} extraClass={cls} />
   );
   return (
-    <div class={`board persp-${P} ${st.activePlayer === P ? 'my-turn' : 'their-turn'} ${ctx.match?.size ? 'matching' : ''}`}>
+    <div class={`board persp-${P} ${st.activePlayer === P ? 'my-turn' : 'their-turn'} ${ctx.match?.size ? 'matching' : ''} ${ctx.viewer === 'nobody' ? 'hand-hidden' : ''}`}>
       <div class="cell c11 opp">{<Pile ctx={ctx} zone={z.oppExile} label="Exile" />}</div>
       <div class="cell c12 opp">
         {row(z.oppLands, <>{who(O)} · lands</>)}
