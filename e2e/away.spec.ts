@@ -5,9 +5,7 @@ test('one device: unblinding lists every action by the other player since you la
   const errs = watchErrors(page);
   await startOneDevice(page); // Player 1 is looking
   // Player 1 draws, plays a creature, and puts +1/+1 on it
-  await page.locator('.my-lib .pile').click();
-  await page.getByRole('button', { name: 'Draw 1' }).click();
-  await barButton(page, 'Done');
+  await drag(page, page.locator('.my-lib [data-card]').first(), page.locator('[data-drop="p1.hand"]'));
   await playFromHand(page, 'p1.battlefield', 1);
   const [a] = await idsIn(page, 'p1.battlefield');
   await resetBar(page);
@@ -23,7 +21,7 @@ test('one device: unblinding lists every action by the other player since you la
   await expect(sheet).toContainText('While Player 2 was away');
   const items = sheet.locator('.log-list li');
   await expect(items).toHaveCount(3);
-  await expect(items.nth(0)).toContainText(/drew 1 card/);
+  await expect(items.nth(0)).toContainText('a card → their hand');
   await expect(items.nth(1)).toContainText(/→ their battlefield/);
   await expect(items.nth(2)).toContainText(/\+1\/\+1 counter/);
   await sheet.getByRole('button', { name: 'Done' }).click().catch(async () => { await page.mouse.click(8, 8); });

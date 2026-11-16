@@ -69,7 +69,7 @@ Each player sees the same layout from their own side: the opponent's half on top
 | --- | --- |
 | Normal | Most used first, as icons where a symbol is clear (each keeps a spoken label): eye: Blind my hand (struck-through eye) or Unblind (open eye, gold) (one device) · crossed swords: Combat · hourglass: Pass turn, in the turn colour · then, only while needed, End combat (the crossed swords inside a red stop-sign outline) · Clear highlight (a word) (they come after the hourglass so the everyday buttons never move) · +1/+1, −1/−1 and a labeled counter tag (no ⚔ Attack tag: attackers are marked in combat mode) · pawn: Tokens (also where a token is dropped to remove it) · die: Dice · finger: Point (lit while waiting for the tap) · a sideways dashed card behind an upright one: Untap all (no arrow, so it can't be read as Undo), which asks "Untap all of Lawrence's cards?" first · then, at the far right after any spare space, ↶ Undo (only while there is a move to undo) and ↷ Redo (only after an undo), with no confirmation; holding either shows the move it would take back or bring back ("Undo: Lawrence: Mountain → their lands") · ☰ menu |
 | Full-screen card | Reveal (hand cards) · Block (a creature on the other player's side) · Attach or Detach (not in a library) · Make lead (an attached card) · Detach all (a card in a group) · the counter tags, with the ⚔ Attack tag only for the player whose turn it is or while hands are blinded · then the rarely used Flip · Face down / Face up · × Close. There is no Tap button (a tap on the picture taps or untaps) and no Attack button (drag the ⚔ Attack tag onto the card; drag the mark off to stop) |
-| Library | a 1–99 stepper N · Draw N (own library only) · Mill N · Look at top N · Reveal top N · Search (own) or Look through (other's) · Shuffle · Top face up · Done. No counts (the board shows them); the library it acts on is outlined in gold. A tap anywhere outside the libraries and their sheets returns to the main footer and still does what it does; a drag never does |
+| Library | a 1–99 stepper N · Look at top N · Reveal top N · Search (own) or Look through (other's) · Shuffle · Top face up · Done. No counts (the board shows them); the library it acts on is outlined in gold. A tap anywhere outside the libraries and their sheets returns to the main footer and still does what it does; a drag never does |
 | Combat mode | a hint, or the chosen blocker's name · Vigilance · End combat (the crossed swords inside a red stop-sign outline) · Pause (two bars, gold) |
 | Attach mode | "Attach \<card>: tap the card to attach it to" · Cancel |
 
@@ -126,13 +126,12 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 
 ## Libraries
 
-Both players can inspect and move cards into and out of either library; every inspection and every non-routine library move alerts the other player. Tapping a library opens its actions in the footer, along with both players' library counts.
+Both players can inspect and move cards into and out of either library; every inspection and every non-routine library move alerts the other player. Tapping a library opens its actions in the footer.
 
 | Action | What it does | Alert to the other player |
 | --- | --- | --- |
-| Draw N | Top N to hand (only from your own library) | No (logged quietly) |
-| Drag the top card to its owner's hand | A draw, the same as Draw 1 | No (logged quietly) |
-| Mill N | Top N to graveyard | No (logged quietly) |
+| Drag the top card to its owner's hand | A draw (there is no Draw button: drag one card at a time) | No (logged quietly) |
+| Drag the top card to a graveyard | A mill (there is no Mill button) | No (logged quietly) |
 | Look at top N | Private tray of the top N; drag each to top, bottom, hand, graveyard or anywhere; drop back in the tray to reorder | Yes |
 | Reveal top N | The same tray, opened on both devices | Yes |
 | Search | Browse your whole library; shuffles when closed | Yes, on opening and closing |

@@ -28,22 +28,19 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   await page.mouse.up();
   await expect(page.locator('.my-field .badge.plus')).toHaveText('+1');
 
-  // library footer: draw 2
-  await page.locator('.my-lib .pile').click();
-  await page.locator('.bar').getByRole('button', { name: '+' }).click();
-  await page.getByRole('button', { name: 'Draw 2' }).click();
-  await expect(hand).toHaveCount(8);
-  await barButton(page, 'Done');
+  // draw: drag the library's top card into the hand
+  await drag(page, page.locator('.my-lib [data-card]').first(), page.locator('[data-drop="p1.hand"]'));
+  await expect(hand).toHaveCount(7);
 
   // Undo takes the draw back at once (no dialog) and says which move; Redo brings it back; Undo again
   await expect(page.locator('.bar').first().getByRole('button', { name: 'Redo', exact: true })).toHaveCount(0);
   await barButton(page, 'Undo');
   await expect(page.locator('.confirm-box')).toHaveCount(0);
-  await expect(page.locator('.ticker-text')).toHaveText('Player 1 undid: Player 1 drew 2 cards');
+  await expect(page.locator('.ticker-text')).toHaveText('Player 1 undid: Player 1: a card → their hand');
   await expect(hand).toHaveCount(6);
   await barButton(page, 'Redo');
-  await expect(page.locator('.ticker-text')).toHaveText('Player 1 redid: Player 1 drew 2 cards');
-  await expect(hand).toHaveCount(8);
+  await expect(page.locator('.ticker-text')).toHaveText('Player 1 redid: Player 1: a card → their hand');
+  await expect(hand).toHaveCount(7);
   await expect(page.locator('.bar').first().getByRole('button', { name: 'Redo', exact: true })).toHaveCount(0);
   await barButton(page, 'Undo');
   // Untap all asks first too; Cancel changes nothing

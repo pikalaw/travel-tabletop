@@ -483,8 +483,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   const libOwner = lib ? zoneOwner(lib) : null;
   const libTop = (z: ZoneId, n: number) => state.zones[z].slice(0, n);
   const libActions = lib && libOwner ? {
-    draw: () => send('draw', { player: libOwner, n: libN }),
-    mill: () => send('mill', { player: libOwner, n: libN }),
     peek: () => {
       if (viewer === 'nobody') { toast('Unblind your hand first — peeking is private.', 'info'); return; }
       const ids = libTop(lib, libN);
@@ -655,8 +653,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     footer = (
       <div class="bar lib">
         <span class="stepper"><TipButton class="btn round" tip="How many cards the buttons act on: one fewer." onClick={() => setN(libN - 1)}>−</TipButton><b>{libN}</b><TipButton class="btn round" tip="How many cards the buttons act on: one more." onClick={() => setN(libN + 1)}>+</TipButton></span>
-        {mine ? <TipButton class="btn" tip={`Draw the top ${libN} into your hand.`} onClick={libActions.draw}>Draw {libN}</TipButton> : null}
-        <TipButton class="btn" tip={`Put the top ${libN} into the graveyard.`} onClick={libActions.mill}>Mill {libN}</TipButton>
         <TipButton class="btn" tip={`Look at the top ${libN} privately, then drag each where it goes (scry, surveil).`} onClick={libActions.peek}>Look at top {libN}</TipButton>
         <TipButton class="btn" tip={`Show the top ${libN} to both players.`} onClick={libActions.reveal}>Reveal top {libN}</TipButton>
         <TipButton class="btn" tip={mine ? 'Search your library; it is shuffled when you close it.' : 'Look through this library (the other player is told).'} onClick={libActions.search}>{mine ? 'Search' : 'Look through'}</TipButton>
