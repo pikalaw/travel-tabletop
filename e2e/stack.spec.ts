@@ -39,6 +39,11 @@ test('the stack in the full view: top first, swipes step down it, any item can b
     await drag(page, page.locator('[data-drop="p1.hand"] [data-card]').last(), page.locator('[data-drop="stack"]'));
     spells.unshift((await idsIn(page, 'stack'))[0]!);
   }
+  // every pile's card is centred on its cell, so the stack's sits on the line between the players, like a shared deck
+  for (const cell of ['.stack-cell', '.my-lib', '.opp-lib']) {
+    const c = (await page.locator(cell).boundingBox())!, card = (await page.locator(`${cell} .pile-card`).boundingBox())!;
+    expect(Math.abs(card.y + card.height / 2 - (c.y + c.height / 2))).toBeLessThan(1);
+  }
   await playFromHand(page, 'p1.battlefield', 1);
   const [src] = await idsIn(page, 'p1.battlefield');
   await longPress(page, page.locator(`.board [data-card="${src}"]`));

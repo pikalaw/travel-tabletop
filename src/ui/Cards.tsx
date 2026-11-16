@@ -314,16 +314,17 @@ export function Pile({ ctx, zone, label, layout = 'pile', topOverride = false, a
   const { w, h } = useSize(ref);
   const ids = ctx.state.zones[zone] || [];
   const top = ids[0] ? ctx.state.cards[ids[0]] : null;
-  const cardH = Math.max(28, Math.min(h - 18, (w - 6) / RATIO));
+  // Never taller than the space under the label, so a short cell (a phone held sideways) shrinks the card rather than cutting it off.
+  const cardH = Math.min(h, Math.max(28, Math.min(h - 18, (w - 6) / RATIO)));
   return (
     <div ref={ref} class={`pile ${ctx.library === zone ? 'picked' : ''}`} data-drop={zone} data-layout={layout} data-tap="pile" data-slot={zone}>
       <span class="slot-label">
         <span class="slot-name">{label}</span>
         <b>{ids.length}</b>
       </span>
-      {top && h > 0 ? (
-        <div class="pile-card">
-          <Card ctx={ctx} card={top} zone={zone} h={cardH} override={topOverride} style={all ? `z-index:${ids.length}` : ''} />
+      {h > 0 ? (
+        <div class="pile-card" style={`--card-h:${cardH}px`}>
+          {top ? <Card ctx={ctx} card={top} zone={zone} h={cardH} override={topOverride} style={all ? `z-index:${ids.length}` : ''} /> : <div class="pile-empty" style={`width:${cardH * RATIO}px;height:${cardH}px`} />}
           {all
             ? ids.slice(1).map((id, i) => {
                 const c = ctx.state.cards[id];
@@ -331,9 +332,7 @@ export function Pile({ ctx, zone, label, layout = 'pile', topOverride = false, a
               })
             : null}
         </div>
-      ) : (
-        <div class="pile-empty" />
-      )}
+      ) : null}
       {layout === 'library' ? (
         <>
           <span class="drop-hint top">Top</span>

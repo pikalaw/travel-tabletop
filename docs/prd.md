@@ -49,7 +49,7 @@ Each player sees the same layout from their own side: the opponent's half on top
 | Exile | Your lands | Graveyard |
 | Your hand (full width) | | |
 
-- **Shared zone.** The stack is one shared zone shown identically on both devices. It sits on the line between the two halves, half in each, like a pile in the middle of the table. Each library is three quarters of a battlefield's height, so its top and bottom drop halves stay easy to hit; Command takes the rest of the left column beside the stats.
+- **Shared zone.** The stack is one shared zone shown identically on both devices. It sits on the line between the two halves, half in each, like a pile in the middle of the table. Every pile slot (exile, graveyard, Command, libraries, the stack) shows its top card centred in the slot, so the stack's card sits on that line like a shared deck. Each library is three quarters of a battlefield's height, so its top and bottom drop halves stay easy to hit; Command takes the rest of the left column beside the stats.
 - **Stats.** Each player's stats sit beside their own battlefield, next to the centre line: their name, life and other counters. The active player's stats sit at the top of their slot and the other player's at the bottom. Tapping a player's stats opens that player's counters.
 - **Labels.** Each slot is labelled at its top left with its name and card count, e.g. "Claire · battlefield 7". Battlefield and lands slots carry the owner's name.
 - **Opponent's hand.** Never shown. Its card count appears right-aligned on the opponent's lands row ("Claire: 5 in hand"). While a card is being dragged, that count becomes a drop target: dropping a card on it puts the card at the end of the opponent's hand (for example, a creature bounced to its owner's hand).
