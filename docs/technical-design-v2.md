@@ -413,6 +413,7 @@ A card in play with `changed` gets a `.changed-bar` (4 px, `--hot` when `changed
 
 **Rows** (`Cards.tsx`). Card height = slot height − 14 px; width = height × 63/88 (a tapped card's box is square, and its image is rotated 90° clockwise, the paper convention).
 
+- **Centred.** `.row-cards` has `margin: 0 auto`, so a row's cards sit centred in the slot, as a pile's card does. Once the row is wider than the slot (an open row that scrolls) the auto margins fall to 0 and it starts at its first card. A drop's index still counts the cards whose centre is left of the pointer.
 - **Units.** Groups (a host and its attachments) are units. Inside a group, each later card overlaps the previous by 75% of its width (PEEK 0.25). Between units the gap is 4 px.
 - **Collapsed.** If the natural width exceeds the slot width − 8 px and there is more than one unit, the row collapses, the overlap spread evenly between units, unless the slot is open.
 - **Open.** The row scrolls sideways. If it holds groups, they fan out: 3 px inside a group, 14 px between groups.

@@ -181,7 +181,8 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .row-box { position: absolute; inset: 0; }
 .row-box > .slot-label { z-index: 2; }
 .row { position: absolute; inset: 0; padding: 4px 4px 4px; display: flex; align-items: stretch; touch-action: none; }
-.row-cards { display: flex; align-items: center; height: 100%; padding-top: 11px; }
+/* Cards sit centred across their row, as in the piles; auto margins fall to 0 once the row is wider than the slot, so a scrolling row still starts at its first card. */
+.row-cards { display: flex; align-items: center; height: 100%; padding-top: 11px; margin: 0 auto; }
 .card.tucked { filter: brightness(.92); }
 /* A fanned group: a gold bar joins each attached card to the next card of its group. */
 .link-bar { position: absolute; top: 50%; height: 8px; margin-top: -4px; border-radius: 4px; background: #c9a65a;
