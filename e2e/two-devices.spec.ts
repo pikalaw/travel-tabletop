@@ -12,15 +12,15 @@ test('two devices: pair by text, play, alerts, pointing, undo, dice', async ({ b
   expect(answer.startsWith('MTG1a')).toBe(true);
   await expect(H.locator('.status')).toHaveText('Connected');
   await expect(G.locator('.status')).toHaveText('Connected');
-  await expect(G.locator('.c52 [data-card]')).toHaveCount(7);
-  await expect(H.locator('.c12 .opp-hand')).toContainText('7 in hand', { ignoreCase: true });
+  await expect(G.locator('.my-hand [data-card]')).toHaveCount(7);
+  await expect(H.locator('.opp-lands .hand-label')).toContainText('7 in hand', { ignoreCase: true });
 
   // the guest plays a card; the host sees it
-  await drag(G, G.locator('.c52 [data-card]').first(), G.locator('.c32 .row'), { fy: 0.8 });
-  await expect(H.locator('.c22 [data-card]')).toHaveCount(1);
+  await drag(G, G.locator('.my-hand [data-card]').first(), G.locator('.my-field .row'), { fy: 0.8 });
+  await expect(H.locator('.opp-field [data-card]')).toHaveCount(1);
 
   // the host looks at its library: the guest gets an alert
-  await H.locator('.c33 .pile').click();
+  await H.locator('.my-lib .pile').click();
   await H.getByText('Look at top 1').click();
   await expect(G.locator('.toast', { hasText: 'looking at the top 1' })).toHaveCount(1);
   await H.locator('.sheet').getByRole('button', { name: 'Done' }).click();
@@ -28,19 +28,19 @@ test('two devices: pair by text, play, alerts, pointing, undo, dice', async ({ b
 
   // the host points at the guest's card: the guest sees the ring
   await barButton(H, 'Point');
-  await H.locator('.c22 [data-card]').first().click();
+  await H.locator('.opp-field [data-card]').first().click();
   await expect(G.locator('.pointer-ring')).toHaveCount(1);
 
   // the guest undoes its move
   await G.getByRole('button', { name: 'Undo' }).click();
-  await expect(H.locator('.c22 [data-card]')).toHaveCount(0);
+  await expect(H.locator('.opp-field [data-card]')).toHaveCount(0);
   // both devices offer Redo, named after the move; the host's Redo brings it back; the guest undoes again
   for (const pg of [H, G]) await expect(pg.locator('.bar').first().getByRole('button', { name: 'Redo', exact: true })).toHaveAttribute('data-tip', /^Redo: Claire: /);
   await H.locator('.bar').first().getByRole('button', { name: 'Redo', exact: true }).click();
-  await expect(H.locator('.c22 [data-card]')).toHaveCount(1);
+  await expect(H.locator('.opp-field [data-card]')).toHaveCount(1);
   await expect(G.locator('.bar').first().getByRole('button', { name: 'Redo', exact: true })).toHaveCount(0);
   await G.getByRole('button', { name: 'Undo' }).click();
-  await expect(H.locator('.c22 [data-card]')).toHaveCount(0);
+  await expect(H.locator('.opp-field [data-card]')).toHaveCount(0);
 
   // dice results show on both devices
   await barButton(G, 'Dice');
@@ -55,14 +55,14 @@ test('two devices: the guest leaves and reconnects; the host resumes after a rel
   const H = await (await browser.newContext({ viewport: { width: 844, height: 390 }, acceptDownloads: true })).newPage();
   let G = await gc.newPage();
   await startTwoDevices(H, G);
-  await drag(G, G.locator('.c52 [data-card]').first(), G.locator('.c32 .row'), { fy: 0.8 });
-  await expect(H.locator('.c22 [data-card]')).toHaveCount(1);
+  await drag(G, G.locator('.my-hand [data-card]').first(), G.locator('.my-field .row'), { fy: 0.8 });
+  await expect(H.locator('.opp-field [data-card]')).toHaveCount(1);
 
   // the guest closes the app; the host notices and keeps playing
   await G.close();
   await expect(H.locator('.status')).toContainText('disconnected', { ignoreCase: true, timeout: 15_000 });
-  await drag(H, H.locator('.c52 [data-card]').first(), H.locator('.c42 .row'), { fy: 0.8 });
-  await expect(H.locator('.c42 [data-card]')).toHaveCount(1);
+  await drag(H, H.locator('.my-hand [data-card]').first(), H.locator('.my-lands .row'), { fy: 0.8 });
+  await expect(H.locator('.my-lands [data-card]')).toHaveCount(1);
 
   // the guest reopens the app and reconnects
   G = await gc.newPage();
@@ -72,17 +72,17 @@ test('two devices: the guest leaves and reconnects; the host resumes after a rel
   await H.waitForSelector('.sheet');
   await pairByText(H, G, async () => { await G.getByRole('button', { name: /^Reconnect to/ }).click(); });
   await G.waitForSelector('.board', { timeout: 20_000 });
-  await expect(G.locator('.c12 [data-card]')).toHaveCount(1); // the host's land
-  await expect(G.locator('.c32 [data-card]')).toHaveCount(1); // its own card
+  await expect(G.locator('.opp-lands [data-card]')).toHaveCount(1); // the host's land
+  await expect(G.locator('.my-field [data-card]')).toHaveCount(1); // its own card
   await expect(H.locator('.status')).toHaveText('Connected');
 
   // the host reloads: the game link reopens the saved game, with its undo history
   await H.reload();
   await H.waitForSelector('.board');
-  await expect(H.locator('.c42 [data-card]')).toHaveCount(1);
-  await expect(H.locator('.c22 [data-card]')).toHaveCount(1);
+  await expect(H.locator('.my-lands [data-card]')).toHaveCount(1);
+  await expect(H.locator('.opp-field [data-card]')).toHaveCount(1);
   await H.getByRole('button', { name: 'Undo' }).click();
-  await expect(H.locator('.c42 [data-card]')).toHaveCount(0);
+  await expect(H.locator('.my-lands [data-card]')).toHaveCount(0);
 
   // export the action log
   await H.locator('.bar [aria-label="Menu"]').scrollIntoViewIfNeeded();
@@ -101,7 +101,7 @@ test('two devices: the host can let the guest go first', async ({ browser }) => 
   const G = await (await browser.newContext({ viewport: { width: 844, height: 390 } })).newPage();
   const eh = watchErrors(H), eg = watchErrors(G);
   await startTwoDevices(H, G, { guestFirst: true });
-  for (const pg of [H, G]) await expect(pg.locator('.turn-label')).toContainText('Claire', { ignoreCase: true });
+  for (const pg of [H, G]) await expect(pg.locator('.counters-cell.role-atk')).toContainText('Claire', { ignoreCase: true });
   // the guest has Pass turn; the host doesn't
   await expect(G.locator('.bar').first().getByRole('button', { name: 'Pass turn', exact: true })).toHaveCount(1);
   await expect(H.locator('.bar').first().getByRole('button', { name: 'Pass turn', exact: true })).toHaveCount(0);

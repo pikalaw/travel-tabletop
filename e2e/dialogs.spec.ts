@@ -43,12 +43,12 @@ test('the browser never shows its own dialog', async ({ page }) => {
   await expect(page.locator('[data-counter="label"]')).toHaveText('lore');
 
   // Typing a player counter value (numeric keypad)
-  await page.locator('.counters-cell').click();
+  await page.locator('.my-stats .counters-cell').click();
   await page.locator('.ctr-val').first().click();
   await expect(page.locator('.dialog-input')).toHaveAttribute('inputmode', 'numeric');
   await page.locator('.dialog-input').fill('17');
   await page.keyboard.press('Enter');
-  await expect(page.locator('.counters-cell')).toContainText('17');
+  await expect(page.locator('.my-stats .counters-cell')).toContainText('17');
   await page.locator('.sheet').getByRole('button', { name: 'Done' }).click();
 
   // Concede: red button; Escape cancels
@@ -104,30 +104,31 @@ test('Unblind opens a chooser: whose turn it is on top in red, the other below i
   expect(await bg('.chooser .btn.pick.def')).toBe('rgb(122, 167, 255)');
   await page.screenshot({ path: 'test-results/chooser.png' });
   await page.locator('.chooser').getByRole('button', { name: 'Cancel' }).click();
-  await expect(page.locator('.c52 .slot-label')).toContainText('(HIDDEN)', { ignoreCase: true });
+  await expect(page.locator('.my-hand .slot-label')).toContainText('(HIDDEN)', { ignoreCase: true });
 
-  // blinded, the hand row is as short as a lands row, and the counters go compact
+  // blinded, the hand row folds away; the hand count in the lands row takes its drops
   const height = (sel: string) => page.locator(sel).evaluate((e) => e.getBoundingClientRect().height);
   await expect(page.locator('.board')).toHaveClass(/\bhand-hidden\b/);
-  expect(Math.abs((await height('.c52')) - (await height('.c42')))).toBeLessThan(2);
-  await expect(page.locator('.counters-cell .turn-label')).toBeHidden();
-  const blindField = await height('.c32');
+  await page.waitForTimeout(400);
+  expect(await height('.my-hand')).toBeLessThan(2);
+  await expect(page.locator('.my-lands .hand-label')).toHaveText(/Player 1: 7 in hand/i);
+  const blindField = await height('.my-field');
   await unblind(page, 'Player 2');
-  await expect(page.locator('.c52 .slot-label')).toContainText('Player 2');
-  // unblinded, it grows back (after its glide) and the battlefields give the room back
+  await expect(page.locator('.my-hand .slot-label')).toContainText('Player 2');
+  // unblinded, it comes back (after its glide), the battlefields give the room back, the label goes
   await expect(page.locator('.board')).not.toHaveClass(/\bhand-hidden\b/);
   await page.waitForTimeout(400);
-  expect(await height('.c52')).toBeGreaterThan((await height('.c42')) + 20);
-  expect(await height('.c32')).toBeLessThan(blindField);
-  await expect(page.locator('.counters-cell .turn-label')).toBeVisible();
-  await expect(page.locator('.c52 .slot-label')).not.toContainText('hidden', { ignoreCase: true });
+  expect(await height('.my-hand')).toBeGreaterThan((await height('.my-lands')) + 20);
+  expect(await height('.my-field')).toBeLessThan(blindField * 0.9);
+  await expect(page.locator('.my-lands .hand-label')).toHaveCount(0);
+  await expect(page.locator('.my-hand .slot-label')).not.toContainText('hidden', { ignoreCase: true });
 
   // a reload resumes the game blinded
   await page.reload(); await page.waitForSelector('.board');
-  await expect(page.locator('.c52 .slot-label')).toContainText('hidden', { ignoreCase: true });
+  await expect(page.locator('.my-hand .slot-label')).toContainText('hidden', { ignoreCase: true });
   // a tap outside the dialog cancels
   await unblindBtn.click();
   await page.mouse.click(10, 10);
   await expect(page.locator('.chooser')).toHaveCount(0);
-  await expect(page.locator('.c52 .slot-label')).toContainText('hidden', { ignoreCase: true });
+  await expect(page.locator('.my-hand .slot-label')).toContainText('hidden', { ignoreCase: true });
 });

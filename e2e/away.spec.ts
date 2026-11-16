@@ -5,7 +5,7 @@ test('one device: unblinding lists every action by the other player since you la
   const errs = watchErrors(page);
   await startOneDevice(page); // Player 1 is looking
   // Player 1 draws, plays a creature, and puts +1/+1 on it
-  await page.locator('.c33 .pile').click();
+  await page.locator('.my-lib .pile').click();
   await page.getByRole('button', { name: 'Draw 1' }).click();
   await barButton(page, 'Done');
   await playFromHand(page, 'p1.battlefield', 1);

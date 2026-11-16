@@ -52,10 +52,10 @@ test('the starter pack downloads all ten decks; players can share a deck; every 
   await page.waitForSelector('.board');
   await unblind(page, 'Player 1');
   // both players got the same two decks: equal libraries, seven cards each in hand
-  const mine = Number(await page.locator('.c33 .slot-label b').innerText());
+  const mine = Number(await page.locator('.my-lib .slot-label b').innerText());
   expect(mine).toBeGreaterThan(20);
-  await expect(page.locator('.c23 .slot-label b')).toHaveText(String(mine));
-  await expect(page.locator('.c52 [data-card]')).toHaveCount(7);
+  await expect(page.locator('.opp-lib .slot-label b')).toHaveText(String(mine));
+  await expect(page.locator('.my-hand [data-card]')).toHaveCount(7);
 });
 
 test('Jumpstart: pick two half-decks, download them, and play them as one deck', async ({ page }) => {
@@ -80,7 +80,7 @@ test('Jumpstart: pick two half-decks, download them, and play them as one deck',
   await page.getByRole('button', { name: 'Start game' }).click();
   await page.waitForSelector('.board');
   await unblind(page, 'Player 1');
-  await expect(page.locator('.c33 .slot-label b')).toHaveText('33'); // 40 cards, 7 in hand
+  await expect(page.locator('.my-lib .slot-label b')).toHaveText('33'); // 40 cards, 7 in hand
 });
 
 test('starting needs a deck for every player', async ({ page }) => {
@@ -108,8 +108,8 @@ test('the board uses the small image, the full view the large one, and a double-
   await page.waitForSelector('.board');
   await unblind(page, 'Player 1');
   const natural = (sel: string) => page.locator(sel).first().evaluate(async (i: HTMLImageElement) => { await i.decode().catch(() => {}); return i.naturalWidth; });
-  await expect.poll(() => natural('.c52 img')).toBe(146);
-  await longPress(page, page.locator('.c52 [data-card]').first());
+  await expect.poll(() => natural('.my-hand img')).toBe(146);
+  await longPress(page, page.locator('.my-hand [data-card]').first());
   await expect.poll(() => natural('.fullcard img')).toBe(672);
   await barButton(page, 'Close');
 });

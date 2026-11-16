@@ -127,33 +127,42 @@ h2 { font-size: 17px; margin: 22px 0 8px; color: var(--ink-2); font-weight: 600;
 .board {
   position: absolute; inset: 0; display: grid; gap: 3px; padding: 3px;
   grid-template-columns: minmax(54px, 16%) 1fr minmax(54px, 16%);
-  /* Battlefields get the most room, then the hand, then the lands. Both sides match. The land
-     rows' floor keeps land cards tappable on a phone held sideways. */
-  grid-template-rows: minmax(43px, 0.55fr) 1.4fr 1.4fr minmax(43px, 0.55fr) minmax(43px, 1fr);
-  grid-template-areas: "c11 c12 c13" "c21 c22 c23" "c31 c32 c33" "c41 c42 c43" "c51 c52 c53";
-  /* Blinding and unblinding resize the hand row: glide rather than jump. Both row lists keep the
-     same form (minmax on the outer rows) so the browser can interpolate between them. */
+  /* Battlefields get the most room (1.4 shares each), then the hand (1), then the lands (.55; their
+     floor keeps land cards tappable on a phone held sideways). Each battlefield spans three bands,
+     outer to inner 45% / 30% / 25% of its height, so the side columns can stack two boxes beside it:
+     on the left Command (outer band) and stats (middle and inner); on the right the library (outer
+     and middle) and the stack, which takes the inner band on both sides: centred on the line
+     between the players, shared. The bottom player's bands mirror the top's. */
+  grid-template-rows: minmax(43px, .55fr) .63fr .42fr .35fr .35fr .42fr .63fr minmax(43px, .55fr) minmax(0px, 1fr);
+  grid-template-areas:
+    "opp-exile opp-lands opp-grave"
+    "opp-cmd   opp-field opp-lib"
+    "opp-stats opp-field opp-lib"
+    "opp-stats opp-field stack"
+    "my-stats  my-field  stack"
+    "my-stats  my-field  my-lib"
+    "my-cmd    my-field  my-lib"
+    "my-exile  my-lands  my-grave"
+    "my-hand   my-hand   my-hand";
+  /* Blinding and unblinding fold the hand row away and back: glide rather than jump. Both row lists
+     keep the same form so the browser can interpolate between them. */
   transition: grid-template-rows 0.25s ease;
 }
 @media (orientation: landscape) {
   .board { grid-template-columns: minmax(58px, 11%) 1fr minmax(58px, 11%); }
 }
-/* A blinded hand (one device) is only card backs: its row shrinks to a lands row's height, and the
-   battlefields get the room. It stays a full-width drop target. */
-.board.hand-hidden { grid-template-rows: minmax(43px, 0.55fr) 1.4fr 1.4fr minmax(43px, 0.55fr) minmax(43px, 0.55fr); }
-/* The counters cell shares that row, so it goes compact: each player's name over their life, no
-   turn label (the colours and the board tint still say whose turn it is), no extra counters. */
-.board.hand-hidden .counters-cell { justify-content: center; gap: 3px; padding: 2px 5px; }
-.board.hand-hidden .counters-cell .turn-label, .board.hand-hidden .ctr-small { display: none; }
-.board.hand-hidden .ctr-life { font-size: 14px; }
-.c11 { grid-area: c11; } .c12 { grid-area: c12; } .c13 { grid-area: c13; }
-.c21 { grid-area: c21; } .c22 { grid-area: c22; } .c23 { grid-area: c23; }
-.c31 { grid-area: c31; } .c32 { grid-area: c32; } .c33 { grid-area: c33; }
-.c41 { grid-area: c41; } .c42 { grid-area: c42; } .c43 { grid-area: c43; }
-.c51 { grid-area: c51; } .c52 { grid-area: c52; } .c53 { grid-area: c53; }
+/* A blinded hand (one device) is only card backs: its row folds away and the battlefields get the
+   room. The hand-count label in the lands row still takes drops into the hand. */
+.board.hand-hidden { grid-template-rows: minmax(43px, .55fr) .63fr .42fr .35fr .35fr .42fr .63fr minmax(43px, .55fr) minmax(0px, 0fr); }
+.board.hand-hidden .my-hand { visibility: hidden; border-width: 0; }
+.opp-exile { grid-area: opp-exile; } .opp-lands { grid-area: opp-lands; } .opp-grave { grid-area: opp-grave; }
+.opp-cmd { grid-area: opp-cmd; } .opp-stats { grid-area: opp-stats; } .opp-field { grid-area: opp-field; } .opp-lib { grid-area: opp-lib; }
+.stack-cell { grid-area: stack; }
+.my-stats { grid-area: my-stats; } .my-cmd { grid-area: my-cmd; } .my-field { grid-area: my-field; } .my-lib { grid-area: my-lib; }
+.my-exile { grid-area: my-exile; } .my-lands { grid-area: my-lands; } .my-grave { grid-area: my-grave; } .my-hand { grid-area: my-hand; }
 .cell { position: relative; min-width: 0; min-height: 0; background: var(--cell); border: 1px solid var(--cell-line); border-radius: 8px; overflow: hidden; }
 .cell.opp { background: rgba(255,255,255,.025); }
-.cell.c23, .cell.c22 { border-bottom-color: rgba(255,255,255,.14); }
+.cell.opp-field, .cell.opp-stats { border-bottom-color: rgba(255,255,255,.14); }
 .persp-p1 .cell.me { box-shadow: inset 0 0 0 1px rgba(242,177,52,.10); }
 .persp-p2 .cell.me { box-shadow: inset 0 0 0 1px rgba(60,198,192,.12); }
 .cell.shared { background: rgba(201,166,90,.06); }
@@ -245,15 +254,16 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 .game.pointing .board { outline: 2px dashed rgba(201,166,90,.6); outline-offset: -2px; }
 .game.readonly .board { filter: grayscale(.4) brightness(.85); }
 
-/* Counters cell */
-.counters-cell { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-around; padding: 4px 6px; cursor: pointer; }
-.counters-cell .turn-label { display: block; position: static; max-width: none; white-space: normal; line-height: 1.15; font-weight: 600; }
-/* Opponent's hand size, right-aligned on their lands row; that row's tap hints move to the bottom. */
-.opp-hand { position: absolute; right: 6px; top: 3px; z-index: 2; font-size: 10px; letter-spacing: .3px; color: var(--ink-2); pointer-events: none; text-transform: uppercase; white-space: nowrap; }
-/* While dragging, the other player's hand count is a drop target for their hand. */
-body.dragging .opp-hand { pointer-events: auto; padding: 4px 8px; margin: -4px -2px; border: 1px dashed rgba(255,255,255,.35); border-radius: 6px; background: rgba(0,0,0,.35); }
-body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset: 0; }
-.c12 .row.can-open::after, .c12 .row-box.open::before { top: auto; bottom: 3px; }
+/* A player's stats, beside their battlefield: "Turn N" (the active player), name, life, other counters. */
+.counters-cell { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 4px 6px; cursor: pointer; overflow: hidden; }
+.counters-cell .turn-label { font-size: 10px; letter-spacing: .3px; text-transform: uppercase; font-weight: 600; color: var(--hot); }
+/* A hand's size, right-aligned on a lands row (the other player's always, yours while blinded); that
+   row's tap hints move to the bottom. */
+.hand-label { position: absolute; right: 6px; top: 3px; z-index: 2; font-size: 10px; letter-spacing: .3px; color: var(--ink-2); pointer-events: none; text-transform: uppercase; white-space: nowrap; }
+/* While dragging, a hand count is a drop target for that hand. */
+body.dragging .hand-label { pointer-events: auto; padding: 4px 8px; margin: -4px -2px; border: 1px dashed rgba(255,255,255,.35); border-radius: 6px; background: rgba(0,0,0,.35); }
+body.dragging .hand-label.drop-hover { outline: 2px solid #c9a65a; outline-offset: 0; }
+.opp-lands .row.can-open::after, .opp-lands .row-box.open::before, .my-lands:has(.hand-label) .row.can-open::after { top: auto; bottom: 3px; }
 /* Turn side: a faint red wash from the attacking (active) player's side to blue on the defender's. */
 /* Turn tint: each player's half of the board gets its own layer, spanning exactly that player's
    rows (the opponent's two rows on top, this side's three below), so the split follows the row
@@ -263,26 +273,23 @@ body.dragging .opp-hand.drop-hover { outline: 2px solid #c9a65a; outline-offset:
    colours cross-fade over 24px centred on the gap between the halves. */
 .board { isolation: isolate; --seam: 12px; }
 .board::before, .board::after { content: ''; grid-column: 1 / -1; z-index: -1; pointer-events: none; }
-.board::before { grid-row: 1 / 3; margin: -3px -3px calc(-1 * var(--seam)); }
-.board::after { grid-row: 3 / 6; margin: calc(-1 * var(--seam)) -3px -3px; }
+.board::before { grid-row: 1 / 5; margin: -3px -3px calc(-1 * var(--seam)); }
+.board::after { grid-row: 5 / 10; margin: calc(-1 * var(--seam)) -3px -3px; }
 .board.my-turn::before { background: linear-gradient(to bottom, rgba(60, 110, 220, .38), rgba(60, 110, 220, .12) calc(100% - 2 * var(--seam)), rgba(60, 110, 220, 0)); }
 .board.my-turn::after { background: linear-gradient(to bottom, rgba(214, 64, 52, 0), rgba(214, 64, 52, .12) calc(2 * var(--seam)), rgba(214, 64, 52, .38)); }
 .board.their-turn::before { background: linear-gradient(to bottom, rgba(214, 64, 52, .38), rgba(214, 64, 52, .12) calc(100% - 2 * var(--seam)), rgba(214, 64, 52, 0)); }
 .board.their-turn::after { background: linear-gradient(to bottom, rgba(60, 110, 220, 0), rgba(60, 110, 220, .12) calc(2 * var(--seam)), rgba(60, 110, 220, .38)); }
-.ctr-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; font-size: 11px; line-height: 1.15; overflow: hidden; }
 /* Attacking (active) player in the hot colour, defending player in the cool one, matching the board gradient. */
 :root { --hot: #ff7b5f; --cool: #7aa7ff; }
-.turn-label.role-atk, .ctr-line.role-atk .ctr-name, .slot-label .role-atk, .opp-hand .role-atk { color: var(--hot); }
-.ctr-line.role-def .ctr-name, .slot-label .role-def, .opp-hand .role-def { color: var(--cool); }
-.ctr-name { font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ctr-life { font-size: 17px; font-weight: 700; }
+.counters-cell.role-atk .ctr-name, .slot-label .role-atk, .hand-label .role-atk { color: var(--hot); }
+.counters-cell.role-def .ctr-name, .slot-label .role-def, .hand-label .role-def { color: var(--cool); }
+.ctr-name { font-size: 12px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctr-life { font-size: 17px; font-weight: 700; line-height: 1.1; }
+.ctr-small { font-size: 11px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-height: 520px) {
-  .counters-cell { padding: 2px 5px; }
-  .ctr-line { flex-wrap: nowrap; }
+  .counters-cell { padding: 2px 5px; gap: 0; }
   .ctr-life { font-size: 14px; }
-  .ctr-small { display: none; }
 }
-.ctr-small { color: var(--ink-2); }
 
 /* Footer */
 .footer { flex: none; background: #0a1410; border-top: 1px solid var(--cell-line); padding-bottom: env(safe-area-inset-bottom); }

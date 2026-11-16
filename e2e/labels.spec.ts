@@ -6,11 +6,13 @@ const HOT = 'rgb(255, 123, 95)', COOL = 'rgb(122, 167, 255)';
 test('labels: hand, counters, opponent hand, ticker; whose turn; only the active player attacks', async ({ page }) => {
   const errs = watchErrors(page);
   await startOneDevice(page, { unblindTo: null });
-  await expect(page.locator('.c52 .slot-label')).toHaveText(/Player 1’s hand \(hidden\)\s*7/i);
+  await expect(page.locator('.my-hand .slot-label')).toHaveText(/Player 1’s hand \(hidden\)\s*7/i);
   await unblind(page, 'Player 1');
-  await expect(page.locator('.c52 .slot-label')).toHaveText(/Player 1’s hand\s*7/i);
-  await expect(page.locator('.counters-cell')).toHaveText(/Turn 1 · Player 1\s*Player 1\s*♥ 20\s*Player 2\s*♥ 20/i);
-  await expect(page.locator('.c12 .opp-hand')).toHaveText(/Player 2: 7 in hand/i);
+  await expect(page.locator('.my-hand .slot-label')).toHaveText(/Player 1’s hand\s*7/i);
+  // each player's stats beside their battlefield; "Turn N" on the active player's
+  await expect(page.locator('.my-stats .counters-cell')).toHaveText(/Turn 1\s*Player 1\s*♥ 20/i);
+  await expect(page.locator('.opp-stats .counters-cell')).toHaveText(/^Player 2\s*♥ 20$/i);
+  await expect(page.locator('.opp-lands .hand-label')).toHaveText(/Player 2: 7 in hand/i);
   await expect(page.locator('.ticker')).toContainText('Turn 1 · Player 1');
   await expect(page.locator('.board')).toHaveClass(/\bmy-turn\b/);
 
@@ -35,29 +37,32 @@ test('labels: hand, counters, opponent hand, ticker; whose turn; only the active
   await expect(page.locator('.board')).toHaveClass(/\bpersp-p2\b.*\bmy-turn\b|\bmy-turn\b.*\bpersp-p2\b/);
   await unblind(page, 'Player 1');
   await expect(page.locator('.board')).toHaveClass(/\btheir-turn\b/);
-  await expect(page.locator('.counters-cell')).toHaveText(/Turn 2 · Player 2\s*Player 2\s*♥ 20\s*Player 1\s*♥ 20/i);
+  await expect(page.locator('.counters-cell.role-atk')).toHaveText(/Turn 2\s*Player 2\s*♥ 20/i);
+  await expect(page.locator('.counters-cell.role-def')).toHaveText(/^Player 1\s*♥ 20$/i);
   errs.expectNone();
 });
 
 async function roleColours(page: Page) {
-  return page.evaluate(([hot, cool]) => [...document.querySelectorAll('.board .role-atk, .board .role-def')]
-    .filter((e) => !e.closest('.counters-cell .ctr-row'))
+  // Each name, and the turn label, as "<cell>:<text>=<hot|cool>"; a stats box colours its own name and turn label.
+  return page.evaluate(([hot, cool]) => [...document.querySelectorAll('.board .role-atk:not(.counters-cell), .board .role-def:not(.counters-cell), .board .counters-cell .ctr-name, .board .counters-cell .turn-label')]
     .map((e) => {
       const c = getComputedStyle(e).color;
-      return `${e.closest('.cell')!.className.split(' ')[1]}:${(e as HTMLElement).innerText.toUpperCase()}=${c === hot ? 'hot' : c === cool ? 'cool' : c}`;
+      return `${e.closest('.cell')!.className.split(' ')[2]}:${(e as HTMLElement).innerText.toUpperCase()}=${c === hot ? 'hot' : c === cool ? 'cool' : c}`;
     }), [HOT, COOL]);
 }
 
 test('the attacking player’s name is hot and the defending player’s cool, and they swap with the turn', async ({ page }) => {
   await startOneDevice(page);
   const p1 = await roleColours(page);
-  expect(p1).toEqual(expect.arrayContaining(['c12:PLAYER 2=cool', 'c22:PLAYER 2=cool', 'c32:PLAYER 1=hot', 'c42:PLAYER 1=hot', 'c51:TURN 1 · PLAYER 1=hot', 'c52:PLAYER 1=hot']));
-  expect(p1.filter((s) => !/=(hot|cool)$/.test(s) && !s.startsWith('c51:PLAYER'))).toEqual([]);
+  expect(p1).toEqual(expect.arrayContaining(['opp-lands:PLAYER 2=cool', 'opp-field:PLAYER 2=cool', 'opp-stats:PLAYER 2=cool',
+    'my-field:PLAYER 1=hot', 'my-lands:PLAYER 1=hot', 'my-stats:TURN 1=hot', 'my-stats:PLAYER 1=hot', 'my-hand:PLAYER 1=hot']));
+  expect(p1.filter((s) => !/=(hot|cool)$/.test(s))).toEqual([]);
   await resetBar(page); await barButton(page, 'Pass turn');
   await answerDialog(page, true);
   await unblind(page, 'Player 1'); // the pass turned the board to Player 2; look from Player 1's side
   const p2 = await roleColours(page);
-  expect(p2).toEqual(expect.arrayContaining(['c12:PLAYER 2=hot', 'c22:PLAYER 2=hot', 'c32:PLAYER 1=cool', 'c42:PLAYER 1=cool', 'c51:TURN 2 · PLAYER 2=hot', 'c52:PLAYER 1=cool']));
+  expect(p2).toEqual(expect.arrayContaining(['opp-lands:PLAYER 2=hot', 'opp-field:PLAYER 2=hot', 'opp-stats:TURN 2=hot', 'opp-stats:PLAYER 2=hot',
+    'my-field:PLAYER 1=cool', 'my-lands:PLAYER 1=cool', 'my-stats:PLAYER 1=cool', 'my-hand:PLAYER 1=cool']));
 });
 
 const pseudo = (page: Page, sel: string, which: '::before' | '::after') => page.locator(sel).first().evaluate((e, w) => getComputedStyle(e, w).content, which);

@@ -56,7 +56,7 @@ test('back up a deck with its tokens, restore it offline on another device, play
   await B.getByRole('button', { name: 'Start game' }).click();
   await B.waitForSelector('.board');
   await unblind(B, 'Player 1');
-  await expect.poll(() => B.evaluate(() => [...document.querySelectorAll<HTMLImageElement>('.c52 img')].filter((i) => i.complete && i.naturalWidth > 0).length)).toBe(7);
+  await expect.poll(() => B.evaluate(() => [...document.querySelectorAll<HTMLImageElement>('.my-hand img')].filter((i) => i.complete && i.naturalWidth > 0).length)).toBe(7);
   errs.expectNone();
 });
 

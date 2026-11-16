@@ -1,4 +1,6 @@
-// The 5×3 board grid, drawn from one player's perspective.
+// The board grid, drawn from one player's perspective. Each battlefield spans three bands, so the
+// side columns can stack two boxes beside it: Command and stats on the left, the library and half of
+// the stack (which straddles the centre line, shared) on the right. Cells are named by what they hold.
 
 import type { ComponentChildren } from 'preact';
 import { Row, Pile, type BoardCtx } from './Cards';
@@ -24,34 +26,20 @@ export function cellsFor(P: PlayerId) {
     myHand: `${P}.hand`,
   } as const satisfies Record<string, ZoneId>;
 }
-function Counters({ ctx }: { ctx: BoardCtx }) {
+/**
+ * One player's stats, beside their battlefield: name (in the turn colour), "Turn N" for the player
+ * whose turn it is, life, then any other counters. A tap opens Player counters.
+ */
+function Stats({ ctx, pl }: { ctx: BoardCtx; pl: PlayerId }) {
   const st = ctx.state;
-  const A = st.activePlayer;
-  const line = (pl: PlayerId) => {
-    const list = ctx.state.players[pl].counters;
-    const life = list[0]!;
-    const rest = list.slice(1);
-    return (
-      <div class={`ctr-line ${pl} ${pl === A ? 'role-atk' : 'role-def'}`}>
-        <span class="ctr-name">{ctx.state.players[pl].name}</span>
-        <span class="ctr-life">♥ {life.value}</span>
-        {rest.slice(0, 3).map((c) => (
-          <span class="ctr-small">
-            {c.key} {c.value}
-          </span>
-        ))}
-        {rest.length > 3 ? <span class="ctr-small">+{rest.length - 3}</span> : null}
-      </div>
-    );
-  };
-  // The player whose turn it is is listed first, under a "Turn N · name" label.
+  const active = st.activePlayer === pl;
+  const [life, ...rest] = st.players[pl].counters;
   return (
-    <div class="counters-cell" data-tap="counters">
-      <span class="slot-label turn-label role-atk">
-        Turn {st.turn} · {st.players[A].name}
-      </span>
-      {line(A)}
-      {line(other(A))}
+    <div class={`counters-cell ${active ? 'role-atk' : 'role-def'}`} data-tap="counters">
+      {active ? <span class="turn-label">Turn {st.turn}</span> : null}
+      <span class="ctr-name">{st.players[pl].name}</span>
+      <span class="ctr-life">♥ {life!.value}</span>
+      {rest.map((c) => <span class="ctr-small">{c.key} {c.value}</span>)}
     </div>
   );
 }
@@ -69,42 +57,43 @@ export function Board({ ctx, P, openSlots }: { ctx: BoardCtx; P: PlayerId; openS
   const row = (zone: ZoneId, label: ComponentChildren, cls = '') => (
     <Row ctx={ctx} zone={zone} ids={st.zones[zone]} open={openSlots.includes(zone)} label={label} extraClass={cls} />
   );
+  const hidden = ctx.viewer === 'nobody'; // one device, blinded: the hand row folds away
   return (
-    <div class={`board persp-${P} ${st.activePlayer === P ? 'my-turn' : 'their-turn'} ${ctx.match?.size ? 'matching' : ''} ${ctx.viewer === 'nobody' ? 'hand-hidden' : ''}`}>
-      <div class="cell c11 opp">{<Pile ctx={ctx} zone={z.oppExile} label="Exile" />}</div>
-      <div class="cell c12 opp">
+    <div class={`board persp-${P} ${st.activePlayer === P ? 'my-turn' : 'their-turn'} ${ctx.match?.size ? 'matching' : ''} ${hidden ? 'hand-hidden' : ''}`}>
+      <div class="cell opp opp-exile">{<Pile ctx={ctx} zone={z.oppExile} label="Exile" />}</div>
+      <div class="cell opp opp-lands">
         {row(z.oppLands, <>{who(O)} · lands</>)}
-        <span class="opp-hand" data-drop={`${O}.hand`} data-layout="append" title={`Drop a card here to put it in ${name(O)}’s hand`}>
-          {who(O)}: {handCount(st, O)} in hand
-        </span>
+        <HandLabel zone={`${O}.hand`} who={who(O)} name={name(O)} n={handCount(st, O)} />
       </div>
-      <div class="cell c13 opp">{<Pile ctx={ctx} zone={z.oppGrave} label="Graveyard" />}</div>
-      <div class="cell c21 opp">{<Pile ctx={ctx} zone={z.oppCmd} label="Command" />}</div>
-      <div class="cell c22 opp">{row(z.oppField, <>{who(O)} · battlefield</>)}</div>
-      <div class="cell c23 opp">
-        {<Pile ctx={ctx} zone={z.oppLib} label="Library" layout="library" />}
+      <div class="cell opp opp-grave">{<Pile ctx={ctx} zone={z.oppGrave} label="Graveyard" />}</div>
+      <div class="cell opp opp-cmd">{<Pile ctx={ctx} zone={z.oppCmd} label="Command" />}</div>
+      <div class="cell opp opp-stats"><Stats ctx={ctx} pl={O} /></div>
+      <div class="cell opp opp-field">{row(z.oppField, <>{who(O)} · battlefield</>)}</div>
+      <div class="cell opp opp-lib">{<Pile ctx={ctx} zone={z.oppLib} label="Library" layout="library" />}</div>
+      <div class="cell shared stack-cell">{<Pile ctx={ctx} zone="stack" label="Stack" all />}</div>
+      <div class="cell me my-stats"><Stats ctx={ctx} pl={P} /></div>
+      <div class="cell me my-cmd">{<Pile ctx={ctx} zone={z.myCmd} label="Command" />}</div>
+      <div class="cell me my-field">{row(z.myField, <>{who(P)} · battlefield</>, 'field')}</div>
+      <div class="cell me my-lib">{<Pile ctx={ctx} zone={z.myLib} label="Library" layout="library" />}</div>
+      <div class="cell me my-exile">{<Pile ctx={ctx} zone={z.myExile} label="Exile" />}</div>
+      <div class="cell me my-lands">
+        {row(z.myLands, <>{who(P)} · lands</>)}
+        {/* While blinded the hand row is folded away; this label still takes drops into the hand. */}
+        {hidden ? <HandLabel zone={z.myHand} who={who(P)} name={name(P)} n={handCount(st, P)} /> : null}
       </div>
-      <div class="cell c31 me">{<Pile ctx={ctx} zone={z.myCmd} label="Command" />}</div>
-      <div class="cell c32 me">{row(z.myField, <>{who(P)} · battlefield</>, 'field')}</div>
-      <div class="cell c33 me">
-        {<Pile ctx={ctx} zone={z.myLib} label="Library" layout="library" />}
+      <div class="cell me my-grave">{<Pile ctx={ctx} zone={z.myGrave} label="Graveyard" />}</div>
+      <div class="cell me my-hand">
+        {row(z.myHand, <>{who(P)}’s hand{ctx.viewer === P ? '' : ' (hidden)'}</>, 'hand')}
       </div>
-      <div class="cell c41 me">{<Pile ctx={ctx} zone={z.myExile} label="Exile" />}</div>
-      <div class="cell c42 me">{row(z.myLands, <>{who(P)} · lands</>)}</div>
-      <div class="cell c43 me">{<Pile ctx={ctx} zone={z.myGrave} label="Graveyard" />}</div>
-      <div class="cell c51 me">
-        <Counters ctx={ctx} />
-      </div>
-      <div class="cell c52 me">
-        {row(
-          z.myHand,
-          <>
-            {who(P)}’s hand{ctx.viewer === P ? '' : ' (hidden)'}
-          </>,
-          'hand',
-        )}
-      </div>
-      <div class="cell c53 shared">{<Pile ctx={ctx} zone="stack" label="Stack" all />}</div>
     </div>
+  );
+}
+
+/** "Claire: 6 in hand": a hand's count, and a drop target that puts a card at the end of that hand. */
+function HandLabel({ zone, who, name, n }: { zone: ZoneId; who: ComponentChildren; name: string; n: number }) {
+  return (
+    <span class="hand-label" data-drop={zone} data-layout="append" title={`Drop a card here to put it in ${name}’s hand`}>
+      {who}: {n} in hand
+    </span>
   );
 }

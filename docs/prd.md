@@ -37,15 +37,24 @@ When both devices have internet access, they can also connect when they aren't o
 
 ## Board layout
 
-Each player sees the same 5×3 grid from their own side: rows 1–2 are the opponent's, rows 3–5 are their own, and a footer sits below. Row 1 is the top, column 1 the left.
+Each player sees the same layout from their own side: the opponent's half on top, their own below, and a footer under the board. Three columns: the middle one holds each player's lands row and battlefield, and your hand along the bottom at full width. Beside each battlefield, the side columns stack two boxes:
 
-> *Diagram omitted in this export: board layout · 5×3 grid plus footer, one player's view.*
+| Left | Middle | Right |
+| --- | --- | --- |
+| Exile | Opponent's lands | Graveyard |
+| Command | Opponent's battlefield | Library |
+| Opponent's stats | Opponent's battlefield | Library, then the stack |
+| Your stats | Your battlefield | the stack, then Library |
+| Command | Your battlefield | Library |
+| Exile | Your lands | Graveyard |
+| Your hand (full width) | | |
 
-- **Shared zone.** The stack (5,3) is one shared zone shown identically on both devices.
+- **Shared zone.** The stack is one shared zone shown identically on both devices. It sits on the line between the two halves, half in each, like a pile in the middle of the table. Each library is three quarters of a battlefield's height, so its top and bottom drop halves stay easy to hit; Command takes the rest of the left column beside the stats.
+- **Stats.** Each player's stats sit beside their own battlefield, next to the centre line: their name, life and other counters. Tapping either opens Player counters.
 - **Labels.** Each slot is labelled at its top left with its name and card count, e.g. "Claire · battlefield 7". Battlefield and lands slots carry the owner's name.
 - **Opponent's hand.** Never shown. Its card count appears right-aligned on the opponent's lands row ("Claire: 5 in hand"). While a card is being dragged, that count becomes a drop target: dropping a card on it puts the card at the end of the opponent's hand (for example, a creature bounced to its owner's hand).
 - **Own hand.** Labelled with its owner, "Lawrence's hand", or "Lawrence's hand (hidden)" while blinded, which also shows whose view the board is in.
-- **Whose turn.** The player-counter cell (5,1) is labelled "Turn N · name" and lists that player first. Wherever a player's name appears on the board (the turn label, the counters cell, the hand count and every row label such as "Claire · lands" or "Lawrence's hand"), the attacking (active) player's name is in a hot coral; the defending player's is in a cool blue. These swap when the turn passes. A clear wash covers the active (attacking) player's rows in red and the defender's rows in blue, each strongest at its own edge of the screen. The colour changes exactly where one player's rows meet the other's, wherever that falls on the screen, and flips when the turn passes.
+- **Whose turn.** The active player's stats start with "Turn N". Wherever a player's name appears on the board (the turn label, the counters cell, the hand count and every row label such as "Claire · lands" or "Lawrence's hand"), the attacking (active) player's name is in a hot coral; the defending player's is in a cool blue. These swap when the turn passes. A clear wash covers the active (attacking) player's rows in red and the defender's rows in blue, each strongest at its own edge of the screen. The colour changes exactly where one player's rows meet the other's, wherever that falls on the screen, and flips when the turn passes.
 - **Player colours.** A player's colour is their role this turn, not their seat: red for the player whose turn it is, blue for the other, so it changes every turn. It is used everywhere a player is shown: the board's names and tint, changed marks, the unblind chooser, the pointer ring and the Player counters sheet. Where both players are listed, the player whose turn it is comes first.
 - **Orientation.** Any device, portrait or landscape, one responsive layout. Rotating changes only the layout, never game state.
 - **Sizing.** The two battlefields get the most height, since both players decide attacks there, and are the same height. The hand is shorter than the battlefields and taller than the lands. The two lands rows are the shortest and the same height, with a floor that keeps land cards big enough to tap on a phone held sideways. Columns 1 and 3 are narrow; column 2 takes the remaining width. Extra space on larger screens enlarges the rows.
@@ -179,7 +188,7 @@ Card counters, tokens, player counters and randomness are all manual tools; the 
 
 **Tokens.** The footer **Tokens** button opens the token picker: one list, sorted by name, of the tokens made for the decks in this game (each token once, from every token deck made for a deck in play; the built-in basic tokens belong to the sample decks). Long-press a token, or spread two fingers on it, to see it full screen (the same viewer as the deck page, in the same frame as the game's full view). There it takes the full view's gestures: swipe sideways for the previous or next token, swipe down to close, and drag it up to go back to the board with the token under your finger and drop it on a slot. Drag a token onto any battlefield or slot to create it there; a tap only shows that hint, so a token is never created by mistake. Dragging a token onto the Tokens button removes it. A token that leaves the battlefield disappears. Only tokens can be removed this way.
 
-**Player counters.** Cell (5,1) holds two key:value lists, one per player, under the "Turn N · name" label; the player whose turn it is is listed first. Tapping the cell opens Player counters.
+**Player counters.** Each player's stats box, beside their battlefield, holds their key:value list: name, ♥ life, then any other counters; the active player's starts with "Turn N". Tapping either opens Player counters.
 
 - `life` is a fixed entry for both players.
 - Each entry has − and + buttons, and tapping its value lets you type a new one.
@@ -213,9 +222,9 @@ Both players can share one device: the board stays visible to both, and only han
 - A game starts blinded. While blinded, the hand slot shows card backs, labelled "(hidden)".
 - **Blind my hand** (footer or menu) hides the hand again, and so does **Pass turn**.
 - While blinded, the footer shows one **Unblind** button.
-- It opens "Who are you?" with two large buttons: on top, in red, the player whose turn it is ("Taking turn 7"); below, in blue, the other player ("Defending"); and Cancel. Picking a name unblinds to that player at once, so it is still two taps, and each player is reminded of their role before their hand shows. Tapping outside the box cancels. There are no codes: a blinded hand can still be dragged onto the board, so a code would protect nothing; players rely on trust and on the ticker, which shows such moves.
+- It opens "Who are you?" with two large buttons: on top, in red, the player whose turn it is ("Taking turn 7"); below, in blue, the other player ("Defending"); and Cancel. Picking a name unblinds to that player at once, so it is still two taps, and each player is reminded of their role before their hand shows. Tapping outside the box cancels. There are no codes: whoever holds the device can pick either name, so a code would protect little on a shared phone; players rely on trust and on the ticker and log, which show every move.
 - Unblinding to a player also switches the board to that player's perspective: their rows move to the bottom and their hand fills (5,2). Switching perspective is only a re-render; state does not change.
-- While the hands are blinded, the hand row (only card backs then) shrinks to a lands row's height, and the two battlefields get the room, so creatures are easier to read, during combat for example. It is still a full-width drop target. The change glides over a quarter of a second. The counters cell beside it goes compact: each player's name over their life, without the "Turn N" label or extra counters (tap it for all of them).
+- While the hands are blinded (one device), the hand row (only card backs then) folds away, and the two battlefields get its height: about a quarter taller each, so creatures are easier to read, during combat for example. Your lands row then shows "Lawrence: 7 in hand", like the opponent's; while a card is being dragged it takes drops into your hand. Cards can't be dragged out of a blinded hand: unblind first. The row slides away and back over a quarter of a second.
 - While the hands are blinded, the board faces the active player. So passing the turn turns the board to the next player, ready for them before they unblind, and undoing a pass turns it back. Actions taken while blinded count as the active player's.
 - Only one hand is ever unblinded at a time.
 - **While you were away.** On unblinding, a sheet lists every action anyone else took since this player last looked, in the ticker's wording (which never names a card the player couldn't have seen). Alerts (library looks, shuffles, dice and so on) are highlighted. Pointing is left out.

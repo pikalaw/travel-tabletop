@@ -6,17 +6,17 @@ test.use({ viewport: { width: 844, height: 390 } });
 test('a one-device game: play, tap, counters, library, undo, full view, peek, tokens, life, blind', async ({ page }) => {
   const errs = watchErrors(page);
   await startOneDevice(page);
-  const hand = page.locator('.c52 [data-card]');
-  const field = page.locator('.c32 [data-card]');
+  const hand = page.locator('.my-hand [data-card]');
+  const field = page.locator('.my-field [data-card]');
   const n0 = await hand.count();
   expect(n0).toBe(7);
 
-  await drag(page, hand.first(), page.locator('.c32 .row'));
+  await drag(page, hand.first(), page.locator('.my-field .row'));
   await expect(hand).toHaveCount(6);
   await expect(field).toHaveCount(1);
 
   await field.first().click();
-  await expect(page.locator('.c32 .card.tapped')).toHaveCount(1);
+  await expect(page.locator('.my-field .card.tapped')).toHaveCount(1);
 
   // Up out of the footer first, as a finger does: a mostly sideways start on the footer scrolls it.
   const chip = (await page.locator('.chip.plus').boundingBox())!;
@@ -26,10 +26,10 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   const to = (await field.first().boundingBox())!;
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
   await page.mouse.up();
-  await expect(page.locator('.c32 .badge.plus')).toHaveText('+1');
+  await expect(page.locator('.my-field .badge.plus')).toHaveText('+1');
 
   // library footer: draw 2
-  await page.locator('.c33 .pile').click();
+  await page.locator('.my-lib .pile').click();
   await page.locator('.bar').getByRole('button', { name: '+' }).click();
   await page.getByRole('button', { name: 'Draw 2' }).click();
   await expect(hand).toHaveCount(8);
@@ -62,33 +62,33 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   await barButton(page, 'Close');
 
   // look at the top 3, move one to the graveyard
-  await page.locator('.c33 .pile').click();
-  await expect(page.locator('.c33 .pile')).toHaveClass(/\bpicked\b/); // the library the footer acts on
+  await page.locator('.my-lib .pile').click();
+  await expect(page.locator('.my-lib .pile')).toHaveClass(/\bpicked\b/); // the library the footer acts on
   const plus = page.locator('.bar').getByRole('button', { name: '+' });
   await plus.click(); await plus.click();
   await page.getByRole('button', { name: 'Look at top 3' }).click();
   await expect(page.locator('.sheet [data-card]')).toHaveCount(3);
-  await drag(page, page.locator('.sheet [data-card]').first(), page.locator('.c43 .pile'));
-  await expect(page.locator('.c43 .slot-label b')).toHaveText('1');
+  await drag(page, page.locator('.sheet [data-card]').first(), page.locator('.my-grave .pile'));
+  await expect(page.locator('.my-grave .slot-label b')).toHaveText('1');
   await expect(page.locator('.sheet [data-card]')).toHaveCount(2);
   await page.locator('.sheet').getByRole('button', { name: 'Done' }).click();
   // still the library footer after its sheet; a tap elsewhere on the board goes back to the main footer
   await expect(page.locator('.bar.lib')).toHaveCount(1);
-  await page.locator('.counters-cell').click();
+  await page.locator('.my-stats .counters-cell').click();
   await expect(page.locator('.bar.lib')).toHaveCount(0);
-  await expect(page.locator('.c33 .pile')).not.toHaveClass(/\bpicked\b/);
+  await expect(page.locator('.my-lib .pile')).not.toHaveClass(/\bpicked\b/);
   await page.locator('.sheet').getByRole('button', { name: 'Done' }).click();
 
   // tokens: create by drag, remove by dragging onto the Tokens button
   await barButton(page, 'Tokens');
-  await drag(page, '.token-item', page.locator('.c32 .row'), { fy: 0.85 });
-  await expect(page.locator('.c32 .mark.token')).toHaveCount(1);
+  await drag(page, '.token-item', page.locator('.my-field .row'), { fy: 0.85 });
+  await expect(page.locator('.my-field .mark.token')).toHaveCount(1);
   await page.locator('.sheet').getByRole('button', { name: 'Done' }).click();
-  await drag(page, page.locator('.c32 .card:has(.mark.token)'), page.locator('.token-btn'));
-  await expect(page.locator('.c32 .mark.token')).toHaveCount(0);
+  await drag(page, page.locator('.my-field .card:has(.mark.token)'), page.locator('.token-btn'));
+  await expect(page.locator('.my-field .mark.token')).toHaveCount(0);
 
   // player counters
-  await page.locator('.counters-cell').click();
+  await page.locator('.my-stats .counters-cell').click();
   // the player whose turn it is comes first, in the turn colour
   await expect(page.locator('.ctr-panel').first()).toHaveClass(/\batk\b/);
   await expect(page.locator('.ctr-panel.atk h3')).toHaveText('Player 1');
@@ -99,6 +99,6 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   // blind, then unblind to Player 2: the board switches to their side
   await barButton(page, 'Blind my hand');
   await unblind(page, 'Player 2');
-  await expect(page.locator('.c32 .slot-label')).toContainText('Player 2');
+  await expect(page.locator('.my-field .slot-label')).toContainText('Player 2');
   errs.expectNone();
 });

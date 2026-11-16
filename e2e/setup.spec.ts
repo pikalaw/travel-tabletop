@@ -20,7 +20,7 @@ test('New game: swap who goes first exchanges the players’ names and decks, an
   // Bo, now Player 1, takes the first turn
   await page.getByRole('button', { name: 'Start game' }).click();
   await page.waitForSelector('.board');
-  await expect(page.locator('.turn-label')).toContainText('Bo', { ignoreCase: true });
+  await expect(page.locator('.counters-cell.role-atk')).toContainText('Bo', { ignoreCase: true });
   await unblind(page, 'Bo');
 
   // the swap is remembered for the next game, like the rest of the setup

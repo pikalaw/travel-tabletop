@@ -25,7 +25,7 @@ test('changed marks: a left border in the changer\'s role colour, cleared by the
   await unblind(page, 'Player 2');
   for (const id of [a!, b!]) await expect(bar(id)).toHaveClass(/\bdef\b/);
   // drawing changes no card in play, so nothing clears
-  await page.locator('.c33 .pile').click();
+  await page.locator('.my-lib .pile').click();
   await page.getByRole('button', { name: 'Draw 1' }).click();
   await barButton(page, 'Done');
   await expect(bar(a!)).toHaveCount(1);

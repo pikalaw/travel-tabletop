@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { inOpenRow, OPEN, drag, point, startOneDevice, playFromHand, idsIn, tapCard, resetBar, barButton, answerDialog, watchErrors } from './helpers';
+import { inOpenRow, OPEN, drag, point, startOneDevice, playFromHand, idsIn, tapCard, resetBar, barButton, answerDialog, unblind, watchErrors } from './helpers';
 
 const marks = (page: Page, id: string) => page.locator(`.board [data-card="${id}"] > .marks`);
 const ticker = (page: Page) => page.locator('.ticker-text');
@@ -17,7 +17,8 @@ async function dragXY(page: Page, a: { x: number; y: number }, b: { x: number; y
 }
 
 async function holdOn(page: Page, id: string) {
-  const p = await point(page, `.board [data-card="${id}"]`, 0.4, 0.6);
+  // near the left edge: in a crowded row the next card overlaps the rest of this one
+  const p = await point(page, `.board [data-card="${id}"]`, 0.12, 0.6);
   await page.mouse.move(p.x, p.y); await page.mouse.down(); await page.waitForTimeout(700); await page.mouse.up(); await page.waitForTimeout(300);
 }
 
@@ -180,10 +181,12 @@ test('matchup: the full view row, blocker as main, the board highlight, opponent
   await page.mouse.click(lands.x + lands.width - 20, lands.y + lands.height - 10);
   await expect(page.locator('.board .in-match')).toHaveCount(0);
 
-  // the opponent's hand count takes a dropped card
-  const before = Number((await page.locator('.opp-hand').innerText()).match(/(\d+) in hand/i)![1]);
-  await drag(page, page.locator('[data-drop="p1.hand"] [data-card]').first(), '.opp-hand');
-  await expect(page.locator('.opp-hand')).toContainText(`${before + 1} in hand`, { ignoreCase: true });
+  // the opponent's hand count takes a dropped card (unblinded first: a blinded hand's row is folded away)
+  await unblind(page, 'Player 1');
+  await page.locator('.sheet').getByRole('button', { name: 'Done' }).click(); // the "while you were away" list
+  const before = Number((await page.locator('.opp-lands .hand-label').innerText()).match(/(\d+) in hand/i)![1]);
+  await drag(page, page.locator('[data-drop="p1.hand"] [data-card]').first(), '.opp-lands .hand-label');
+  await expect(page.locator('.opp-lands .hand-label')).toContainText(`${before + 1} in hand`, { ignoreCase: true });
   await expect(ticker(page)).toContainText(/Player 2's hand/);
   errs.expectNone();
 });
@@ -224,7 +227,7 @@ test('combat mode: the life counters still open, and changing life keeps combat 
   await startOneDevice(page);
   await resetBar(page); await barButton(page, 'Combat');
   await expect(page.locator('.bar.combat')).toHaveCount(1);
-  await page.locator('[data-tap="counters"]').click();
+  await page.locator('.my-stats [data-tap="counters"]').click();
   const sheet = page.locator('.sheet');
   await expect(sheet).toBeVisible();
   await sheet.locator('.btn.round').first().click(); // −1 on the first counter: Player 1's life
