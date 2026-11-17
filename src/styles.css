@@ -348,9 +348,10 @@ body.dragging .hand-label.drop-hover { outline: 2px solid #c9a65a; outline-offse
 /* A new turn stands out: a light band across the list, dark text. */
 .log-list li.turn-start { background: #e8d9a8; color: #1a1408; font-weight: 600; padding: 3px 8px; border-radius: 6px; margin: 4px 0; }
 .log-list li.turn-start .ts { color: #5a4a20; }
-.token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
-.token-item { touch-action: none; cursor: grab; }
-.token-item img, .token-item .card-face { width: 100%; aspect-ratio: 63/88; border-radius: 5px; display: block; }
+/* Two rows that scroll sideways, like the trays: a sideways swipe scrolls (gestures.ts), up or down picks a token up. */
+.token-grid { height: 100%; display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, minmax(0, 1fr)); grid-auto-columns: max-content; gap: 8px; overflow-x: auto; overflow-y: hidden; }
+.token-item { height: 100%; aspect-ratio: 63/88; touch-action: none; cursor: grab; }
+.token-item img, .token-item .card-face { width: 100%; height: 100%; border-radius: 5px; display: block; }
 .dice { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 10px; }
 .dN { display: inline-flex; gap: 4px; align-items: center; }
 .dN input { width: 76px; }

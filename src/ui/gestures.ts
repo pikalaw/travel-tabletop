@@ -9,7 +9,7 @@
 //   data-trash                              a drop target that removes tokens / counters
 //   data-tip="text"                         hold to show the text as a tip (see TipButton); lifting hides
 //                                           it, and a held button or tag does nothing else
-// Horizontal scrollers (the footer bar, open slots, trays) are panned here rather than by the
+// Horizontal scrollers (the footer bar, open slots, trays, the token list) are panned here rather than by the
 // browser, so scrolling does not depend on touch-action handling: a mostly horizontal movement
 // that starts inside one scrolls it (and cancels the tap); any other movement on a card drags it.
 
@@ -24,7 +24,7 @@ const LONG_MS = 480;
 const TEXT_GHOST_W = 220;
 
 const SOURCE_SEL = '[data-card],[data-counter],[data-badge],[data-token-def],[data-tap]';
-const SCROLL_SEL = '.bar, .row.open';
+const SCROLL_SEL = '.bar, .row.open, .token-grid';
 const FRICTION = 0.95; // per 16 ms frame, for the glide after a fling
 
 /** Where a drag ended. */

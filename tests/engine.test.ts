@@ -52,6 +52,20 @@ describe('engine basics', () => {
     expect(checkInvariants(h.state)).toBeNull();
   });
 
+  it('a token is made only on a battlefield, and leaving one for any other zone, the stack too, deletes it', () => {
+    const h = started();
+    for (const to of ['p1.graveyard', 'p1.hand', 'p1.library', 'p1.exile', 'stack']) {
+      expect(h.dispatch({ type: 'createToken', actor: 'p1', payload: { defId: 'tok', name: 'Soldier', to } }).ok).toBe(false);
+    }
+    expect(Object.values(h.state.cards).some((c) => c.isToken)).toBe(false);
+    h.dispatch({ type: 'createToken', actor: 'p1', payload: { defId: 'tok', name: 'Soldier', to: 'p1.lands' } });
+    const tid = h.state.zones['p1.lands'][0];
+    h.dispatch({ type: 'move', actor: 'p1', payload: { cardId: tid, from: 'p1.lands', to: 'stack' } });
+    expect(h.state.cards[tid]).toBeUndefined();
+    expect(h.state.zones.stack).toEqual([]);
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
   it('an ability goes on top of the stack with its source picture, and is deleted when it leaves', () => {
     const h = started();
     const [src, spell] = h.state.zones['p1.hand'];

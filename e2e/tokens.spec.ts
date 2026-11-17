@@ -85,3 +85,45 @@ test('a sample-deck game offers the basic tokens', async ({ page }) => {
   await expect(page.locator('.sheet .token-item').first()).toBeVisible();
   await expect(page.locator('.sheet')).not.toContainText('No tokens');
 });
+
+test('many tokens: the list scrolls sideways under a swipe; a token dropped off the battlefields is not made, and one moved off is gone', async ({ page }) => {
+  const errs = watchErrors(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const names = ['Ally', 'Bear', 'Clue', 'Copy', 'Food', 'Human Soldier', 'Monk', 'Soldier', 'Spirit', 'Treasure'];
+  await mockScryfall(page, { tokens: { 'Aang, Air Nomad': names } });
+  await importDeck(page, 'Aang', '2 Aang, Air Nomad\n18 Plains');
+  await expect(page.getByText('Imported')).toBeVisible({ timeout: 20_000 });
+  await page.getByText('← Decks').click();
+  await page.getByText('← Home').click();
+  await page.getByRole('button', { name: 'New game' }).click();
+  await pickDecks(page, [['Aang'], ['Aang']]);
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await page.waitForSelector('.board');
+  await unblind(page, 'Player 1');
+
+  await barButton(page, 'Tokens');
+  const grid = page.locator('.sheet .token-grid');
+  await expect(page.locator('.sheet .token-item')).toHaveCount(names.length);
+  await page.waitForTimeout(300); await page.screenshot({ path: 'test-results/tokens-sheet.png' });
+  const g = (await grid.boundingBox())!;
+  expect(await grid.evaluate((e) => e.scrollWidth > e.clientWidth)).toBe(true);
+  // a sideways swipe scrolls the list and makes nothing
+  await page.mouse.move(g.x + g.width - 20, g.y + g.height * 0.3); await page.mouse.down();
+  await page.mouse.move(g.x + 20, g.y + g.height * 0.3, { steps: 10 }); await page.mouse.up();
+  await expect.poll(() => grid.evaluate((e) => e.scrollLeft)).toBeGreaterThan(100);
+  await expect(page.locator('.board .mark.token')).toHaveCount(0);
+
+  // dropped on a graveyard: nothing is made (a cancel)
+  await drag(page, page.locator('.sheet .token-item').last(), page.locator('[data-drop="p1.graveyard"]'));
+  await expect(page.locator('[data-drop="p1.graveyard"] .slot-label b')).toHaveText('0');
+  await expect(page.locator('.board .mark.token')).toHaveCount(0);
+  // dropped on a battlefield: made
+  await drag(page, page.locator('.sheet .token-item').last(), page.locator('.my-field .row'), { fy: 0.85 });
+  await expect(page.locator('.my-field .mark.token')).toHaveCount(1);
+  await page.locator('.sheet').getByRole('button', { name: 'Done' }).click();
+  // moved onto the stack, it is gone
+  await drag(page, page.locator('.my-field .card:has(.mark.token)'), page.locator('[data-drop="stack"]'));
+  await expect(page.locator('.board .mark.token')).toHaveCount(0);
+  await expect(page.locator('[data-drop="stack"] .slot-label b')).toHaveText('0');
+  errs.expectNone();
+});

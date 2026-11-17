@@ -176,7 +176,7 @@ interface GameState {
 ```
 
 - **Zones.** 15 in all: seven kinds per player plus the shared `stack`. "Battlefield zones" are a player's `battlefield` and `lands`. A zone's owner (the part before the dot) is the player whose side it is on, which the app also treats as control.
-- **Invariants** (`checkInvariants`, run by the property tests after every command): every card id is in exactly one zone; every zone entry exists in `cards`; the attachment and combat rules below hold.
+- **Invariants** (`checkInvariants`, run by the property tests after every command): every card id is in exactly one zone; every zone entry exists in `cards`; a token is only in a battlefield zone; the attachment and combat rules below hold.
 - **Not in state:** viewer and perspective, open slots, sheets, the full view, the matchup highlight, pointer and combat modes. These are local UI state per device.
 - **Card definitions** live in storage; the state carries `defId` and `name` only.
 
@@ -200,7 +200,7 @@ interface CommandEnvelope { type: string; actor: Actor; clientSeq?: number; payl
 | `setFaceDown` | cardId, from, value? | Sets `faceDown` |
 | `reveal` | cardId, from, value? | Sets `revealed` (kept for compatibility; the UI uses the `showCard` notice) |
 | `addCounter` / `removeCounter` | cardId, from?, kind: plus, minus or label, label?, n? (default 1) | A label's count of 0 deletes it; removing below 0 is invalid |
-| `createToken` | defId, name, to, toIndex?, owner? | New card `t<n>`, owner = given or the zone's owner |
+| `createToken` | defId, name, to, toIndex?, owner? | New card `t<n>`, owner = given or the zone's owner; `to` must be a battlefield zone, and the UI sends nothing for a drop anywhere else |
 | `removeToken` | cardId, from | Only tokens |
 | `draw` / `mill` | player, n | Moves up to n from the library top: draw appends to hand, mill puts each on top of the graveyard; clears faceDown, revealed, tapped |
 | `shuffle` | zone | Fisher–Yates over the zone with host randomness |
@@ -218,7 +218,7 @@ interface CommandEnvelope { type: string; actor: Actor; clientSeq?: number; payl
 
 `undo` and `redo` are handled by the host, not the engine (see Host). `replay` mirrors them: an undo puts the state it leaves on a redo list, a redo takes it back, and an applied command clears the list. Randomness: `randomNeeded(state, cmd)` returns how many numbers the host must supply (all deck cards for `startGame`, the zone size for `shuffle`, else 0); the engine reads them from `cmd.random`, clamped to \[0, 1).
 
-**Moving cards** (`move`). The host card's attachments travel with it when it goes to a battlefield zone (see Attachments); an attached card that moves is detached. The moved cards are removed from `from`. A token whose destination is not a battlefield zone or the stack is deleted, and so is an ability item whose destination is not the stack. Otherwise each card passes through `changeZone(card, from, to)`:
+**Moving cards** (`move`). The host card's attachments travel with it when it goes to a battlefield zone (see Attachments); an attached card that moves is detached. The moved cards are removed from `from`. A token whose destination is not a battlefield zone (the stack included) is deleted, and so is an ability item whose destination is not the stack. Otherwise each card passes through `changeZone(card, from, to)`:
 
 - same zone: nothing changes;
 - leaving the battlefield zones, entering them, or going to any non-battlefield zone: `tapped = false`;
@@ -433,7 +433,7 @@ A card in play with `changed` gets a `.changed-bar` (4 px, `--hot` when `changed
 
 **Game screen** (`Game.tsx`). `UiState`: viewer, perspective, open slots (a list), `mode` (above, with the library zone and N for the library footer; `BoardCtx.library` outlines that pile with class `picked`, and `onTap` returns to normal mode on any tap whose zone isn't a library, outside a sheet, before handling it as usual), sheet, full-view card `{ cardId, zone, anchor }`, the highlighted matchup's card id, reveal screen, the unblind chooser (`choosing`), the label name; plus the art map, the log lines (the whole game) and the pointer ring.
 
-- **Tokens sheet:** `gameTokens(state, tokenDecks, art)` lists the definition ids of every token deck whose `forDecks` includes a deck in the game, each once, sorted by name; the sheet shows them as one grid. The built-in basic tokens are made for the two sample decks (fixture version 3). A long-press or spread on a token opens `CardViewer` (`CardViewer.tsx`, shared with the deck page) over the sheet, stepping through the same list; its drag up closes it and hands the sheet's element for that token to a board drag (`adopt`), as the full view does for a card.
+- **Tokens sheet:** `gameTokens(state, tokenDecks, art)` lists the definition ids of every token deck whose `forDecks` includes a deck in the game, each once, sorted by name; the sheet shows them as `.token-grid`: two rows, `grid-auto-flow: column`, scrolling sideways. It is in `SCROLL_SEL`, so a mostly sideways movement pans it and any other movement on a token drags it. The built-in basic tokens are made for the two sample decks (fixture version 3). A long-press or spread on a token opens `CardViewer` (`CardViewer.tsx`, shared with the deck page) over the sheet, stepping through the same list; its drag up closes it and hands the sheet's element for that token to a board drag (`adopt`), as the full view does for a card.
 - **Full-screen card frame** (`CardFrame.tsx`, with `cardGestures.ts`): the large picture, the ← and → signs (shown where `onPrev` or `onNext` is set), the arrow keys (ignored while typing in a field) and `useCardGestures({ onTap, onPrev, onNext, onDragOut, onClose })`: a tap, a sideways swipe (50 px), a drag up (40 px, handed off) and a swipe down (50 px). The pointer is captured on press, so a mouse swipe that ends past the card's edge still counts; it is released when a drag up hands off. `FullCard` and `CardViewer` both draw it, so the full view, the deck page and the token viewer look and swipe alike; only the callbacks and what each screen draws around the frame differ (the full view's tap toggles tapped and it adds details and footer actions; the viewer's tap closes and it adds the rulings link and a caption with name, position and Flip; its own styles size the picture to the card, so those sit right under it). Rule: the frame holds only what every screen has; anything one screen needs stays in that screen, and a second one-screen option is the signal to split the frame again.
 - **Pass turn (one device):** after `passTurn` is sent the screen blinds (`viewer` = `'nobody'`), as Blind my hand does.
 - **Combat (one device):** `startCombat` (the Combat button, and Block in the full view) blinds first if a hand is showing, then enters combat mode. Marks made while blinded are the table's, so their changed borders count for the active player.

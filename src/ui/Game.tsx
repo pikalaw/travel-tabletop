@@ -19,7 +19,7 @@ import {
 import { initialUi, uiReducer, clockTime, roleOf, type SheetState } from './gameUi';
 import { fullModel } from './fullModel';
 import { CardViewer, type CardView } from './CardViewer';
-import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone } from '../engine/view';
+import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone, isBattlefieldZone } from '../engine/view';
 import { listDecks, loadLog } from '../storage/db';
 import { loadArt, type Art } from '../storage/art';
 import type { Session } from '../client/session';
@@ -449,7 +449,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     }
     // A token from the token picker.
     if (src.dataset.tokenDef) {
-      if (!dz) return;
+      if (!dz || !isBattlefieldZone(dz)) return; // dropped anywhere but a battlefield: nothing is made
       send('createToken', { defId: src.dataset.tokenDef, name: src.dataset.tokenName, to: dz, toIndex: 'index' in d ? d.index : undefined, owner: zoneOwner(dz) || actingPlayer });
       return;
     }

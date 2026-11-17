@@ -244,8 +244,8 @@ function run(input: GameState, cmd: Command): ApplyResult {
       const carry = c.attachedTo || !isBattlefieldZone(to) ? [] : attachmentsOf(state, from, c.id);
       delete c.attachedTo;
       for (const id of [...carry, c.id]) src.splice(src.indexOf(id), 1);
-      // A token lives only in play or on the stack; an ability item only on the stack.
-      if ((c.isToken && !isBattlefieldZone(to) && to !== 'stack') || (c.ability && to !== 'stack')) {
+      // A token lives only on a battlefield (a lands row is one); an ability item only on the stack.
+      if ((c.isToken && !isBattlefieldZone(to)) || (c.ability && to !== 'stack')) {
         delete state.cards[c.id];
         moved.push({ id: c.id, from, to: null });
         break;
@@ -441,6 +441,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
 
     case 'createToken': {
       if (!isZone(p.to)) return fail('invalid', 'bad zone');
+      if (!isBattlefieldZone(p.to)) return fail('invalid', 'Tokens go onto a battlefield.');
       const owner = isPlayer(p.owner) ? p.owner : (zoneOwner(p.to) || 'p1');
       const id = `t${state.nextId++}`;
       state.cards[id] = newCard(id, typeof p.defId === 'string' ? p.defId : '', typeof p.name === 'string' && p.name ? p.name : 'Token', null, owner, true);
@@ -633,6 +634,7 @@ export function checkInvariants(state: GameState): string | null {
   }
   for (const c of Object.values(state.cards)) {
     const z = seen.get(c.id)!;
+    if (c.isToken && !isBattlefieldZone(z)) return `token ${c.id} is off the battlefield`;
     if ((c.attacking || c.blocking) && !isBattlefieldZone(z)) return `card ${c.id} has combat marks off the battlefield`;
     if (c.attacking && zoneOwner(z) !== state.activePlayer) return `card ${c.id} attacks from the defending side`;
     if (c.blocking && zoneOwner(z) === state.activePlayer) return `card ${c.id} blocks from the attacking side`;
