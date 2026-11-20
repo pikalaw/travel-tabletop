@@ -79,7 +79,7 @@ export const OPEN = /(^|\s)open(\s|$)/;
  * left as it is.
  */
 export async function inOpenRow(page: Page, zone: string, act: () => Promise<void>) {
-  const row = page.locator(`[data-drop="${zone}"]`);
+  const row = page.locator(`[data-drop="${zone}"]:not(.counters-cell)`);
   const crowded = !!(await row.getAttribute('data-collapsed'));
   const strip = async () => { const b = (await row.boundingBox())!; await page.mouse.click(b.x + b.width - 10, b.y + 4); };
   if (crowded) { await strip(); await expect(row).not.toHaveAttribute('data-collapsed', /.+/); }
@@ -108,12 +108,12 @@ export async function startOneDevice(page: Page, opts: { unblindTo?: string | nu
 
 /** Card ids in a zone's row or pile on the board. */
 export function idsIn(page: Page, zone: string) {
-  return page.locator(`[data-drop="${zone}"]`).evaluate((e) => [...e.querySelectorAll('[data-card]')].map((c) => (c as HTMLElement).dataset.card!));
+  return page.locator(`[data-drop="${zone}"]:not(.counters-cell)`).evaluate((e) => [...e.querySelectorAll('[data-card]')].map((c) => (c as HTMLElement).dataset.card!));
 }
 
 /** Move the first n hand cards of Player 1 onto a zone by dragging. */
 export async function playFromHand(page: Page, zone: string, n = 1) {
-  for (let i = 0; i < n; i++) await drag(page, page.locator('[data-drop="p1.hand"] [data-card]').first(), page.locator(`[data-drop="${zone}"]`));
+  for (let i = 0; i < n; i++) await drag(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first(), page.locator(`[data-drop="${zone}"]:not(.counters-cell)`));
 }
 
 /** Collect page errors; call expectNoErrors at the end of a test. */

@@ -21,7 +21,7 @@ test('rulings: a card with rulings links to a panel over the full view; swipe do
   await page.getByRole('button', { name: 'Start game' }).click();
   await page.waitForSelector('.board');
   await unblind(page, 'Player 1');
-  const hand = page.locator('[data-drop="p1.hand"] [data-card]');
+  const hand = page.locator('.row[data-drop="p1.hand"] [data-card]');
   const alts = await hand.evaluateAll((els) => els.map((e) => e.querySelector('img')?.getAttribute('alt')));
   const elf = alts.indexOf('Elf Test'), bear = alts.indexOf('Bear Test');
   test.skip(elf < 0 || bear < 0, 'the opening hand lacks one of the two cards');

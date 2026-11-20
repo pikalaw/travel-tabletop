@@ -36,7 +36,7 @@ test('the stack in the full view: top first, swipes step down it, any item can b
   // three spells, then an ability (Custom…, since sample cards have no rules text) on top
   const spells: string[] = [];
   for (let i = 0; i < 3; i++) {
-    await drag(page, page.locator('[data-drop="p1.hand"] [data-card]').last(), page.locator('[data-drop="stack"]'));
+    await drag(page, page.locator('.row[data-drop="p1.hand"] [data-card]').last(), page.locator('[data-drop="stack"]'));
     spells.unshift((await idsIn(page, 'stack'))[0]!);
   }
   // every pile's card is centred on its cell, so the stack's sits on the line between the players, like a shared deck

@@ -181,12 +181,13 @@ test('matchup: the full view row, blocker as main, the board highlight, opponent
   await page.mouse.click(lands.x + lands.width - 20, lands.y + lands.height - 10);
   await expect(page.locator('.board .in-match')).toHaveCount(0);
 
-  // the opponent's hand count takes a dropped card (unblinded first: a blinded hand's row is folded away)
+  // the opponent's stats box takes a dropped card into their hand (unblinded first: a blinded hand's row is folded away)
   await unblind(page, 'Player 1');
   await page.locator('.sheet').getByRole('button', { name: 'Done' }).click(); // the "while you were away" list
-  const before = Number((await page.locator('.opp-lands .hand-label').innerText()).match(/(\d+) in hand/i)![1]);
-  await drag(page, page.locator('[data-drop="p1.hand"] [data-card]').first(), '.opp-lands .hand-label');
-  await expect(page.locator('.opp-lands .hand-label')).toContainText(`${before + 1} in hand`, { ignoreCase: true });
+  const oppHand = page.locator('.opp-stats .ctr-hand');
+  const before = Number((await oppHand.innerText()).match(/Hand (\d+)/i)![1]);
+  await drag(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first(), '.opp-stats .counters-cell');
+  await expect(oppHand).toHaveText(`Hand ${before + 1}`, { ignoreCase: true });
   await expect(ticker(page)).toContainText(/Player 2's hand/);
   errs.expectNone();
 });

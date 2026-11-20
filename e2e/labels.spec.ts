@@ -10,9 +10,8 @@ test('labels: hand, counters, opponent hand, ticker; whose turn; only the active
   await unblind(page, 'Player 1');
   await expect(page.locator('.my-hand .slot-label')).toHaveText(/Player 1’s hand\s*7/i);
   // each player's stats beside their battlefield; "Turn N" on the active player's
-  await expect(page.locator('.my-stats .counters-cell')).toHaveText(/Turn 1\s*Player 1\s*♥ 20/i);
-  await expect(page.locator('.opp-stats .counters-cell')).toHaveText(/^Player 2\s*♥ 20$/i);
-  await expect(page.locator('.opp-lands .hand-label')).toHaveText(/Player 2: 7 in hand/i);
+  await expect(page.locator('.my-stats .counters-cell')).toHaveText(/Turn 1\s*Player 1\s*♥ 20\s*Hand 7/i);
+  await expect(page.locator('.opp-stats .counters-cell')).toHaveText(/^Player 2\s*♥ 20\s*Hand 7$/i);
   await expect(page.locator('.ticker')).toContainText('Turn 1 · Player 1');
   // the active player's box sits at the top of its cell, the other's at the bottom
   const gap = (sel: string) => page.locator(sel).evaluate((cell) => {
@@ -45,8 +44,8 @@ test('labels: hand, counters, opponent hand, ticker; whose turn; only the active
   await expect(page.locator('.board')).toHaveClass(/\bpersp-p2\b.*\bmy-turn\b|\bmy-turn\b.*\bpersp-p2\b/);
   await unblind(page, 'Player 1');
   await expect(page.locator('.board')).toHaveClass(/\btheir-turn\b/);
-  await expect(page.locator('.counters-cell.role-atk')).toHaveText(/Turn 2\s*Player 2\s*♥ 20/i);
-  await expect(page.locator('.counters-cell.role-def')).toHaveText(/^Player 1\s*♥ 20$/i);
+  await expect(page.locator('.counters-cell.role-atk')).toHaveText(/Turn 2\s*Player 2\s*♥ 20\s*Hand \d+/i);
+  await expect(page.locator('.counters-cell.role-def')).toHaveText(/^Player 1\s*♥ 20\s*Hand \d+$/i);
   errs.expectNone();
 });
 
@@ -77,13 +76,13 @@ const pseudo = (page: Page, sel: string, which: '::before' | '::after') => page.
 
 test('"tap to open" shows on a collapsed row and on a single attached group; "tap to close" on an open row', async ({ page }) => {
   await startOneDevice(page);
-  const hand = page.locator('[data-drop="p1.hand"]');
+  const hand = page.locator('.row[data-drop="p1.hand"]');
   const me = page.locator('[data-drop="p1.battlefield"]');
-  await expect.poll(() => pseudo(page, '[data-drop="p1.hand"]', '::after')).toBe('"tap to open"');
+  await expect.poll(() => pseudo(page, '.row[data-drop="p1.hand"]', '::after')).toBe('"tap to open"');
   const hb = (await hand.boundingBox())!;
   await page.mouse.click(hb.x + hb.width - 6, hb.y + hb.height - 4); await page.waitForTimeout(300);
-  expect(await pseudo(page, '.row-box:has([data-drop="p1.hand"])', '::before')).toBe('"tap to close"');
-  expect(await pseudo(page, '[data-drop="p1.hand"]', '::after')).toBe('none');
+  expect(await pseudo(page, '.row-box:has(.row[data-drop="p1.hand"])', '::before')).toBe('"tap to close"');
+  expect(await pseudo(page, '.row[data-drop="p1.hand"]', '::after')).toBe('none');
   // a tap still closes after the row has scrolled
   await hand.evaluate((e) => { e.scrollLeft = 200; }); await page.waitForTimeout(200);
   await page.mouse.click(hb.x + hb.width - 6, hb.y + hb.height - 4); await page.waitForTimeout(300);

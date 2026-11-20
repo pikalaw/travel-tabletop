@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { startOneDevice, playFromHand, idsIn, tapCard, barButton, resetBar, answerDialog, unblind, watchErrors } from './helpers';
+import { drag, startOneDevice, playFromHand, idsIn, tapCard, barButton, resetBar, answerDialog, unblind, watchErrors } from './helpers';
 
 const box = (page: Page) => page.locator('.confirm-box.plain');
 
@@ -106,12 +106,14 @@ test('Unblind opens a chooser: whose turn it is on top in red, the other below i
   await page.locator('.chooser').getByRole('button', { name: 'Cancel' }).click();
   await expect(page.locator('.my-hand .slot-label')).toContainText('(HIDDEN)', { ignoreCase: true });
 
-  // blinded, the hand row folds away; the hand count in the lands row takes its drops
+  // blinded, the hand row folds away; the stats box shows the hand size and takes its drops
   const height = (sel: string) => page.locator(sel).evaluate((e) => e.getBoundingClientRect().height);
   await expect(page.locator('.board')).toHaveClass(/\bhand-hidden\b/);
   await page.waitForTimeout(400);
   expect(await height('.my-hand')).toBeLessThan(2);
-  await expect(page.locator('.my-lands .hand-label')).toHaveText(/Player 1: 7 in hand/i);
+  await expect(page.locator('.my-stats .ctr-hand')).toHaveText('Hand 7');
+  await drag(page, page.locator('.my-lib [data-card]').first(), '.my-stats .counters-cell');
+  await expect(page.locator('.my-stats .ctr-hand')).toHaveText('Hand 8');
   const blindField = await height('.my-field');
   await unblind(page, 'Player 2');
   await expect(page.locator('.my-hand .slot-label')).toContainText('Player 2');
@@ -120,7 +122,6 @@ test('Unblind opens a chooser: whose turn it is on top in red, the other below i
   await page.waitForTimeout(400);
   expect(await height('.my-hand')).toBeGreaterThan((await height('.my-lands')) + 20);
   expect(await height('.my-field')).toBeLessThan(blindField * 0.9);
-  await expect(page.locator('.my-lands .hand-label')).toHaveCount(0);
   await expect(page.locator('.my-hand .slot-label')).not.toContainText('hidden', { ignoreCase: true });
 
   // a reload resumes the game blinded

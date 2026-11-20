@@ -13,7 +13,7 @@ test('two devices: pair by text, play, alerts, pointing, undo, dice', async ({ b
   await expect(H.locator('.status')).toHaveText('Connected');
   await expect(G.locator('.status')).toHaveText('Connected');
   await expect(G.locator('.my-hand [data-card]')).toHaveCount(7);
-  await expect(H.locator('.opp-lands .hand-label')).toContainText('7 in hand', { ignoreCase: true });
+  await expect(H.locator('.opp-stats .ctr-hand')).toHaveText('Hand 7');
 
   // the guest plays a card; the host sees it
   await drag(G, G.locator('.my-hand [data-card]').first(), G.locator('.my-field .row'), { fy: 0.8 });

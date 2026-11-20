@@ -29,7 +29,7 @@ test('a one-device game: play, tap, counters, library, undo, full view, peek, to
   await expect(page.locator('.my-field .badge.plus')).toHaveText('+1');
 
   // draw: drag the library's top card into the hand
-  await drag(page, page.locator('.my-lib [data-card]').first(), page.locator('[data-drop="p1.hand"]'));
+  await drag(page, page.locator('.my-lib [data-card]').first(), page.locator('.row[data-drop="p1.hand"]'));
   await expect(hand).toHaveCount(7);
 
   // Undo takes the draw back at once (no dialog) and says which move; Redo brings it back; Undo again

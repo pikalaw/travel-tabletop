@@ -27,12 +27,12 @@ test('spread: on a collapsed slot it opens the first card; on an open slot, the 
   const errs = watchErrors(page);
   const cdp = await context.newCDPSession(page);
   await startOneDevice(page);
-  const handRow = page.locator('[data-drop="p1.hand"]');
+  const handRow = page.locator('.row[data-drop="p1.hand"]');
   await expect(handRow).toHaveAttribute('data-collapsed', /.+/);
   const hand = await idsIn(page, 'p1.hand');
 
   // collapsed: wherever the fingers are, the slot's first card opens
-  const c = await centre(page, '[data-drop="p1.hand"]');
+  const c = await centre(page, '.row[data-drop="p1.hand"]');
   await spread(cdp, page, c.x + 40, c.y);
   await expect(page.locator('.card-frame-pic')).toHaveAttribute('data-card-target', hand[0]!);
   // a swipe down closes it
@@ -49,7 +49,7 @@ test('spread: on a collapsed slot it opens the first card; on an open slot, the 
   const hb = (await handRow.boundingBox())!;
   await page.touchscreen.tap(hb.x + hb.width - 12, hb.y + 4);
   await expect(handRow).toHaveClass(OPEN);
-  const second = await centre(page, `[data-drop="p1.hand"] [data-card="${hand[1]}"]`);
+  const second = await centre(page, `.row[data-drop="p1.hand"] [data-card="${hand[1]}"]`);
   await spread(cdp, page, second.x, second.y + 20, 6, 60);
   await expect(page.locator('.card-frame-pic')).toHaveAttribute('data-card-target', hand[1]!);
   errs.expectNone();

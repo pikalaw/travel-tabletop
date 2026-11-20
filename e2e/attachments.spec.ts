@@ -11,7 +11,7 @@ test('attachments: attach, redirect to the host, viewer, tap, fan, detach, follo
   const [host, second] = await idsIn(page, 'p1.battlefield');
 
   // attach a hand card to the first battlefield card
-  await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first());
+  await longPress(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first());
   await barButton(page, 'Attach');
   await expect(page.locator('.bar').first()).toContainText('tap the card to attach it to');
   await inOpenRow(page, 'p1.battlefield', async () => {
@@ -116,7 +116,7 @@ test('Detach all asks first, then frees the whole group in one step; Undo brings
   await playFromHand(page, 'p1.battlefield', 1);
   const [host] = await idsIn(page, 'p1.battlefield');
   for (let i = 0; i < 2; i++) {
-    await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first());
+    await longPress(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first());
     await barButton(page, 'Attach');
     const h = (await page.locator(`[data-card="${host}"]`).boundingBox())!;
     await page.mouse.click(h.x + h.width * 0.7, h.y + h.height * 0.6);

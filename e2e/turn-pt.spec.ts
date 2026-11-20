@@ -26,7 +26,7 @@ test('power and toughness this turn: steppers and typing in the full view, a das
   await barButton(page, 'Close');
   await expect(card.locator('.badge.pt')).toHaveText('−3/−1');
   // not on a card out of play: no steppers there
-  await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first(), 0.4, 0.4);
+  await longPress(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first(), 0.4, 0.4);
   await expect(page.locator('.fullcard .turn-pt')).toHaveCount(0);
   await barButton(page, 'Close');
 

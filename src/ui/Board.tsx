@@ -27,19 +27,26 @@ export function cellsFor(P: PlayerId) {
   } as const satisfies Record<string, ZoneId>;
 }
 /**
- * One player's stats, beside their battlefield: name (in the turn colour), "Turn N" for the player
- * whose turn it is, life, then any other counters. The active player's box sits at the top of its
- * cell, the other's at the bottom. A tap opens this player's counters.
+ * One player's stats, beside their battlefield: "Turn N" for the player whose turn it is, the name
+ * (in the turn colour), life, hand size, then any other counters. The active player's box sits at
+ * the top of its cell, the other's at the bottom. A tap opens this player's counters; a card dropped
+ * on it goes to the end of this player's hand (the only way in while that hand is blinded).
  */
 function Stats({ ctx, pl }: { ctx: BoardCtx; pl: PlayerId }) {
   const st = ctx.state;
   const active = st.activePlayer === pl;
   const [life, ...rest] = st.players[pl].counters;
   return (
-    <div class={`counters-cell ${active ? 'role-atk' : 'role-def'}`} data-tap="counters" data-player={pl}>
-      {active ? <span class="turn-label">Turn {st.turn}</span> : null}
-      <span class="ctr-name">{st.players[pl].name}</span>
-      <span class="ctr-life">♥ {life!.value}</span>
+    <div class={`counters-cell ${active ? 'role-atk' : 'role-def'}`} data-tap="counters" data-player={pl}
+      data-drop={`${pl}.hand`} data-layout="append" title={`Tap for ${st.players[pl].name}’s counters; drop a card here to put it in their hand`}>
+      <span class="ctr-head">
+        {active ? <span class="turn-label">Turn {st.turn}</span> : null}
+        <span class="ctr-name">{st.players[pl].name}</span>
+      </span>
+      <span class="ctr-main">
+        <span class="ctr-life">♥ {life!.value}</span>
+        <span class="ctr-small ctr-hand">Hand {handCount(st, pl)}</span>
+      </span>
       {rest.map((c) => <span class="ctr-small">{c.key} {c.value}</span>)}
     </div>
   );
@@ -64,7 +71,6 @@ export function Board({ ctx, P, openSlots }: { ctx: BoardCtx; P: PlayerId; openS
       <div class="cell opp opp-exile">{<Pile ctx={ctx} zone={z.oppExile} label="Exile" />}</div>
       <div class="cell opp opp-lands">
         {row(z.oppLands, <>{who(O)} · lands</>)}
-        <HandLabel zone={`${O}.hand`} who={who(O)} name={name(O)} n={handCount(st, O)} />
       </div>
       <div class="cell opp opp-grave">{<Pile ctx={ctx} zone={z.oppGrave} label="Graveyard" />}</div>
       <div class="cell opp opp-cmd">{<Pile ctx={ctx} zone={z.oppCmd} label="Command" />}</div>
@@ -79,8 +85,6 @@ export function Board({ ctx, P, openSlots }: { ctx: BoardCtx; P: PlayerId; openS
       <div class="cell me my-exile">{<Pile ctx={ctx} zone={z.myExile} label="Exile" />}</div>
       <div class="cell me my-lands">
         {row(z.myLands, <>{who(P)} · lands</>)}
-        {/* While blinded the hand row is folded away; this label still takes drops into the hand. */}
-        {hidden ? <HandLabel zone={z.myHand} who={who(P)} name={name(P)} n={handCount(st, P)} /> : null}
       </div>
       <div class="cell me my-grave">{<Pile ctx={ctx} zone={z.myGrave} label="Graveyard" />}</div>
       <div class="cell me my-hand">
@@ -90,11 +94,3 @@ export function Board({ ctx, P, openSlots }: { ctx: BoardCtx; P: PlayerId; openS
   );
 }
 
-/** "Claire: 6 in hand": a hand's count, and a drop target that puts a card at the end of that hand. */
-function HandLabel({ zone, who, name, n }: { zone: ZoneId; who: ComponentChildren; name: string; n: number }) {
-  return (
-    <span class="hand-label" data-drop={zone} data-layout="append" title={`Drop a card here to put it in ${name}’s hand`}>
-      {who}: {n} in hand
-    </span>
-  );
-}

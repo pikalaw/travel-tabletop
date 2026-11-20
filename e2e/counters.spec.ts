@@ -64,7 +64,7 @@ test('counter badges in the full view by touch: drag off, + and − buttons', as
   await startOneDevice(page);
   await resetBar(page);
   const bf = page.locator('[data-drop="p1.battlefield"]');
-  await tdrag(page.locator('[data-drop="p1.hand"] [data-card]').first(), bf);
+  await tdrag(page.locator('.row[data-drop="p1.hand"] [data-card]').first(), bf);
   const c = await point(page, bf.locator('[data-card]').first());
   await touchSwipe(cdp, page, c.x, c.y, c.x, c.y, { steps: 1, holdBefore: 700 });
   await expect(page.locator('.fullcard')).toHaveCount(1);

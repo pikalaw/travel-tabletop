@@ -274,14 +274,10 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 .counters-cell { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 4px 6px; cursor: pointer; overflow: hidden; }
 .counters-cell.role-def { justify-content: flex-end; } /* the active player's box at the top of its cell, the other's at the bottom */
 .counters-cell.role-atk { justify-content: flex-start; }
-.counters-cell .turn-label { font-size: 10px; letter-spacing: .3px; text-transform: uppercase; font-weight: 600; color: var(--hot); }
-/* A hand's size, right-aligned on a lands row (the other player's always, yours while blinded); that
-   row's tap hints move to the bottom. */
-.hand-label { position: absolute; right: 6px; top: 3px; z-index: 2; font-size: 10px; letter-spacing: .3px; color: var(--ink-2); pointer-events: none; text-transform: uppercase; white-space: nowrap; }
-/* While dragging, a hand count is a drop target for that hand. */
-body.dragging .hand-label { pointer-events: auto; padding: 4px 8px; margin: -4px -2px; border: 1px dashed rgba(255,255,255,.35); border-radius: 6px; background: rgba(0,0,0,.35); }
-body.dragging .hand-label.drop-hover { outline: 2px solid #c9a65a; outline-offset: 0; }
-.opp-lands .row.can-open::after, .opp-lands .row-box.open::before, .my-lands:has(.hand-label) .row.can-open::after { top: auto; bottom: 3px; }
+.counters-cell .turn-label { font-size: 10px; letter-spacing: .3px; text-transform: uppercase; font-weight: 600; color: var(--hot); white-space: nowrap; flex: none; }
+/* Held upright: "Turn N" over the name, life over hand size. Held sideways the box is short, so each
+   pair shares one line. */
+.ctr-head, .ctr-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 /* Turn side: a faint red wash from the attacking (active) player's side to blue on the defender's. */
 /* Turn tint: each player's half of the board gets its own layer, spanning exactly that player's
    rows (the opponent's two rows on top, this side's three below), so the split follows the row
@@ -299,13 +295,14 @@ body.dragging .hand-label.drop-hover { outline: 2px solid #c9a65a; outline-offse
 .board.their-turn::after { background: linear-gradient(to bottom, rgba(60, 110, 220, 0), rgba(60, 110, 220, .12) calc(2 * var(--seam)), rgba(60, 110, 220, .38)); }
 /* Attacking (active) player in the hot colour, defending player in the cool one, matching the board gradient. */
 :root { --hot: #ff7b5f; --cool: #7aa7ff; }
-.counters-cell.role-atk .ctr-name, .slot-label .role-atk, .hand-label .role-atk { color: var(--hot); }
-.counters-cell.role-def .ctr-name, .slot-label .role-def, .hand-label .role-def { color: var(--cool); }
+.counters-cell.role-atk .ctr-name, .slot-label .role-atk { color: var(--hot); }
+.counters-cell.role-def .ctr-name, .slot-label .role-def { color: var(--cool); }
 .ctr-name { font-size: 12px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ctr-life { font-size: 17px; font-weight: 700; line-height: 1.1; }
 .ctr-small { font-size: 11px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-height: 520px) {
   .counters-cell { padding: 2px 5px; gap: 0; }
+  .ctr-head, .ctr-main { flex-direction: row; align-items: baseline; gap: 6px; }
   .ctr-life { font-size: 14px; }
 }
 

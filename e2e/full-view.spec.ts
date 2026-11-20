@@ -16,7 +16,7 @@ test('full view: swipes step through the slot, one stop per group; arrows are si
   const [a, b, c] = await idsIn(page, 'p1.battlefield');
 
   // attach a hand card to the first card, so the slot holds: [a + attachment], b, c
-  await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first());
+  await longPress(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first());
   await barButton(page, 'Attach');
   await inOpenRow(page, 'p1.battlefield', async () => {
       const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
@@ -68,7 +68,7 @@ test('full view: dragging the card up carries its whole group back to the board;
   await startOneDevice(page);
   await playFromHand(page, 'p1.battlefield', 2);
   const [a] = await idsIn(page, 'p1.battlefield');
-  await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first());
+  await longPress(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first());
   await barButton(page, 'Attach');
   await inOpenRow(page, 'p1.battlefield', async () => {
       const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
@@ -127,7 +127,7 @@ test('make lead: an attached card becomes the group\'s lead card; new attachment
       const pa = await point(page, `.board [data-card="${a}"]`, 0.15, 0.5);
       await page.mouse.click(pa.x, pa.y);
   });
-  await longPress(page, page.locator('[data-drop="p1.hand"] [data-card]').first(), 0.15, 0.5);
+  await longPress(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first(), 0.15, 0.5);
   await barButton(page, 'Attach');
   await inOpenRow(page, 'p1.battlefield', async () => {
       const pa2 = await point(page, `.board [data-card="${a}"]`, 0.5, 0.5);

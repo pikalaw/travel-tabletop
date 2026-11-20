@@ -55,7 +55,7 @@ test('a long press on a button or tag only shows its tip; lifting hides it and n
 
   // a held tag moved onto a card does not drag: the hold was the whole gesture
   const bf = page.locator('[data-drop="p1.battlefield"]');
-  const h = await point(page, page.locator('[data-drop="p1.hand"] [data-card]').first()), b = await point(page, bf);
+  const h = await point(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first()), b = await point(page, bf);
   await touchSwipe(cdp, page, h.x, h.y, b.x, b.y, { steps: 14 });
   const card = await point(page, bf.locator('[data-card]').first());
   const plus = bar.locator('[data-counter="plus"]');

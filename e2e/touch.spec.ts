@@ -49,7 +49,7 @@ test('touch: swipes scroll bars and rows without pressing; taps press; drag up p
   await expect(page.locator('.sheet')).toHaveCount(0);
 
   // the library bar scrolls without drawing
-  const handCards = page.locator('.row[data-drop="p1.hand"] [data-card]');
+  const handCards = page.locator('.row.row[data-drop="p1.hand"] [data-card]');
   await page.locator('.pile[data-drop="p1.library"]').tap();
   await page.waitForTimeout(300);
   const n0 = await handCards.count();
@@ -59,7 +59,7 @@ test('touch: swipes scroll bars and rows without pressing; taps press; drag up p
   await bar.getByText('Done').tap();
 
   // an open hand row scrolls; the card order is unchanged
-  const hand = page.locator('.row[data-drop="p1.hand"]');
+  const hand = page.locator('.row.row[data-drop="p1.hand"]');
   const hb = (await hand.boundingBox())!;
   const hy = hb.y + hb.height / 2;
   await page.mouse.click(hb.x + hb.width - 20, hy);

@@ -88,7 +88,7 @@ test('a card with no rules text offers only Custom…; an ability item shows its
   await page.getByRole('button', { name: 'Start game' }).click();
   await page.waitForSelector('.board');
   await unblind(page, 'Player 1');
-  const hand = page.locator('[data-drop="p1.hand"] [data-card]');
+  const hand = page.locator('.row[data-drop="p1.hand"] [data-card]');
   // find a Bear in hand (no text) and an Elf
   let bear = -1, elf = -1;
   for (let i = 0; i < 7; i++) {
