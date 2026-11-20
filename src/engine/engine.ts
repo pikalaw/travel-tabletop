@@ -103,7 +103,7 @@ function changeZone(c: CardInstance, from: ZoneId, to: ZoneId): void {
   const leavingField = isBattlefieldZone(from) && !isBattlefieldZone(to);
   const enteringField = !isBattlefieldZone(from) && isBattlefieldZone(to);
   if (leavingField || enteringField || !isBattlefieldZone(to)) c.tapped = false;
-  if (leavingField) { c.counters = { plus: 0, minus: 0, labeled: {} }; c.face = 'front'; }
+  if (leavingField) { c.counters = { plus: 0, minus: 0, labeled: {} }; c.face = 'front'; delete c.turnPT; }
   c.faceDown = false;
   c.revealed = false;
 }
@@ -525,9 +525,20 @@ function run(input: GameState, cmd: Command): ApplyResult {
       state.activePlayer = to;
       state.turn += 1;
       clearCombat(state);
+      for (const c of Object.values(state.cards)) delete c.turnPT; // "until end of turn" ends
       for (const z of [`${to}.battlefield`, `${to}.lands`] as const) {
         for (const id of state.zones[z]) state.cards[id]!.tapped = false;
       }
+      break;
+    }
+
+    case 'adjustPT': {
+      const n = need(p.cardId, p.from); if (!located(n)) return n;
+      if (!isBattlefieldZone(n.from)) return fail('invalid', 'Only a card in play gets power and toughness changes.');
+      if (!isInt(p.power) || !isInt(p.toughness)) return fail('invalid', 'bad change');
+      const power = (n.card.turnPT?.power ?? 0) + p.power, toughness = (n.card.turnPT?.toughness ?? 0) + p.toughness;
+      if (power || toughness) n.card.turnPT = { power, toughness };
+      else delete n.card.turnPT;
       break;
     }
 
@@ -574,7 +585,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
 /** Commands that change a card in play, and so mark it as changed (see `CardInstance.changed`). */
 const MARKING: ReadonlySet<Command['type']> = new Set<Command['type']>([
   'move', 'attach', 'detach', 'detachAll', 'setLead', 'tap', 'flip', 'setFaceDown',
-  'addCounter', 'removeCounter', 'createToken', 'attack', 'block', 'putAbility',
+  'addCounter', 'removeCounter', 'createToken', 'attack', 'block', 'putAbility', 'adjustPT',
 ]);
 
 /**
@@ -635,6 +646,7 @@ export function checkInvariants(state: GameState): string | null {
   for (const c of Object.values(state.cards)) {
     const z = seen.get(c.id)!;
     if (c.isToken && !isBattlefieldZone(z)) return `token ${c.id} is off the battlefield`;
+    if (c.turnPT && (!isBattlefieldZone(z) || (!c.turnPT.power && !c.turnPT.toughness))) return `card ${c.id} has a turn P/T change ${JSON.stringify(c.turnPT)} in ${z}`;
     if ((c.attacking || c.blocking) && !isBattlefieldZone(z)) return `card ${c.id} has combat marks off the battlefield`;
     if (c.attacking && zoneOwner(z) !== state.activePlayer) return `card ${c.id} attacks from the defending side`;
     if (c.blocking && zoneOwner(z) === state.activePlayer) return `card ${c.id} blocks from the attacking side`;
