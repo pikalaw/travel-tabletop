@@ -45,6 +45,12 @@ export interface CardInstance {
    */
   changed?: { by: PlayerId; turn: number };
   /**
+   * Power and toughness changes until end of turn (pumps, or damage marked as −toughness), as the
+   * sum of the full view's +1/+0, −1/+0, +0/+1 and +0/−1 taps. Only on a card in play, never 0/0;
+   * cleared when the turn passes or the card leaves play. Added in protocol 8.
+   */
+  turnPT?: { power: number; toughness: number };
+  /**
    * Set on an ability on the stack (id `a<n>`): its text and the card it came from. It shows the
    * source's picture and name, copied when it was put there, and is face down if the source was.
    * It exists only on the stack: moving it anywhere else deletes it. Added in protocol 5.

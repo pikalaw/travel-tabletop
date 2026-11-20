@@ -36,7 +36,7 @@ test('touch: a vertical swipe scrolls the abilities list; a sideways pull picks 
   await longPress(page, page.locator(`.board [data-card="${card}"]`));
   const cdp = await context.newCDPSession(page);
   const meta = page.locator('.fullcard-meta');
-  const line = page.locator('.abilities .ability.line').nth(1);
+  const line = page.locator('.abilities .ability.line').nth(0); // the first: the ones below start under the footer
 
   // swiping up on a line scrolls the list, and picks nothing up
   const r = (await line.boundingBox())!;
@@ -45,11 +45,11 @@ test('touch: a vertical swipe scrolls the abilities list; a sideways pull picks 
   await expect(page.locator('.fullcard')).toHaveCount(1);
 
   // pulled sideways, the line comes along; dropped on the Stack, it goes there
-  const l2 = (await page.locator('.abilities .ability.line').nth(2).boundingBox())!;
+  const l2 = (await page.locator('.abilities .ability.line').nth(1).boundingBox())!;
   const stack = (await page.locator('[data-drop="stack"]').boundingBox())!;
   const start = { x: l2.x + l2.width / 2, y: l2.y + l2.height / 2 };
   await touchPath(cdp, page, [start, { x: start.x - 90, y: start.y }, { x: stack.x + stack.width / 2, y: stack.y + stack.height / 2 }]);
   await expect(page.locator('.fullcard')).toHaveCount(0);
   await expect(page.locator('[data-drop="stack"] .slot-label b')).toHaveText('1');
-  await expect(page.locator('.ticker-text')).toContainText('Ability number 3');
+  await expect(page.locator('.ticker-text')).toContainText('Ability number 2');
 });

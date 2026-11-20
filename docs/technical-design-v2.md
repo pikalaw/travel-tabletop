@@ -151,6 +151,7 @@ interface CardInstance {
   attacking?: number;         // attack number 1, 2, … while marked attacking
   blocking?: string[];        // ids of the attackers it blocks
   changed?: { by: PlayerId; turn: number }; // last changed in play, by whom and in which turn (protocol 4)
+  turnPT?: { power: number; toughness: number }; // change until end of turn, in play only, never 0/0 (protocol 8)
   ability?: { text: string; sourceId: string }; // an ability on the stack (id a<n>), and its source (protocol 5)
 }
 
@@ -176,7 +177,7 @@ interface GameState {
 ```
 
 - **Zones.** 15 in all: seven kinds per player plus the shared `stack`. "Battlefield zones" are a player's `battlefield` and `lands`. A zone's owner (the part before the dot) is the player whose side it is on, which the app also treats as control.
-- **Invariants** (`checkInvariants`, run by the property tests after every command): every card id is in exactly one zone; every zone entry exists in `cards`; a token is only in a battlefield zone; the attachment and combat rules below hold.
+- **Invariants** (`checkInvariants`, run by the property tests after every command): every card id is in exactly one zone; every zone entry exists in `cards`; a token is only in a battlefield zone; `turnPT` is only on a card in a battlefield zone and never 0/0; the attachment and combat rules below hold.
 - **Not in state:** viewer and perspective, open slots, sheets, the full view, the matchup highlight, pointer and combat modes. These are local UI state per device.
 - **Card definitions** live in storage; the state carries `defId` and `name` only.
 
@@ -207,7 +208,7 @@ interface CommandEnvelope { type: string; actor: Actor; clientSeq?: number; payl
 | `setLibraryTopFaceUp` | player, value |  |
 | `setPlayerCounter` | player, key, value | Rounded to an integer |
 | `addPlayerCounter` / `removePlayerCounter` | player, key, value? | Names unique (case-insensitive); `life` cannot be removed |
-| `passTurn` | to? | activePlayer = to (default the other); turn + 1; untaps the new active player's battlefield and lands; clears combat marks |
+| `passTurn` | to? | activePlayer = to (default the other); turn + 1; untaps the new active player's battlefield and lands; clears combat marks and every card's `turnPT` |
 | `concede` | player | result = { winner: other, reason: 'concede' } |
 | `endGame` | winner? | result = { winner, reason: 'ended' } |
 | `attach` / `detach` | see Attachments |  |
@@ -215,6 +216,7 @@ interface CommandEnvelope { type: string; actor: Actor; clientSeq?: number; payl
 | `setLead` | cardId (an attached card), from | Makes it the group's lead (host): it swaps places with the old lead, the rest of the group attaches to it, and the old lead's `attacking` number, its `blocking` list and every block aimed at it move to the new lead; `tapped` and counters stay on their own cards; invalid on a card that is not attached. Added in protocol 3 |
 | `attack` / `block` / `endCombat` | see Combat marks |  |
 | `putAbility` | cardId (the source, in any zone), from, text | New item `a<n>` on top of the stack: `ability = { text, sourceId }` with the source's `defId` (its picture), name, deckId and owner, and face down if the source is. Text is trimmed; empty or over 2,000 characters is invalid. An item exists only on the stack: `move` to any other zone deletes it, and `attach` of an item is invalid. Added in protocol 5 |
+| `adjustPT` | cardId, from (a battlefield zone), power, toughness (integers) | Adds to the card's `turnPT`; a sum of 0/0 deletes it. Invalid for a card out of play. Added in protocol 8 |
 
 `undo` and `redo` are handled by the host, not the engine (see Host). `replay` mirrors them: an undo puts the state it leaves on a redo list, a redo takes it back, and an applied command clears the list. Randomness: `randomNeeded(state, cmd)` returns how many numbers the host must supply (all deck cards for `startGame`, the zone size for `shuffle`, else 0); the engine reads them from `cmd.random`, clamped to \[0, 1).
 
@@ -222,7 +224,7 @@ interface CommandEnvelope { type: string; actor: Actor; clientSeq?: number; payl
 
 - same zone: nothing changes;
 - leaving the battlefield zones, entering them, or going to any non-battlefield zone: `tapped = false`;
-- leaving the battlefield zones: counters cleared and `face = 'front'`;
+- leaving the battlefield zones: counters and `turnPT` cleared and `face = 'front'`;
 - any zone change: `faceDown = false`, `revealed = false`.
 
 They are inserted at `toIndex`, clamped to the destination's length; no index means the end. `moved` lists `{ id, from, to, toIndex }` for the log and ticker.
@@ -243,7 +245,7 @@ After every command `fixAttachments` restores these rules:
 
 `fixCombat` runs after every command, after `fixAttachments`. A card not in a battlefield zone loses both marks. A card off the active player's side loses `attacking`, and a card on the active player's side loses `blocking`, so a change of control removes a creature from combat. A blocker's references to cards no longer attacking are dropped.
 
-**Changed marks.** `fixChanged` runs after `fixCombat`. A card out of play loses `changed`. On `passTurn` it drops marks with `turn < state.turn - 1`. A marking command (`move` except a reorder within one zone, `attach`, `detach`, `detachAll`, `setLead`, `tap`, `flip`, `setFaceDown`, `addCounter`, `removeCounter`, `createToken`, `attack`, `block`, `putAbility`) sets `changed = { by, turn }` on every card it touched (the payload's `cardId` and the moved cards) that is now in play; `by` is the actor, or the active player for `table`, and `host` marks nothing. When `by` is the active player, marks with `turn < state.turn` are dropped first. The untap in `passTurn`, `untapAll` and `endCombat` mark nothing. `checkInvariants` checks that only cards in play carry a mark and none is older than the previous turn, and that every ability item is on the stack. The v1 compatibility replay compares states without `changed`, a field v1 never had.
+**Changed marks.** `fixChanged` runs after `fixCombat`. A card out of play loses `changed`. On `passTurn` it drops marks with `turn < state.turn - 1`. A marking command (`move` except a reorder within one zone, `attach`, `detach`, `detachAll`, `setLead`, `tap`, `flip`, `setFaceDown`, `addCounter`, `removeCounter`, `createToken`, `attack`, `block`, `putAbility`, `adjustPT`) sets `changed = { by, turn }` on every card it touched (the payload's `cardId` and the moved cards) that is now in play; `by` is the actor, or the active player for `table`, and `host` marks nothing. When `by` is the active player, marks with `turn < state.turn` are dropped first. The untap in `passTurn`, `untapAll` and `endCombat` mark nothing. `checkInvariants` checks that only cards in play carry a mark and none is older than the previous turn, and that every ability item is on the stack. The v1 compatibility replay compares states without `changed`, a field v1 never had.
 
 **Notices** are logged and broadcast but change no state: `peek` (zone, n), `revealTop` (zone, n, ids), `searchOpen` / `searchClose` (zone), `inspect` (zone), `point` (cardId? zone?), `showCard` (cardId, zone), `coinFlip`, `rollDie` (sides), `randomPick` (zone), `info`. The host fills results: coin `heads` / `tails`; die sides clamped to 2–1000 with result 1…sides; randomPick's `cardId` (an empty zone is invalid). A `searchClose` on a library is followed by a host-issued `shuffle`. Alert notices: peek, revealTop, searchOpen, searchClose, inspect, coinFlip, rollDie, randomPick.
 
@@ -433,6 +435,8 @@ A card in play with `changed` gets a `.changed-bar` (4 px, `--hot` when `changed
 
 **Game screen** (`Game.tsx`). `UiState`: viewer, perspective, open slots (a list), `mode` (above, with the library zone and N for the library footer; `BoardCtx.library` outlines that pile with class `picked`, and `onTap` returns to normal mode on any tap whose zone isn't a library, outside a sheet, before handling it as usual), sheet, full-view card `{ cardId, zone, anchor }`, the highlighted matchup's card id, reveal screen, the unblind chooser (`choosing`), the label name; plus the art map, the log lines (the whole game) and the pointer ring.
 
+- **Power and toughness this turn** (`TurnPT` in `Overlays.tsx`): in the full view of a card in play (`FullActions.pt`), "This turn" with − and + steppers for power and toughness, styled like the counter steppers; each tap sends `adjustPT` with ±1. A tap on a number opens a prompt (the full keyboard, so a minus sign can be typed; `−` is read as `-`) and sends the difference. On the board, `Badges` adds a dashed teal `.badge.pt` ("+2/−1", from `ptText` in `engine/view.ts`) that is not draggable.
+- **Tokens button** in both footers (one `tokensButton` element): the main footer and combat mode, since tokens often arrive mid-combat.
 - **Tokens sheet:** `gameTokens(state, tokenDecks, art)` lists the definition ids of every token deck whose `forDecks` includes a deck in the game, each once, sorted by name; the sheet shows them as `.token-grid`: two rows, `grid-auto-flow: column`, scrolling sideways. It is in `SCROLL_SEL`, so a mostly sideways movement pans it and any other movement on a token drags it. The built-in basic tokens are made for the two sample decks (fixture version 3). A long-press or spread on a token opens `CardViewer` (`CardViewer.tsx`, shared with the deck page) over the sheet, stepping through the same list; its drag up closes it and hands the sheet's element for that token to a board drag (`adopt`), as the full view does for a card.
 - **Full-screen card frame** (`CardFrame.tsx`, with `cardGestures.ts`): the large picture, the ← and → signs (shown where `onPrev` or `onNext` is set), the arrow keys (ignored while typing in a field) and `useCardGestures({ onTap, onPrev, onNext, onDragOut, onClose })`: a tap, a sideways swipe (50 px), a drag up (40 px, handed off) and a swipe down (50 px). The pointer is captured on press, so a mouse swipe that ends past the card's edge still counts; it is released when a drag up hands off. `FullCard` and `CardViewer` both draw it, so the full view, the deck page and the token viewer look and swipe alike; only the callbacks and what each screen draws around the frame differ (the full view's tap toggles tapped and it adds details and footer actions; the viewer's tap closes and it adds the rulings link and a caption with name, position and Flip; its own styles size the picture to the card, so those sit right under it). Rule: the frame holds only what every screen has; anything one screen needs stays in that screen, and a second one-screen option is the signal to split the frame again.
 - **Pass turn (one device):** after `passTurn` is sent the screen blinds (`viewer` = `'nobody'`), as Blind my hand does.

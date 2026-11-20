@@ -52,6 +52,28 @@ describe('engine basics', () => {
     expect(checkInvariants(h.state)).toBeNull();
   });
 
+  it('power and toughness changes this turn add up, clear at 0/0, on leaving play and when the turn passes', () => {
+    const h = started();
+    const [a, b] = h.state.zones['p1.hand'];
+    for (const id of [a, b]) h.dispatch({ type: 'move', actor: 'p1', payload: { cardId: id, from: 'p1.hand', to: 'p1.battlefield' } });
+    const pt = (power: number, toughness: number, id = a) => h.dispatch({ type: 'adjustPT', actor: 'p1', payload: { cardId: id, from: 'p1.battlefield', power, toughness } });
+    pt(1, 0); pt(1, 0); pt(0, -3);
+    expect(h.state.cards[a].turnPT).toEqual({ power: 2, toughness: -3 });
+    pt(-2, 3);
+    expect(h.state.cards[a].turnPT).toBeUndefined();
+    // only in play
+    expect(h.dispatch({ type: 'adjustPT', actor: 'p1', payload: { cardId: h.state.zones['p1.hand'][0], from: 'p1.hand', power: 1, toughness: 0 } }).ok).toBe(false);
+    // leaving play clears it
+    pt(1, 1);
+    h.dispatch({ type: 'move', actor: 'p1', payload: { cardId: a, from: 'p1.battlefield', to: 'p1.graveyard' } });
+    expect(h.state.cards[a].turnPT).toBeUndefined();
+    // the turn passing clears every card's, on both sides
+    pt(0, -2, b);
+    h.dispatch({ type: 'passTurn', actor: 'p1', payload: {} });
+    expect(h.state.cards[b].turnPT).toBeUndefined();
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
   it('a token is made only on a battlefield, and leaving one for any other zone, the stack too, deletes it', () => {
     const h = started();
     for (const to of ['p1.graveyard', 'p1.hand', 'p1.library', 'p1.exile', 'stack']) {
@@ -615,7 +637,7 @@ describe('untrusted payloads', () => {
   it('any payload at all leaves a valid state or an error', () => {
     const anyPayload = fc.dictionary(fc.constantFrom('cardId', 'from', 'to', 'toZone', 'toCardId', 'attackerId', 'attackerZone', 'player', 'kind', 'label', 'n', 'value', 'zone', 'key', 'toIndex', 'defId', 'name', 'owner', 'winner'),
       fc.oneof(fc.constantFrom<unknown>(...ZONES, 'p1', 'p2', 'c1', 'c3', 'plus', 'label', null, undefined, true, -1, 2.5, 1e9), fc.anything()));
-    fc.assert(fc.property(fc.constantFrom(...[...new Set(['move', 'tap', 'attach', 'detach', 'attack', 'block', 'addCounter', 'removeCounter', 'createToken', 'removeToken', 'draw', 'mill', 'setPlayerCounter', 'addPlayerCounter', 'removePlayerCounter', 'passTurn', 'concede', 'endGame', 'untapAll', 'flip', 'setFaceDown', 'reveal', 'setLibraryTopFaceUp', 'endCombat'])]), anyPayload, (type, payload) => {
+    fc.assert(fc.property(fc.constantFrom(...[...new Set(['move', 'tap', 'attach', 'detach', 'attack', 'block', 'addCounter', 'removeCounter', 'createToken', 'removeToken', 'draw', 'mill', 'setPlayerCounter', 'addPlayerCounter', 'removePlayerCounter', 'passTurn', 'concede', 'endGame', 'untapAll', 'flip', 'setFaceDown', 'reveal', 'setLibraryTopFaceUp', 'endCombat', 'adjustPT'])]), anyPayload, (type, payload) => {
       const h = started();
       h.dispatch({ type, actor: 'p2', payload });
       expect(checkInvariants(h.state)).toBeNull();

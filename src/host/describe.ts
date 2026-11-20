@@ -2,7 +2,7 @@
 // Card names appear only when both players could see the card before or after the change.
 // Commands reach here only after the engine applied them, so their payloads are valid.
 
-import { zoneKind, zoneOwner, visibleTo } from '../engine/view';
+import { zoneKind, zoneOwner, visibleTo, ptText } from '../engine/view';
 import { assertNever, type Command, type Movement, type Notice, type NoticeKind } from '../types/commands';
 import type { Actor, GameState, ZoneId } from '../types/state';
 
@@ -118,6 +118,11 @@ export function describeCommand(cmd: Command, before: GameState, after: GameStat
       const p = cmd.payload;
       const t = p.text.trim();
       return `${name} put an ability of ${cn(p.cardId, p.from, p.from)} on the stack: “${t.length > 80 ? `${t.slice(0, 79)}…` : t}”`;
+    }
+    case 'adjustPT': {
+      const p = cmd.payload;
+      const now = st.cards[p.cardId]?.turnPT ?? { power: 0, toughness: 0 };
+      return `${name}: ${cn(p.cardId, p.from, p.from)} ${ptText(p)} this turn (now ${ptText(now)})`;
     }
     case 'concede': return `${st.players[cmd.payload.player].name} conceded`;
     case 'endGame': return 'Game ended';

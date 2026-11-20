@@ -5,7 +5,7 @@ import { useState, useRef } from 'preact/hooks';
 import type { ComponentChildren, JSX } from 'preact';
 import { promptBox } from './Dialogs';
 import { Row, cardImage, BACK_URL, type BoardCtx } from './Cards';
-import { zoneKind, zoneOwner, other, canSeeFace, findZone } from '../engine/view';
+import { zoneKind, zoneOwner, other, canSeeFace, findZone, signed } from '../engine/view';
 import { artUrl, sizeFor, type Art } from '../storage/art';
 import { abilitiesOf } from './abilities';
 import type { FullModel } from './fullModel';
@@ -135,6 +135,8 @@ export interface FullCardProps {
   onClose?: (() => void) | null;
   /** A tap on the card taps or untaps it (when the model allows). */
   onToggleTap?: (() => void) | null;
+  /** Add to the card's power and toughness until end of turn. */
+  onPT?: ((power: number, toughness: number) => void) | null;
   /** Put typed text (Custom…) on the stack as an ability (when the model offers abilities). */
   onAbility?: ((text: string) => void) | null;
   /**
@@ -145,7 +147,35 @@ export interface FullCardProps {
   onAbilityDrag?: ((el: HTMLElement, e: PointerEvent, x0: number, y0: number) => void) | null;
 }
 
-export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null, onToggleTap = null, onAbility = null, onAbilityDrag = null }: FullCardProps) {
+/**
+ * "This turn: − +2 + / − −1 +": the card's power and toughness changes until end of turn (pumps, or
+ * damage as −toughness), stepped like counters. A tap on a number types a value (with a sign, so
+ * the full keyboard).
+ */
+function TurnPT({ name, pt, onPT }: { name: string; pt: { power: number; toughness: number }; onPT: (power: number, toughness: number) => void }) {
+  const type = async (which: 'power' | 'toughness') => {
+    const v = await promptBox({ title: `${name}: ${which} this turn`, body: 'The change until end of turn, e.g. 2 or −3.', value: String(pt[which]), ok: 'Set' });
+    const n = v == null ? NaN : Number(v.trim().replace('−', '-'));
+    if (Number.isInteger(n) && n !== pt[which]) onPT(which === 'power' ? n - pt.power : 0, which === 'toughness' ? n - pt.toughness : 0);
+  };
+  const step = (which: 'power' | 'toughness', label: string) => (
+    <span class="pt-step" data-pt={which}>
+      <button class="btn round ctr-step" aria-label={`${label} −1`} onClick={() => onPT(which === 'power' ? -1 : 0, which === 'toughness' ? -1 : 0)}>−</button>
+      <button class={`pt-val${pt[which] ? ' set' : ''}`} aria-label={`${label} this turn`} onClick={() => void type(which)}>{signed(pt[which])}</button>
+      <button class="btn round ctr-step" aria-label={`${label} +1`} onClick={() => onPT(which === 'power' ? 1 : 0, which === 'toughness' ? 1 : 0)}>+</button>
+    </span>
+  );
+  return (
+    <div class="turn-pt">
+      <span class="turn-pt-label">This turn</span>
+      {step('power', 'Power')}
+      <span class="pt-slash">/</span>
+      {step('toughness', 'Toughness')}
+    </div>
+  );
+}
+
+export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter = null, step = null, onStep = () => {}, onDragOut = null, onClose = null, onToggleTap = null, onPT = null, onAbility = null, onAbilityDrag = null }: FullCardProps) {
   const st = ctx.state;
   const { card, zone } = model;
   const cardId = card.id;
@@ -300,6 +330,7 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
           {card.isToken ? ' · token' : ''}
           {art?.back ? ' · double-faced' : ''}
         </span>
+        {model.actions.pt && onPT ? <TurnPT name={nameOf(card)} pt={card.turnPT ?? { power: 0, toughness: 0 }} onPT={onPT} /> : null}
         {/* Near the top, so it shows without scrolling on a phone held upright. */}
         {rulings.length ? (
           <button class="rulings-link" onClick={() => setRulingsFor(cardId)}>

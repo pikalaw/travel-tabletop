@@ -249,6 +249,14 @@ body.dragging .pile[data-layout="library"].drop-hover:is(.drop-top, .drop-bottom
 .badge[data-badge]::after { content: ""; position: absolute; inset: -8px -3px; }
 .badge.plus { color: #9be7a8; } .badge.minus { color: #ffa29a; } .badge.label { color: #d7c58f; }
 .badge.big { font-size: 15px; line-height: 26px; padding: 0 10px; border-radius: 13px; }
+/* The power/toughness change until end of turn: teal and dashed, so it never reads as a counter. */
+.badge.pt { color: var(--accent); border-style: dashed; border-color: var(--accent); }
+.turn-pt { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+.turn-pt-label { font-size: 13px; color: var(--ink-2); margin-right: 2px; }
+.pt-step { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 20px; background: rgba(0,0,0,.6); }
+.pt-val { min-width: 44px; min-height: 34px; padding: 0 6px; font-size: 18px; font-weight: 700; color: var(--ink-2); background: none; border: 0; font-variant-numeric: tabular-nums; }
+.pt-val.set { color: var(--accent); }
+.pt-slash { font-size: 18px; color: var(--ink-3); }
 
 /* Drag and drop */
 .drag-ghost { position: fixed; z-index: 1000; pointer-events: none; opacity: .9; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.6); transform: scale(1.06); }

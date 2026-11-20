@@ -3,7 +3,7 @@
 import { useRef } from 'preact/hooks';
 import type { ComponentChildren, JSX } from 'preact';
 import { useSize } from './hooks';
-import { canSeeFace, zoneKind } from '../engine/view';
+import { canSeeFace, zoneKind, ptText } from '../engine/view';
 import { sizeFor, artUrl, type Art, type ImageSize } from '../storage/art';
 import type { CardInstance, GameState, Viewer, ZoneId } from '../types/state';
 import backSvg from '../assets/back.svg';
@@ -72,6 +72,8 @@ function Badges({ card, zone, interactive }: { card: CardInstance; zone: ZoneId;
       </span>,
     );
   }
+  // Not a counter: the change until end of turn, set in the full view (so it cannot be dragged off).
+  if (card.turnPT) items.push(<span class="badge pt" title="Power and toughness change this turn">{ptText(card.turnPT)}</span>);
   if (!items.length) return null;
   return <div class="badges">{items}</div>;
 }

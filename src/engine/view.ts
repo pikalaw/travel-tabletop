@@ -34,6 +34,12 @@ export function isZone(zone: unknown): zone is ZoneId {
   return typeof zone === 'string' && ZONE_SET.has(zone);
 }
 
+/** A signed number as printed on cards: "+2", "−1" (a real minus sign), "+0". */
+export const signed = (n: number): string => (n < 0 ? `−${-n}` : `+${n}`);
+
+/** A power/toughness change, "+2/−1". */
+export const ptText = (pt: { power: number; toughness: number }): string => `${signed(pt.power)}/${signed(pt.toughness)}`;
+
 /** Zones where cards are "on the battlefield" (tokens survive only here). */
 export function isBattlefieldZone(zone: string): boolean {
   const k = zoneKind(zone);

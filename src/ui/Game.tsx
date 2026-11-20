@@ -588,6 +588,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   const showAttack = actor === 'table' || actingPlayer === state.activePlayer;
 
   // ----- footer -----
+  // In both footers: tokens often arrive mid-combat (tapped and attacking).
+  const tokensButton = <TipButton class="btn icon token-btn" data-trash label="Tokens" tip="Tokens: drag one onto the battlefield. Drop a token here to remove it." onClick={() => setSheet({ kind: 'tokens' })}><PawnIcon /></TipButton>;
   let footer;
   if (model) {
     const { card, zone: fullZone, actions: a } = model;
@@ -633,6 +635,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
             : <>Tap {state.players[state.activePlayer].name}’s attackers, or a blocker then its attacker.</>}</span>
         <TipButton class={`btn${combat.vigilance ? ' on' : ''}`} aria-pressed={combat.vigilance} tip="The next attacker you tap stays untapped, for a creature with vigilance."
           onClick={() => dispatch({ type: 'mode', mode: { ...combat, vigilance: !combat.vigilance } })}>Vigilance</TipButton>
+        {tokensButton}
         <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton>
         {/* Leaves combat mode with every mark kept; Combat comes back to it, End combat ends it. */}
         <TipButton class="btn icon primary" label="Pause" tip="Pause combat: back to normal play, for instants and abilities; the marks stay." onClick={toNormal}><PauseIcon /></TipButton>
@@ -676,7 +679,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         {matchSet?.size ? <TipButton class="btn on" tip="Stop highlighting the combat matchup." onClick={() => dispatch({ type: 'match', cardId: null })}>Clear highlight</TipButton> : null}
         {/* No ⚔ Attack chip here: attackers are marked in combat mode. */}
         <CounterChips label={label} attack={false} />
-        <TipButton class="btn icon token-btn" data-trash label="Tokens" tip="Tokens: drag one onto the battlefield. Drop a token here to remove it." onClick={() => setSheet({ kind: 'tokens' })}><PawnIcon /></TipButton>
+        {tokensButton}
         <TipButton class="btn icon" label="Dice" tip="Dice, a coin flip, or a random card." onClick={() => setSheet({ kind: 'dice' })}><DieIcon /></TipButton>
         <TipButton class={`btn icon ${pointMode ? 'on' : ''}`} aria-pressed={pointMode} label="Point" tip="Point: tap a card or slot to highlight it for the other player."
           onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}><PointIcon /></TipButton>
@@ -728,6 +731,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
               step={fullStep} onStep={(id) => dispatch({ type: 'full', full: { cardId: id, zone: fullZone, anchor: id } })}
               onDragOut={(e, x0, y0) => dragOutOfFull(full.cardId, fullZone, e, x0, y0)} onClose={closeFull}
               onToggleTap={() => send('tap', { cardId: full.cardId, from: fullZone })}
+              onPT={(power, toughness) => send('adjustPT', { cardId: full.cardId, from: fullZone, power, toughness })}
               onAbility={(text) => send('putAbility', { cardId: full.cardId, from: fullZone, text })}
               onAbilityDrag={(el, e, x0, y0) => {
                 if (!gestures.current) return;

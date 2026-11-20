@@ -16,6 +16,8 @@ export interface FullActions {
   /** How many cards are attached to this card's group's lead (0: no Detach all). */
   detachAll: number;
   counters: boolean;
+  /** The "This turn" power/toughness steppers, for a card in play. */
+  pt: boolean;
 }
 
 export interface FullModel {
@@ -66,6 +68,7 @@ export function fullModel(state: GameState, cardId: string, zone: ZoneId, viewer
       makeLead: !!card.attachedTo,
       detachAll: attached,
       counters: isCard,
+      pt: field && isCard,
     },
   };
 }
