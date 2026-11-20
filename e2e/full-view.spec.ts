@@ -178,3 +178,16 @@ test('full view: a tap on the card taps or untaps it; a tapped card stays uprigh
   await expect(page.locator('.fullcard-meta')).not.toContainText('tapped');
   errs.expectNone();
 });
+
+test('side by side, the picture never covers the details, whatever the window shape', async ({ page }) => {
+  await startOneDevice(page);
+  await playFromHand(page, 'p1.battlefield');
+  const [a] = await idsIn(page, 'p1.battlefield');
+  await longPress(page, page.locator(`.board [data-card="${a}"]`));
+  for (const [w, h] of [[844, 390], [930, 920], [1280, 720], [990, 938]] as const) {
+    await page.setViewportSize({ width: w, height: h }); await page.waitForTimeout(150);
+    const img = (await page.locator('.fullcard .card-frame-pic img').boundingBox())!, meta = (await page.locator('.fullcard-meta').boundingBox())!;
+    expect(img.x + img.width, `${w}×${h}`).toBeLessThanOrEqual(meta.x);
+    expect(img.width / img.height).toBeCloseTo(63 / 88, 1);
+  }
+});

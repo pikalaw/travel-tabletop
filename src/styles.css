@@ -365,14 +365,19 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 /* Full-screen card */
 .full-wrap { position: absolute; inset: 0; z-index: 30; background: #050a08; display: flex; align-items: center; justify-content: center; padding: 10px; }
 .fullcard { display: flex; gap: 16px; align-items: center; justify-content: center; height: 100%; width: 100%; flex-wrap: nowrap; }
-.fullcard > .card-frame { flex: 0 1 auto; min-width: 0; max-width: 62%; }
-.fullcard-meta { flex: 0 1 280px; min-width: 0; }
+/* Side by side: the details get a fixed width (room for the This turn line), the card the rest. */
+.fullcard > .card-frame { flex: 1 1 0; min-width: 0; }
+.fullcard-meta { flex: 0 0 340px; min-width: 0; }
 /* The shared frame of a full-screen card (CardFrame): the game's full view and the card viewer */
 .card-frame { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; min-height: 0; }
 .card-frame-pic { position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; touch-action: none; }
+/* In the full view the picture is sized to fit its box both ways (a size container), so it can never
+   spill past the frame onto the details beside it. */
+.fullcard .card-frame-pic { container-type: size; align-self: stretch; }
+.fullcard .card-frame-pic img { height: min(100cqh, 100cqw * 88 / 63); max-width: none; }
 .card-frame-pic img { height: 100%; max-height: 100%; max-width: 92vw; object-fit: contain; border-radius: 4.5%/3.2%; box-shadow: 0 10px 40px rgba(0,0,0,.7); }
 .full-badges { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 92vw; }
-.fullcard-meta { display: grid; gap: 4px; max-width: 280px; font-size: 13px; color: var(--ink-2); }
+.fullcard-meta { display: grid; gap: 4px; max-width: 340px; font-size: 13px; color: var(--ink-2); }
 .fullcard-meta b { color: var(--ink); font-size: 16px; }
 .fullcard-meta .hint { font-size: 12px; color: var(--ink-3); }
 @media (orientation: portrait) { .fullcard { flex-direction: column; gap: 10px; } .fullcard > .card-frame { height: 78%; max-width: 100%; } .fullcard-meta { flex: 0 0 auto; } .fullcard-meta { max-width: 92vw; text-align: center; } }
