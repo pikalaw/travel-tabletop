@@ -1,7 +1,7 @@
 // Overlays on the game screen: card viewer sheets, full-screen card, counters, log, tokens,
 // dice, menu.
 
-import { useState, useRef } from 'preact/hooks';
+import { useState, useRef, useLayoutEffect } from 'preact/hooks';
 import type { ComponentChildren, JSX } from 'preact';
 import { promptBox } from './Dialogs';
 import { Row, cardImage, BACK_URL, type BoardCtx } from './Cards';
@@ -259,6 +259,26 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
         </span>
       )),
   ].filter(Boolean);
+  // Held upright, the whole view scrolls, and the card shrinks first: scrolling the details up takes
+  // the room from the picture, down to a third of the view, and only then does the list move (under
+  // the card, which stays at the top). Scrolling back regrows it. The picture keeps its place in the
+  // flow (height + margin = its full size), so the details follow the finger one to one; the scroll
+  // position is only read, never set, so a fling keeps its momentum.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const shrinkOnScroll = () => {
+    const el = rootRef.current;
+    if (!el) return;
+    if (!matchMedia('(orientation: portrait)').matches) { el.style.removeProperty('--frame-h'); el.style.removeProperty('--frame-gap'); return; }
+    const full = el.clientHeight * (row ? 0.66 : 0.78), least = Math.min(full, el.clientHeight / 3);
+    const h = Math.max(least, full - el.scrollTop);
+    el.style.setProperty('--frame-h', `${h}px`);
+    el.style.setProperty('--frame-gap', `${full - h}px`);
+  };
+  useLayoutEffect(() => {
+    shrinkOnScroll();
+    addEventListener('resize', shrinkOnScroll);
+    return () => removeEventListener('resize', shrinkOnScroll);
+  }, [!!row]);
   // The card's abilities, for a face the viewer can see; an ability item shows its own text instead.
   const offer = model.offersAbilities && onAbility ? onAbility : null;
   const abilities = offer ? abilitiesOf(art?.text, card.face, !!art?.back) : [];
@@ -313,7 +333,7 @@ export function FullCard({ ctx, model, row = null, onPick = () => {}, onCounter 
     );
   };
   return (
-    <div class={`fullcard ${row ? 'grouped' : ''}`}>
+    <div class={`fullcard ${row ? 'grouped' : ''}`} ref={rootRef} onScroll={shrinkOnScroll}>
       <CardFrame url={img.url} name={card.name} gestures={gestures} target={{ cardId: card.id, zone }}>
         {badges.length ? <div class="full-badges">{badges}</div> : null}
       </CardFrame>

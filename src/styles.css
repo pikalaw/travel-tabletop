@@ -490,7 +490,14 @@ body.dragging .hand-label.drop-hover { outline: 2px solid #c9a65a; outline-offse
 
 /* Abilities: the full view's list, an ability item's text, and the band on an ability item */
 .fullcard-meta { max-height: 100%; overflow-y: auto; align-content: start; }
-@media (orientation: portrait) { .fullcard-meta { max-height: 22%; } .fullcard.grouped .fullcard-meta { max-height: 34%; } }
+/* Held upright, the whole view scrolls rather than the details alone: the card is sticky at the top
+   and FullCard's scroll handler shrinks it (--frame-h) before the details pass under it. */
+@media (orientation: portrait) {
+  .fullcard { display: block; overflow-y: auto; overscroll-behavior: contain; }
+  .fullcard > .card-frame, .fullcard.grouped > .card-frame { position: sticky; top: 0; z-index: 1; background: #050a08; height: var(--frame-h, 78%); margin-bottom: var(--frame-gap, 0px); padding-bottom: 10px; box-sizing: border-box; }
+  .fullcard.grouped > .card-frame { height: var(--frame-h, 66%); }
+  .fullcard-meta { max-height: none; overflow: visible; margin: 0 auto; }
+}
 .abilities { display: grid; gap: 6px; margin: 6px 0; text-align: left; }
 .ability { text-align: left; white-space: pre-line; background: var(--btn); color: var(--ink); border: 1px solid var(--cell-line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; cursor: pointer; }
 .ability:active { background: var(--btn-2); }

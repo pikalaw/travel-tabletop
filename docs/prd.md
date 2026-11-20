@@ -108,6 +108,7 @@ Any card can be dragged from any slot to any slot, including the opponent's slot
 **Full-screen card view** (long-press)
 
 - Shows the card large on an opaque screen, so the board never shows behind it. Its name, zone and state (tapped, face down, revealed, back face, token, double-faced) are listed beside it.
+- **Held upright, scrolling the details shrinks the card first.** Scrolling up takes room from the picture, down to a third of the screen, so more of the details (abilities, counters, the This turn line) fit; after that the details scroll on under the card, which stays at the top. Scrolling back down regrows it. Each card opens full size.
 - **Tapped cards stay upright here**, so their text can be read; a **↷ Tapped** badge under the card says it is tapped. A tap on a card in play taps or untaps it.
 - Combat marks and counters show in a strip below the card image, never over it, so the card's text stays readable. Counters have − and + buttons. Dragging a counter tag from the footer onto the card adds one; dragging a counter or mark away removes one.
 - **Flip** shows the other face to both players. **Face down** hides the face from everyone but the owner. Both work on any card; the app does not check whether it makes sense.
