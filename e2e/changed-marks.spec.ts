@@ -1,40 +1,51 @@
 import { test, expect } from '@playwright/test';
 import { OPEN, point, startOneDevice, playFromHand, idsIn, drag, tapCard, barButton, resetBar, answerDialog, unblind, watchErrors } from './helpers';
 
-test('changed marks: a left border in the changer\'s role colour, cleared by the next player\'s first change', async ({ page }) => {
+test('changed marks: green for a card that entered play, yellow for a change, cleared by the next player\'s first change or by putting the card back', async ({ page }) => {
   const errs = watchErrors(page);
   await startOneDevice(page);
   const bar = (id: string) => page.locator(`[data-card="${id}"] > .changed-bar`);
 
-  // Player 1 (active) plays two cards and taps one: red borders, the tapped one too
+  // Player 1 (active) plays two cards and taps one: green borders, the tapped one too
   await playFromHand(page, 'p1.battlefield', 2);
   const [a, b] = await idsIn(page, 'p1.battlefield');
   const row = page.locator('[data-drop="p1.battlefield"]');
   if (await row.getAttribute('data-collapsed')) await tapCard(page, b!); // the first tap opens a collapsed row
   await tapCard(page, b!);
   await expect(page.locator(`[data-card="${b}"].tapped`)).toHaveCount(1);
-  for (const id of [a!, b!]) await expect(bar(id)).toHaveClass(/\batk\b/);
+  for (const id of [a!, b!]) await expect(bar(id)).toHaveClass(/\bentered\b/);
   // on a tapped card the border spans the turned picture, on the left of the frame
   const frame = (await page.locator(`[data-card="${b}"]`).boundingBox())!;
   const tb = (await bar(b!).boundingBox())!;
   expect(Math.abs(tb.x - frame.x)).toBeLessThan(2);
   expect(tb.height).toBeLessThan(frame.height - 10);
 
-  // the pass: Player 1's marks stay, now blue (Player 1 defends)
+  // the pass: Player 1's marks stay, still green
   await resetBar(page); await barButton(page, 'Pass turn'); await answerDialog(page, true);
   await unblind(page, 'Player 2');
-  for (const id of [a!, b!]) await expect(bar(id)).toHaveClass(/\bdef\b/);
+  for (const id of [a!, b!]) await expect(bar(id)).toHaveClass(/\bentered\b/);
   // drawing changes no card in play, so nothing clears
   await drag(page, page.locator('.my-lib [data-card]').first(), page.locator('.row[data-drop="p2.hand"]'));
   await expect(bar(a!)).toHaveCount(1);
-  // Player 2's first change clears them; its own card gets a red border
+  // Player 2's first change clears them; its own card gets a green border
   await drag(page, page.locator('.row[data-drop="p2.hand"] [data-card]').first(), page.locator('[data-drop="p2.battlefield"]'));
   const [c] = await idsIn(page, 'p2.battlefield');
-  await expect(bar(c!)).toHaveClass(/\batk\b/);
+  await expect(bar(c!)).toHaveClass(/\bentered\b/);
   for (const id of [a!, b!]) await expect(bar(id)).toHaveCount(0);
-  // undo brings the previous turn's marks back
+  // tapping Player 1's untapped card is a change (yellow); untapping it puts it back (no border)
+  const away = page.locator('.sheet');
+  if (await away.count()) await away.getByRole('button', { name: 'Done' }).click(); // the "while away" list
+  if (await row.getAttribute('data-collapsed')) await tapCard(page, a!); // from this side too
+  await tapCard(page, a!);
+  await expect(bar(a!)).toHaveClass(/\bchanged\b/);
+  await tapCard(page, a!);
+  await expect(bar(a!)).toHaveCount(0);
+  // undo brings the change back, and undo again the previous turn's marks
   await page.getByRole('button', { name: 'Undo' }).click();
-  await expect(bar(a!)).toHaveClass(/\bdef\b/);
+  await expect(bar(a!)).toHaveClass(/\bchanged\b/);
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(bar(a!)).toHaveClass(/\bentered\b/);
   errs.expectNone();
 });
 

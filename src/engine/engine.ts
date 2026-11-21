@@ -577,7 +577,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
 
   fixAttachments(state);
   fixCombat(state);
-  fixChanged(state, cmd, moved);
+  fixChanged(input, state, cmd, moved);
   state.seq = input.seq + 1;
   return { state, moved };
 }
@@ -588,15 +588,47 @@ const MARKING: ReadonlySet<Command['type']> = new Set<Command['type']>([
   'addCounter', 'removeCounter', 'createToken', 'attack', 'block', 'putAbility', 'adjustPT',
 ]);
 
+/** The cards in play (battlefield or lands), with their zones. */
+function inPlayZones(state: GameState): Map<string, ZoneId> {
+  const m = new Map<string, ZoneId>();
+  for (const pl of PLAYERS) for (const z of [`${pl}.battlefield`, `${pl}.lands`] as const) for (const id of state.zones[z]) m.set(id, z);
+  return m;
+}
+
+/**
+ * What a "changed" mark compares against, as a string: everything shown about a card in play,
+ * including what is attached to it and what blocks it (an attach changes only the attached card's
+ * record, but both cards look different). Its place within a row is left out, as reordering marks
+ * nothing.
+ */
+export function cardLook(state: GameState, id: string, zone: ZoneId): string {
+  const c = state.cards[id]!;
+  const labeled = Object.entries(c.counters.labeled).filter(([, n]) => n).sort(([a], [b]) => (a < b ? -1 : 1));
+  const attached: string[] = [], blockedBy: string[] = [];
+  for (const o of Object.values(state.cards)) {
+    if (o.attachedTo === id) attached.push(o.id);
+    if (o.blocking?.includes(id)) blockedBy.push(o.id);
+  }
+  return JSON.stringify([
+    zone, c.tapped, c.face, c.faceDown, c.counters.plus, c.counters.minus, labeled,
+    c.turnPT ?? null, c.attachedTo ?? null, c.attacking ?? null, [...(c.blocking ?? [])].sort(),
+    attached.sort(), blockedBy.sort(),
+  ]);
+}
+
 /**
  * Keep the "changed" marks. A marking command marks the cards it touched that are in play, for
- * the player who sent it (on a blinded table, the active player). The active player's first
- * marking command in a turn clears the marks from earlier turns; a turn pass drops marks more
- * than one turn old; a card out of play has none. Routine changes (the untap when a turn passes,
- * Untap all, ending combat) mark nothing.
+ * the player who sent it (on a blinded table, the active player): `entered` if the card came into
+ * play (or was created) by it, else a change, which remembers the card's look from just before
+ * (`base`). A card that entered keeps `entered` through later changes. A marking command that
+ * puts a card back to its `base` look clears its mark; `putAbility` leaves no `base`, as it
+ * changes nothing visible on the card. The active player's first marking command in a turn
+ * clears the marks from earlier turns; a turn pass drops marks more than one turn old; a card out
+ * of play has none. Routine changes (the untap when a turn passes, Untap all, ending combat) mark
+ * nothing and clear nothing.
  */
-export function fixChanged(state: GameState, cmd: Command, moved: readonly Movement[]): void {
-  const inPlay = new Set([...PLAYERS.flatMap((pl) => [...state.zones[`${pl}.battlefield`], ...state.zones[`${pl}.lands`]])]);
+export function fixChanged(input: GameState, state: GameState, cmd: Command, moved: readonly Movement[]): void {
+  const inPlay = inPlayZones(state);
   for (const c of Object.values(state.cards)) if (c.changed && !inPlay.has(c.id)) delete c.changed;
   if (cmd.type === 'passTurn') {
     for (const c of Object.values(state.cards)) if (c.changed && c.changed.turn < state.turn - 1) delete c.changed;
@@ -614,7 +646,26 @@ export function fixChanged(state: GameState, cmd: Command, moved: readonly Movem
   if (by === state.activePlayer) {
     for (const c of Object.values(state.cards)) if (c.changed && c.changed.turn < state.turn) delete c.changed;
   }
-  for (const id of marked) state.cards[id]!.changed = { by, turn: state.turn };
+  const wasInPlay = inPlayZones(input);
+  for (const id of marked) {
+    const c = state.cards[id]!, old = c.changed;
+    if (!wasInPlay.has(id)) c.changed = { by, turn: state.turn, entered: true };
+    // A mark from an earlier turn that is touched again starts afresh, from the card as it was.
+    else if (old && old.turn === state.turn) c.changed = { ...old, by };
+    else c.changed = { by, turn: state.turn, base: cardLook(input, id, wasInPlay.get(id)!) };
+    if (cmd.type === 'putAbility') delete c.changed.base;
+  }
+  // A card this command put back as it was loses its mark. Only cards whose look this command
+  // changed (or just marked) are checked, so an attacker with vigilance keeps its mark after
+  // combat ends, even though it now looks as it did.
+  for (const [id, z] of inPlay) {
+    const c = state.cards[id]!;
+    if (c.changed?.base === undefined) continue;
+    const now = cardLook(state, id, z);
+    if (now !== c.changed.base) continue;
+    const before = wasInPlay.has(id) ? cardLook(input, id, wasInPlay.get(id)!) : null;
+    if (before !== now || marked.includes(id)) delete c.changed;
+  }
 }
 
 /**
@@ -654,6 +705,7 @@ export function checkInvariants(state: GameState): string | null {
     if (c.ability && z !== 'stack') return `ability ${c.id} is off the stack`;
     if (c.changed && !isBattlefieldZone(z)) return `card ${c.id} has a changed mark out of play`;
     if (c.changed && c.changed.turn < state.turn - 1) return `card ${c.id} has a changed mark from turn ${c.changed.turn}`;
+    if (c.changed?.entered && c.changed.base !== undefined) return `card ${c.id} entered but has a base look`;
   }
   return null;
 }

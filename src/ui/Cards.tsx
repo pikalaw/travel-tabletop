@@ -102,11 +102,11 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
   const w = Math.round(h * RATIO);
   const tapped = card.tapped && (zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands');
   const boxW = tapped ? h : w;
-  // Changed this turn or last: a left border in the colour of the changer's current role (red for
-  // the active player, blue for the other). It sits on the card's frame, which never rotates, so a
+  // Changed this turn or last: a left border, green if the card entered play, yellow if it was
+  // changed in play, for either player. It sits on the card's frame, which never rotates, so a
   // tapped card shows it on its left too, spanning the turned picture's height.
   const inPlay = zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands';
-  const changed = inPlay && card.changed ? (card.changed.by === ctx.state.activePlayer ? 'atk' : 'def') : null;
+  const changed = inPlay && card.changed ? (card.changed.entered ? 'entered' : 'changed') : null;
   const markers: JSX.Element[] = [];
   if (card.isToken) markers.push(<span class="mark token">T</span>);
   if (card.faceDown)

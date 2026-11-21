@@ -40,10 +40,12 @@ export interface CardInstance {
   blocking?: string[];
   /**
    * Who last changed this card while it was in play (battlefield or lands), and in which turn:
-   * drawn as a coloured left border so the other player can see what was just done. Added in
-   * protocol 4.
+   * drawn as a coloured left border so the other player can see what was just done (protocol 4).
+   * `entered`: the card came into play (green), else it was changed (yellow). `base`: for a
+   * change, the card's look (`cardLook`) from just before; the mark goes once the card looks like
+   * that again. Absent where a change can't be put back (an ability put on the stack). Protocol 9.
    */
-  changed?: { by: PlayerId; turn: number };
+  changed?: { by: PlayerId; turn: number; entered?: true; base?: string };
   /**
    * Power and toughness changes until end of turn (pumps, or damage marked as −toughness), as the
    * sum of the full view's +1/+0, −1/+0, +0/+1 and +0/−1 taps. Only on a card in play, never 0/0;
