@@ -75,7 +75,7 @@ Each player sees the same layout from their own side: the opponent's half on top
 
 **Menu** (☰): Blind my hand (one device), Export action log (two devices, or one device once the game is over), Re-pair the guest device (host) or Reconnect to the host (guest), Concede (one per player on one device), Rematch with the same decks (not on the guest), Leave to home screen. Pass turn is only in the footer.
 
-**Sheets.** Sheets you only read or tap (the menu, Recent actions, Dice and random, Player counters, re-pair) open centred on the board, as tall as their content. Sheets you drag cards out of (zone viewers, peek, search and reveal trays, Tokens) open at the top, so your own half of the board stays free to drop on. Confirmation dialogs are centred on the screen.
+**Sheets.** Sheets you only read or tap (the menu, Recent actions, Dice and random, Player counters, re-pair) open centred on the board, as tall as their content. Sheets you drag cards out of (zone viewers, peek, search and reveal trays, Tokens) open at the top, so your own half of the board stays free to drop on. Confirmation dialogs are centred on the screen. The footer buttons that open a sheet (Tokens, Mana, Dice and ☰) are lit while it is open, and a second tap on the same button closes it, so a mistaken tap in the crowded footer is undone where it was made.
 
 ## Zones and interactions
 
