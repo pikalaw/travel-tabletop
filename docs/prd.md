@@ -182,7 +182,7 @@ A card in play that a player just changed carries a coloured **left border**, so
 - **Put back:** a yellow border goes away when anything puts the card back as it was before its first change of the turn: tapped or not, face, counters, power and toughness this turn, its row, what it is attached to and what is attached to it, and combat marks. Its place within a row doesn't count. This includes the automatic changes: ending combat clears an attacker with vigilance, and the untap and the end of "this turn" changes when a turn passes clear a card they put back.
 - **What does not mark:** the untap when a turn passes, ending combat, reordering a row, putting an ability on the stack (the stack shows its source), and anything in a hand, library or other pile. A card that leaves play loses its border.
 - **Tapped cards** show the border on their left too, along the turned card.
-- **When they clear:** the previous turn's borders stay up, drawn dashed in the same colours, until the active player's first change of the new turn, so the next player sees what was just done, even after drawing. Changes the defender makes during the turn (a block, an instant) are this turn's and stay. Borders more than one turn old clear when the turn passes. Undo brings cleared borders back.
+- **When they clear:** the previous turn's borders stay up, drawn thinner in the same colours, until the active player's first change of the new turn, so the next player sees what was just done, even after drawing. Changes the defender makes during the turn (a block, an instant) are this turn's and stay. Borders more than one turn old clear when the turn passes. Undo brings cleared borders back.
 
 ## Counters, tokens and footer tools
 

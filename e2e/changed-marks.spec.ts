@@ -21,11 +21,11 @@ test('changed marks: green for a card that entered play, yellow for a change, cl
   expect(tb.height).toBeLessThan(frame.height - 10);
 
   await expect(bar(a!)).not.toHaveClass(/\bold\b/);
-  // the pass: Player 1's marks stay, still green but dashed
+  // the pass: Player 1's marks stay, still green but thinner
   await resetBar(page); await barButton(page, 'Pass turn'); await answerDialog(page, true);
   await unblind(page, 'Player 2');
   for (const id of [a!, b!]) await expect(bar(id)).toHaveClass(/\bentered\b.*\bold\b/);
-  expect(await bar(a!).evaluate((e) => getComputedStyle(e).backgroundImage)).toContain('repeating-linear-gradient');
+  expect(await bar(a!).evaluate((e) => getComputedStyle(e).width)).toBe('2px');
   expect(await bar(a!).evaluate((e) => getComputedStyle(e).opacity)).toBe('1');
   // drawing changes no card in play, so nothing clears
   await drag(page, page.locator('.my-lib [data-card]').first(), page.locator('.row[data-drop="p2.hand"]'));
