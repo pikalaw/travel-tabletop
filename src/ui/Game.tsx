@@ -542,7 +542,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   }
   const menuItems: (MenuItem | null)[] = [
     same && viewer !== 'nobody' ? { label: 'Blind my hand', onClick: () => { blind(); setSheet(null); } } : null,
-    canPass ? { label: 'Pass the turn', onClick: () => { setSheet(null); passTurn(); } } : null,
     !same || state.result ? { label: 'Export action log (JSON Lines)', onClick: () => void exportLog() } : null,
     session.kind === 'host' && pairing ? { label: 'Re-pair the guest device', onClick: () => setSheet({ kind: 'pair' }) } : null,
     session.kind === 'guest' && pairing ? { label: 'Reconnect to the host', onClick: () => setSheet({ kind: 'pair' }) } : null,
@@ -690,7 +689,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       case 'dice': sheetEl = <DiceSheet ctx={ctx} P={P} send={send} onClose={close} />; break;
       case 'menu': sheetEl = <MenuSheet items={menuItems} onClose={close} />; break;
       case 'pair':
-        if (pairing) sheetEl = <Sheet title={session.kind === 'host' ? 'Re-pair the guest' : 'Reconnect to the host'} onClose={close} tall>{pairing.render(() => setSheet(null))}</Sheet>;
+        if (pairing) sheetEl = <Sheet title={session.kind === 'host' ? 'Re-pair the guest' : 'Reconnect to the host'} onClose={close} tall center>{pairing.render(() => setSheet(null))}</Sheet>;
         break;
     }
   }

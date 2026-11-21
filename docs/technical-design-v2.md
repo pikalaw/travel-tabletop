@@ -458,7 +458,7 @@ A card in play with `changed` gets a `.changed-bar` (4 px; `.entered`, `--good` 
 - **Alerts:** in two-device games, alerts from the other player and all dice results show as toasts. On one device there are no toasts for alerts and no list on unblinding: the changed-card borders show what happened on the board, and the log (Recent actions) has every line, alerts highlighted.
 - **Pointer:** the ring is drawn around the card, or else its slot, for 3 s in the pointer's colour.
 - **Other:** the screen wake lock is requested during play and re-requested when the page becomes visible. A guest that isn't connected is shown greyed.
-- **Sheets** (`Overlays.tsx`) cover the top 36–44% of the board: zone viewer (with Random card), peek, reveal, search and inspect trays, Player counters, Recent actions (with Export log), Tokens, Dice and random, Menu, Re-pair.
+- **Sheets** (`Overlays.tsx`): the ones cards are dragged out of (zone viewer with Random card, peek, reveal, search and inspect trays, Tokens) cover the top 36–44% of the board, leaving the player's own half free as drop targets. The read-or-tap ones (Player counters, Recent actions with Export log, Dice and random, Menu, Re-pair) take `center`: `.sheet.center` is centred on the board (`top: 50%; transform: translateY(-50%)`), `height: auto` up to the board's height. The Menu has no Pass the turn; the footer's hourglass is the one way to pass.
 
 ## Stack and abilities
 

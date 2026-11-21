@@ -44,9 +44,15 @@ export function zoneTitle(state: GameState, zone: ZoneId): string {
 }
 
 /** A panel over the opponent's half of the board. */
-export function Sheet({ title, onClose, children, actions, tall = false }: { title: string; onClose: () => void; children?: ComponentChildren; actions?: ComponentChildren; tall?: boolean }) {
+/**
+ * A sheet over the board. `center`: centred on the screen, for sheets that are only read or
+ * tapped (menu, log, dice, counters, re-pair). Without it the sheet sits at the top, leaving the
+ * player's own half of the board free as drop targets for cards dragged out of it (zone trays,
+ * tokens).
+ */
+export function Sheet({ title, onClose, children, actions, tall = false, center = false }: { title: string; onClose: () => void; children?: ComponentChildren; actions?: ComponentChildren; tall?: boolean; center?: boolean }) {
   return (
-    <div class={`sheet ${tall ? 'tall' : ''}`} role="dialog" aria-label={title}>
+    <div class={`sheet ${tall ? 'tall' : ''} ${center ? 'center' : ''}`} role="dialog" aria-label={title}>
       <div class="sheet-head">
         <span class="sheet-title">{title}</span>
         <span class="sheet-actions">{actions}</span>
@@ -404,7 +410,7 @@ export function CountersSheet({ ctx, pl, send, onClose }: { ctx: BoardCtx; pl: P
   const [adding, setAdding] = useState('');
   const set = (key: string, value: number) => send('setPlayerCounter', { player: pl, key, value });
   return (
-    <Sheet title="Player counters" onClose={onClose} tall>
+    <Sheet title="Player counters" onClose={onClose} tall center>
       <div class={`ctr-panel ${roleOf(st, pl)}`}>
         <h3>{st.players[pl].name}</h3>
         {st.players[pl].counters.map((c) => (
@@ -466,6 +472,7 @@ export function LogSheet({ lines, onClose, onExport }: { lines: readonly LogLine
       title="Recent actions"
       onClose={onClose}
       tall
+      center
       actions={
         <button class="btn ghost" onClick={onExport}>
           Export log
@@ -527,7 +534,7 @@ export function DiceSheet({ ctx, P, send, onClose }: { ctx: BoardCtx; P: PlayerI
     });
   const zones: ZoneId[] = [`${P}.hand`, `${other(P)}.hand`, `${P}.graveyard`, `${P}.battlefield`, `${other(P)}.battlefield`];
   return (
-    <Sheet title="Dice and random" onClose={onClose}>
+    <Sheet title="Dice and random" onClose={onClose} center>
       <div class="dice">
         <button class="btn" onClick={() => send('coinFlip', {})}>
           Flip a coin
@@ -567,7 +574,7 @@ export interface MenuItem { label: string; onClick: () => void; danger?: boolean
 
 export function MenuSheet({ items, onClose }: { items: readonly (MenuItem | null | false)[]; onClose: () => void }) {
   return (
-    <Sheet title="Game menu" onClose={onClose}>
+    <Sheet title="Game menu" onClose={onClose} center>
       <div class="menu-items">
         {items.filter((it): it is MenuItem => !!it).map((it) => (
           <button class={`btn ${it.danger ? 'danger' : ''}`} onClick={it.onClick}>

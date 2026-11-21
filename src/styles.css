@@ -339,6 +339,8 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
   display: flex; flex-direction: column; box-shadow: 0 12px 30px rgba(0,0,0,.6);
 }
 .sheet.tall { height: 44%; min-height: 150px; }
+/* Read-or-tap sheets (menu, log, dice, counters, re-pair): centred, as tall as their content. */
+.sheet.center { top: 50%; transform: translateY(-50%); height: auto; min-height: 0; max-height: calc(100% - 8px); }
 .sheet-head { display: flex; align-items: center; gap: 8px; padding: 6px 8px 4px 12px; }
 .sheet-title { flex: 1; font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sheet-actions { display: inline-flex; gap: 6px; }
