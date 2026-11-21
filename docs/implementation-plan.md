@@ -142,7 +142,7 @@ Planned (Nov 21, 2026). The features are in the PRD (Heaps, Token expiry, Mana) 
 | --- | --- | --- |
 | E1 Token expiry | `expires` on `CardInstance`; `createToken` takes it; `expireTokens` called by `endCombat` and `passTurn`; invariants; ticker lines; the End combat button and confirmation; expiry marks; the Tokens sheet's Stays · End of combat · End of turn control; `PROTOCOL_VERSION` 10 | Engine unit and property tests pass; the v1 log still replays to the same final state; browser: an end-of-combat token goes at End combat and comes back with Undo, an end-of-turn token survives End combat and goes at Pass turn |
 | E2 Mana tokens | `builtin-mana` in `fixtures.ts` (next fixture version), `ManaSheet`, the Mana button in both footers | Browser: drag red mana from the sheet in combat mode, tap it, End combat removes it; the Tokens sheet doesn't list mana tokens |
-| E3 Heaps | `heaps` and `heapKey` in `engine/view.ts`; heap rendering, the "×N" badge and one-card actions in `Cards.tsx` and the gesture code | `heaps` unit tests pass; browser: six Forests show "×6", a tap leaves "×5" and a tapped Forest, the next turn's untap shows "×6" again, an attached or attacking card stays apart, and a hand with two copies shows two cards |
+| E3 Heaps | `heaps` and `heapKey` in `engine/view.ts`; heap rendering, the "×N" badge, one-card actions and the slide-and-turn motion in `Cards.tsx` and the gesture code | `heaps` unit tests pass; browser: six Forests show "×6", a tap leaves "×5" and a tapped Forest, the next turn's untap shows "×6" again, an attached or attacking card stays apart, and a hand with two copies shows two cards |
 
 ## Test strategy
 
