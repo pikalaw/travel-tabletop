@@ -36,10 +36,10 @@ test('touch: swipes scroll bars and rows without pressing; taps press; drag up p
   await expect(page.locator('.sheet')).toHaveCount(0);
   expect(await ticker.innerText()).toBe(tick0);
 
-  // a quick fling carries on past the finger
+  // a quick fling carries on past the finger (100 px: without Untap all the bar no longer scrolls 150 px)
   await bar.evaluate((e) => { e.scrollLeft = 0; });
-  await swipe(cdp, page, 300, y, 150, y, 2);
-  expect(await bar.evaluate((e) => e.scrollLeft)).toBeGreaterThan(150);
+  await swipe(cdp, page, 300, y, 200, y, 2);
+  expect(await bar.evaluate((e) => e.scrollLeft)).toBeGreaterThan(100);
 
   // a tap still presses a button
   await bar.evaluate((e) => { e.scrollLeft = 0; });

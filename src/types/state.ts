@@ -43,7 +43,7 @@ export interface CardInstance {
    * drawn as a coloured left border so the other player can see what was just done (protocol 4).
    * `entered`: the card came into play (green), else it was changed (yellow). `base`: for a
    * change, the card's look (`cardLook`) from just before; the mark goes once the card looks like
-   * that again. Absent where a change can't be put back (an ability put on the stack). Protocol 9.
+   * that again. Protocol 9.
    */
   changed?: { by: PlayerId; turn: number; entered?: true; base?: string };
   /**

@@ -585,7 +585,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
 /** Commands that change a card in play, and so mark it as changed (see `CardInstance.changed`). */
 const MARKING: ReadonlySet<Command['type']> = new Set<Command['type']>([
   'move', 'attach', 'detach', 'detachAll', 'setLead', 'tap', 'flip', 'setFaceDown',
-  'addCounter', 'removeCounter', 'createToken', 'attack', 'block', 'putAbility', 'adjustPT',
+  'addCounter', 'removeCounter', 'createToken', 'attack', 'block', 'adjustPT',
 ]);
 
 /** The cards in play (battlefield or lands), with their zones. */
@@ -620,44 +620,21 @@ export function cardLook(state: GameState, id: string, zone: ZoneId): string {
  * Keep the "changed" marks. A marking command marks the cards it touched that are in play, for
  * the player who sent it (on a blinded table, the active player): `entered` if the card came into
  * play (or was created) by it, else a change, which remembers the card's look from just before
- * (`base`). A card that entered keeps `entered` through later changes. A marking command that
- * puts a card back to its `base` look clears its mark; `putAbility` leaves no `base`, as it
- * changes nothing visible on the card. The active player's first marking command in a turn
- * clears the marks from earlier turns; a turn pass drops marks more than one turn old; a card out
- * of play has none. Routine changes (the untap when a turn passes, Untap all, ending combat) mark
- * nothing and clear nothing.
+ * (`base`). A card that entered keeps `entered` through later changes. Then any command, a
+ * routine one too (the untap when a turn passes, ending combat), clears the change mark of a card
+ * it put back to its `base` look. The active player's first marking command in a turn clears the
+ * marks from earlier turns; a turn pass drops marks more than one turn old; a card out of play
+ * has none. Putting an ability on the stack marks nothing: the stack shows its source.
  */
 export function fixChanged(input: GameState, state: GameState, cmd: Command, moved: readonly Movement[]): void {
-  const inPlay = inPlayZones(state);
+  const inPlay = inPlayZones(state), wasInPlay = inPlayZones(input);
   for (const c of Object.values(state.cards)) if (c.changed && !inPlay.has(c.id)) delete c.changed;
   if (cmd.type === 'passTurn') {
     for (const c of Object.values(state.cards)) if (c.changed && c.changed.turn < state.turn - 1) delete c.changed;
-    return;
   }
-  if (!MARKING.has(cmd.type)) return;
-  const by: PlayerId | null = cmd.actor === 'p1' || cmd.actor === 'p2' ? cmd.actor : cmd.actor === 'table' ? state.activePlayer : null;
-  if (!by) return;
-  const p = (cmd.payload ?? {}) as Record<string, unknown>;
-  if (cmd.type === 'move' && p.from === p.to) return; // reordering a row changes no card
-  const touched = new Set(moved.map((m) => m.id));
-  if (typeof p.cardId === 'string') touched.add(p.cardId);
-  const marked = [...touched].filter((id) => inPlay.has(id));
-  if (!marked.length) return;
-  if (by === state.activePlayer) {
-    for (const c of Object.values(state.cards)) if (c.changed && c.changed.turn < state.turn) delete c.changed;
-  }
-  const wasInPlay = inPlayZones(input);
-  for (const id of marked) {
-    const c = state.cards[id]!, old = c.changed;
-    if (!wasInPlay.has(id)) c.changed = { by, turn: state.turn, entered: true };
-    // A mark from an earlier turn that is touched again starts afresh, from the card as it was.
-    else if (old && old.turn === state.turn) c.changed = { ...old, by };
-    else c.changed = { by, turn: state.turn, base: cardLook(input, id, wasInPlay.get(id)!) };
-    if (cmd.type === 'putAbility') delete c.changed.base;
-  }
-  // A card this command put back as it was loses its mark. Only cards whose look this command
-  // changed (or just marked) are checked, so an attacker with vigilance keeps its mark after
-  // combat ends, even though it now looks as it did.
+  const marked = markChanged(input, state, cmd, moved, inPlay, wasInPlay);
+  // A card this command put back as it was loses its mark. Only cards this command changed (or
+  // just marked) are checked: a card that looked as it did all along keeps its mark.
   for (const [id, z] of inPlay) {
     const c = state.cards[id]!;
     if (c.changed?.base === undefined) continue;
@@ -666,6 +643,30 @@ export function fixChanged(input: GameState, state: GameState, cmd: Command, mov
     const before = wasInPlay.has(id) ? cardLook(input, id, wasInPlay.get(id)!) : null;
     if (before !== now || marked.includes(id)) delete c.changed;
   }
+}
+
+/** Set the marks of a marking command (see `fixChanged`); returns the ids it marked. */
+function markChanged(input: GameState, state: GameState, cmd: Command, moved: readonly Movement[], inPlay: Map<string, ZoneId>, wasInPlay: Map<string, ZoneId>): string[] {
+  if (!MARKING.has(cmd.type)) return [];
+  const by: PlayerId | null = cmd.actor === 'p1' || cmd.actor === 'p2' ? cmd.actor : cmd.actor === 'table' ? state.activePlayer : null;
+  if (!by) return [];
+  const p = (cmd.payload ?? {}) as Record<string, unknown>;
+  if (cmd.type === 'move' && p.from === p.to) return []; // reordering a row changes no card
+  const touched = new Set(moved.map((m) => m.id));
+  if (typeof p.cardId === 'string') touched.add(p.cardId);
+  const marked = [...touched].filter((id) => inPlay.has(id));
+  if (!marked.length) return [];
+  if (by === state.activePlayer) {
+    for (const c of Object.values(state.cards)) if (c.changed && c.changed.turn < state.turn) delete c.changed;
+  }
+  for (const id of marked) {
+    const c = state.cards[id]!, old = c.changed;
+    if (!wasInPlay.has(id)) c.changed = { by, turn: state.turn, entered: true };
+    // A mark from an earlier turn that is touched again starts afresh, from the card as it was.
+    else if (old && old.turn === state.turn) c.changed = { ...old, by };
+    else c.changed = { by, turn: state.turn, base: cardLook(input, id, wasInPlay.get(id)!) };
+  }
+  return marked;
 }
 
 /**
@@ -705,7 +706,7 @@ export function checkInvariants(state: GameState): string | null {
     if (c.ability && z !== 'stack') return `ability ${c.id} is off the stack`;
     if (c.changed && !isBattlefieldZone(z)) return `card ${c.id} has a changed mark out of play`;
     if (c.changed && c.changed.turn < state.turn - 1) return `card ${c.id} has a changed mark from turn ${c.changed.turn}`;
-    if (c.changed?.entered && c.changed.base !== undefined) return `card ${c.id} entered but has a base look`;
+    if (c.changed && !c.changed.entered === (c.changed.base === undefined)) return `card ${c.id} has a changed mark that is neither entered nor with a base look`;
   }
   return null;
 }

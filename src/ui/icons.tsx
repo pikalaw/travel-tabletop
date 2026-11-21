@@ -68,14 +68,6 @@ export const PointIcon = () => (
   </Icon>
 );
 
-/** Untap all: a card lying sideways (faint, dashed) and the same card standing upright. No arrow, so it can't be read as Undo. */
-export const UntapIcon = () => (
-  <Icon>
-    <rect x="2.5" y="12.5" width="12" height="8" rx="1.5" stroke-dasharray="2 2" opacity=".55" />
-    <rect x="11" y="3" width="9" height="13" rx="1.5" />
-  </Icon>
-);
-
 export const TrashIcon = () => (
   <Icon size={20}><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></Icon>
 );

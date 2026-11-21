@@ -4,7 +4,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { toast } from './toast';
 import { TipButton } from './TipButton';
-import { UndoIcon, RedoIcon, EyeIcon, EyeOffIcon, SwordsIcon, EndCombatIcon, PauseIcon, CloseIcon, HourglassIcon, PawnIcon, DieIcon, PointIcon, UntapIcon } from './icons';
+import { UndoIcon, RedoIcon, EyeIcon, EyeOffIcon, SwordsIcon, EndCombatIcon, PauseIcon, CloseIcon, HourglassIcon, PawnIcon, DieIcon, PointIcon } from './icons';
 import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
 import { Board } from './Board';
@@ -309,12 +309,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       return;
     }
     setCombat(blocker?.cardId === id ? null : { cardId: id, zone });
-  }
-
-
-  function untapAll() {
-    void confirmBox({ title: `Untap all of ${state.players[actingPlayer].name}’s cards?`, ok: 'Untap all' })
-      .then((yes) => { if (yes) send('untapAll', { player: actingPlayer }); });
   }
 
   function passTurn() {
@@ -683,7 +677,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         <TipButton class="btn icon" label="Dice" tip="Dice, a coin flip, or a random card." onClick={() => setSheet({ kind: 'dice' })}><DieIcon /></TipButton>
         <TipButton class={`btn icon ${pointMode ? 'on' : ''}`} aria-pressed={pointMode} label="Point" tip="Point: tap a card or slot to highlight it for the other player."
           onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}><PointIcon /></TipButton>
-        <TipButton class="btn icon" label="Untap all" tip="Untap all your cards (asks first)." onClick={untapAll}><UntapIcon /></TipButton>
         <span class="spacer" />
         {/* Shown only when there is something to do. No confirmation: Redo brings back what Undo took
             back, and both are logged for both players. Each one's tip names the move. */}

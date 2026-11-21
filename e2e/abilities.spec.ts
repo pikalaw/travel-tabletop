@@ -53,8 +53,8 @@ test('abilities: the full view lists them; one dragged sideways onto the Stack g
   await dragAbility(page, list.nth(1), 'stack');
   await expect(page.locator('.ticker-text')).toContainText('put an ability of Elf Test on the stack');
   await expect(stackCount).toHaveText('1');
-  // the source card in play is marked as changed
-  await expect(page.locator(`.board [data-card="${elf}"] .changed-bar`)).toHaveCount(1);
+  // an ability adds no mark: the source keeps the green one from entering play
+  await expect(page.locator(`.board [data-card="${elf}"] .changed-bar.entered`)).toHaveCount(1);
 
   // Custom… asks for any text
   await open();

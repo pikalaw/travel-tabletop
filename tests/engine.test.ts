@@ -99,8 +99,8 @@ describe('engine basics', () => {
     expect(aid).toMatch(/^a\d+$/);
     const item = h.state.cards[aid];
     expect(item).toMatchObject({ defId: h.state.cards[src].defId, name: h.state.cards[src].name, owner: 'p1', isToken: false, faceDown: false, ability: { text: '{T}: Add {G}.', sourceId: src } });
-    // the source gets the changed mark, as for any change to a card in play
-    expect(h.state.cards[src].changed).toMatchObject({ by: 'p1', turn: 1 });
+    // the source keeps the mark it got from entering play: an ability adds none
+    expect(h.state.cards[src].changed).toMatchObject({ by: 'p1', turn: 1, entered: true });
     // reordering on the stack keeps it; it cannot be attached; moving it off deletes it, source unmoved
     expect(h.dispatch({ type: 'move', actor: 'p1', payload: { cardId: aid, from: 'stack', to: 'stack', toIndex: 1 } }).ok).toBe(true);
     expect(h.dispatch({ type: 'attach', actor: 'p1', payload: { cardId: aid, from: 'stack', toCardId: src, toZone: 'p1.battlefield' } })).toMatchObject({ ok: false, error: 'invalid' });
@@ -506,19 +506,20 @@ describe('changed marks', () => {
   });
 
   it('routine changes mark nothing: untap all, the untap at a turn pass, ending combat, reordering', () => {
-    const { h, a2, b1 } = setup();
+    const { h, a1, a2, b1 } = setup();
     send(h, 'tap', { cardId: b1, from: 'p2.battlefield' }, 'p2');
     send(h, 'passTurn', { to: 'p2' }); // turn 2: p2's cards untap, which marks nothing
     expect(h.state.cards[b1].tapped).toBe(false);
     expect(by(h, b1)).toEqual({ by: 'p2', turn: 1, kind: 'entered' });
     send(h, 'tap', { cardId: a2, from: 'p1.battlefield' }); // the defender's tap: marked
-    send(h, 'untapAll', { player: 'p1' });
-    expect(by(h, a2)).toEqual({ by: 'p1', turn: 2, kind: 'changed' });
+    send(h, 'flip', { cardId: a1, from: 'p1.battlefield' });
+    send(h, 'untapAll', { player: 'p1' }); // a1 stays flipped, so its mark stays
+    expect(by(h, a1)).toEqual({ by: 'p1', turn: 2, kind: 'changed' });
     send(h, 'attack', { cardId: b1, from: 'p2.battlefield' }, 'p2'); // the active player's first marking move
     send(h, 'endCombat', {}, 'p2');
-    send(h, 'move', { cardId: a2, from: 'p1.battlefield', to: 'p1.battlefield', toIndex: 0 }, 'p2');
-    expect(by(h, a2)).toEqual({ by: 'p1', turn: 2, kind: 'changed' });
-    expect(by(h, b1)).toEqual({ by: 'p2', turn: 2, kind: 'changed' });
+    send(h, 'move', { cardId: a1, from: 'p1.battlefield', to: 'p1.battlefield', toIndex: 0 }, 'p2');
+    expect(by(h, a1)).toEqual({ by: 'p1', turn: 2, kind: 'changed' });
+    expect(h.state.cards[b1].attacking).toBeUndefined();
   });
 
   it("the active player's first marking move clears earlier turns' marks; a pass drops marks two turns old", () => {
@@ -632,22 +633,35 @@ describe('changed marks', () => {
     expect(checkInvariants(h.state)).toBeNull();
   });
 
-  it('routine changes clear nothing, even when they put a card back; an ability on the stack is never put back', () => {
-    const { h, a1, b1 } = quiet();
+  it('routine changes clear a card they put back: untap all, ending combat (vigilance), the untap at a pass', () => {
+    const { h, a1, a2, b1 } = quiet();
     send(h, 'tap', { cardId: a1, from: 'p1.battlefield' });
     send(h, 'untapAll', { player: 'p1' });
-    expect(by(h, a1)?.kind).toBe('changed');
-    // a vigilant attacker keeps its mark after combat, and later marking moves elsewhere keep it too
-    send(h, 'attack', { cardId: b1, from: 'p2.battlefield' }, 'p2');
+    expect(by(h, a1)).toBeUndefined();
+    // a vigilant attacker is back as it was when combat ends; a tapped one is not
+    send(h, 'attack', { cardId: b1, from: 'p2.battlefield', tap: false }, 'p2');
+    expect(by(h, b1)?.kind).toBe('changed');
     send(h, 'endCombat', {}, 'p2');
-    send(h, 'tap', { cardId: a1, from: 'p1.battlefield' }, 'p2');
-    expect(by(h, b1)?.kind).toBe('changed');
-    send(h, 'putAbility', { cardId: b1, from: 'p2.battlefield', text: 'Draw a card.' }, 'p2');
-    expect(h.state.cards[b1].changed?.base).toBeUndefined();
-    send(h, 'tap', { cardId: b1, from: 'p2.battlefield' }, 'p2');
-    send(h, 'tap', { cardId: b1, from: 'p2.battlefield' }, 'p2');
-    expect(by(h, b1)?.kind).toBe('changed');
+    expect(by(h, b1)).toBeUndefined();
+    // p1 taps a2 on p2's turn; it untaps when the turn passes to p1, which clears the mark
+    send(h, 'tap', { cardId: a2, from: 'p1.battlefield' });
+    expect(by(h, a2)?.kind).toBe('changed');
+    send(h, 'passTurn', { to: 'p1' }, 'p2');
+    expect(by(h, a2)).toBeUndefined();
+    // a pump wears off at the pass the same way
+    send(h, 'adjustPT', { cardId: a1, from: 'p1.battlefield', power: 2, toughness: 0 });
+    expect(by(h, a1)?.kind).toBe('changed');
+    send(h, 'passTurn', { to: 'p2' });
+    expect(by(h, a1)).toBeUndefined();
+    expect(checkInvariants(h.state)).toBeNull();
   });
+
+  it('putting an ability on the stack marks nothing', () => {
+    const { h, b1 } = quiet();
+    send(h, 'putAbility', { cardId: b1, from: 'p2.battlefield', text: 'Draw a card.' }, 'p2');
+    expect(by(h, b1)).toBeUndefined();
+  });
+
 });
 
 // ---------- Property tests ----------
