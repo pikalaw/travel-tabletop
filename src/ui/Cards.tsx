@@ -1,10 +1,10 @@
 // Card rendering: one card, a row of cards (overlapping when collapsed), and a pile.
 
-import { useRef } from 'preact/hooks';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 import type { ComponentChildren, JSX } from 'preact';
 import { useSize } from './hooks';
 import { SwordsIcon, HourglassIcon } from './icons';
-import { canSeeFace, zoneKind, ptText } from '../engine/view';
+import { canSeeFace, zoneKind, ptText, heaps } from '../engine/view';
 import { sizeFor, artUrl, type Art, type ImageSize } from '../storage/art';
 import type { CardInstance, GameState, Viewer, ZoneId } from '../types/state';
 import backSvg from '../assets/back.svg';
@@ -96,9 +96,11 @@ export interface CardProps {
   attachedN?: number;
   /** In a fanned group: the width of the gap to the previous card of the group, bridged by a gold bar. */
   linkLeft?: number;
+  /** A heap of this many identical cards, drawn as this one (its first) with "×N"; 0 or 1 for a single card. */
+  heapN?: number;
 }
 
-export function Card({ ctx, card, zone, h, override = false, style = '', interactive = true, tucked = false, attachedN = 0, linkLeft = 0 }: CardProps) {
+export function Card({ ctx, card, zone, h, override = false, style = '', interactive = true, tucked = false, attachedN = 0, linkLeft = 0, heapN = 0 }: CardProps) {
   const img = cardImage(ctx, card, zone, override, h);
   const w = Math.round(h * RATIO);
   const tapped = card.tapped && (zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands');
@@ -163,7 +165,7 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
     );
   return (
     <div
-      class={`card ${tapped ? 'tapped' : ''} ${tucked ? 'tucked' : ''} ${ctx.pointed === card.id ? 'pointed' : ''} ${ctx.selected === card.id ? 'selected' : ''} ${ctx.match?.has(card.id) ? 'in-match' : ''}`}
+      class={`card ${tapped ? 'tapped' : ''} ${heapN > 1 ? 'heap' : ''} ${tucked ? 'tucked' : ''} ${ctx.pointed === card.id ? 'pointed' : ''} ${ctx.selected === card.id ? 'selected' : ''} ${ctx.match?.has(card.id) ? 'in-match' : ''}`}
       data-card={card.id}
       data-zone={zone}
       data-card-target={card.id}
@@ -180,6 +182,7 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
         />
       ) : null}
       <div class="card-inner" style={`width:${w}px;height:${h}px`}>
+        {heapN > 1 ? <span class="heap-edges" aria-hidden="true" /> : null}
         {img.url ? (
           <img
             class={`card-face ${card.faceDown && img.visible ? 'dim' : ''}`}
@@ -203,6 +206,12 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
       <div class="marks" style={tapped ? `top:${Math.round((h - w) / 2) + 2}px` : ''}>
         {markers}
       </div>
+      {/* Top right, where a real card has its mana cost (tokens have none); outside the rotated picture. */}
+      {heapN > 1 ? (
+        <span class="heap-count" key={heapN} title={`${heapN} identical cards`} style={tapped ? `top:${Math.round((h - w) / 2) + 2}px` : ''}>
+          ×{heapN}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -233,8 +242,10 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
   const { w, h } = useSize(ref);
   const cardH = Math.max(28, h - 14);
   const cardW = cardH * RATIO;
-  const cards = ids.map((id) => ctx.state.cards[id]).filter((c): c is CardInstance => !!c);
   const field = zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands';
+  // Identical cards in play are drawn as one heap, by its first card (see `heaps`).
+  const heap = field ? heaps(ctx.state, ids) : null;
+  const cards = (heap ? heap.shown : ids).map((id) => ctx.state.cards[id]).filter((c): c is CardInstance => !!c);
   const widths = cards.map((c) => (c.tapped && field ? cardH : cardW));
   const groupOf = (c: CardInstance) => (field && c.attachedTo) || c.id;
   const hasGroups = field && cards.some((c) => c.attachedTo);
@@ -256,6 +267,7 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
   const scrolls = open && (overflow || natural > w - 8);
   const attachedN = new Map<string, number>();
   if (field) for (const c of cards) if (c.attachedTo) attachedN.set(c.attachedTo, (attachedN.get(c.attachedTo) || 0) + 1);
+  useSlideIn(ref, w, h, heap);
   // The label and the open-slot outline sit outside the scroller so they stay put while it scrolls.
   return (
     <div class={`row-box ${scrolls || fanned ? 'open' : ''}`}>
@@ -297,6 +309,7 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
                   tucked={tucked}
                   attachedN={fanned ? 0 : attachedN.get(card.id) || 0}
                   linkLeft={fanned && sameGroup(i) ? innerGap : 0}
+                  heapN={heap?.members.get(card.id)?.length ?? 0}
                 />
               );
             })}
@@ -304,6 +317,40 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
       </div>
     </div>
   );
+}
+
+/** How long a card takes to slide to its new place in a row (it turns, if tapped, over the same time). */
+const SLIDE_MS = 180;
+
+/**
+ * Cards that move within a row slide to their new place instead of jumping (FLIP: note where each
+ * card was drawn, and after the next render start it there and let it glide back to none). A card
+ * that comes out of a heap starts where its heap was drawn, so a tap on a heap shows which card
+ * left it. Only changes to the cards move anything: a resize just redraws.
+ */
+function useSlideIn(ref: { current: HTMLDivElement | null }, w: number, h: number, heap: ReturnType<typeof heaps> | null) {
+  const last = useRef<{ rects: Map<string, DOMRect>; heapOf: Map<string, string>; w: number; h: number } | null>(null);
+  useLayoutEffect(() => {
+    const row = ref.current;
+    if (!row) return;
+    const rects = new Map<string, DOMRect>();
+    for (const el of row.querySelectorAll<HTMLElement>('.row-cards > .card')) rects.set(el.dataset.card!, el.getBoundingClientRect());
+    const heapOf = new Map<string, string>();
+    if (heap) for (const [first, m] of heap.members) for (const id of m) heapOf.set(id, first);
+    const prev = last.current;
+    last.current = { rects, heapOf, w, h };
+    if (!prev || prev.w !== w || prev.h !== h) return;
+    if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    for (const el of row.querySelectorAll<HTMLElement>('.row-cards > .card')) {
+      const id = el.dataset.card!, now = rects.get(id)!;
+      // Where it was drawn: itself, or the heap it was in (drawn by that heap's first card).
+      const was = prev.rects.get(id) ?? prev.rects.get(prev.heapOf.get(id) ?? '');
+      if (!was) continue;
+      const dx = was.left - now.left, dy = was.top - now.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
+      el.animate?.([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: SLIDE_MS, easing: 'ease' });
+    }
+  });
 }
 
 /** A pile: shows the top card (index 0) and a count. */

@@ -20,7 +20,7 @@ import {
 import { initialUi, uiReducer, clockTime, roleOf, type SheetState } from './gameUi';
 import { fullModel } from './fullModel';
 import { CardViewer, type CardView } from './CardViewer';
-import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone, isBattlefieldZone } from '../engine/view';
+import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone, isBattlefieldZone, heaps } from '../engine/view';
 import { listDecks, loadLog } from '../storage/db';
 import { loadArt, type Art } from '../storage/art';
 import type { Session } from '../client/session';
@@ -840,7 +840,11 @@ function hostOf(state: GameState, id: string): string {
  */
 export function slotSteps(state: GameState, cardId: string, zone: ZoneId, viewer: Viewer, sheet: SheetState | null): { prev: string | null; next: string | null } {
   const tray = sheet && sheet.kind !== 'zone' && 'zone' in sheet && sheet.zone === zone && ['peek', 'reveal', 'search', 'inspect'].includes(sheet.kind);
-  const all = state.zones[zone] || [];
+  const zoneIds = state.zones[zone] || [];
+  // A heap is one stop, by its first card (the one the board draws).
+  const heap = isBattlefieldZone(zone) ? heaps(state, zoneIds) : null;
+  const all = heap ? heap.shown : zoneIds;
+  if (heap) for (const [first, m] of heap.members) if (m.includes(cardId)) cardId = first;
   const ids = tray && 'ids' in sheet ? all.filter((id) => sheet.ids.includes(id)) : all;
   const units: string[] = [];
   for (const id of ids) {

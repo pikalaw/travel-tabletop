@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allZones, canSeeFace, findZone, handCount, isBattlefieldZone, isZone, other, visibleTo, zoneKind, zoneOwner } from '../src/engine/view';
+import { allZones, canSeeFace, findZone, handCount, heaps, isBattlefieldZone, isZone, other, visibleTo, zoneKind, zoneOwner } from '../src/engine/view';
 import type { CardInstance, GameState, PlayerId, ZoneId } from '../src/types/state';
 
 function card(id: string, owner: PlayerId, extra: Partial<CardInstance> = {}): CardInstance {
@@ -76,5 +76,33 @@ describe('visibility', () => {
     const s = stateWith({ stack: [card('c1', 'p2')], 'p1.graveyard': [card('c2', 'p1')] });
     expect(visibleTo(s, s.cards.c1!, 'stack')).toEqual(['p1', 'p2']);
     expect(canSeeFace(s, s.cards.c2!, 'p1.graveyard', 'nobody')).toBe(true);
+  });
+});
+
+describe('heaps', () => {
+  const ids = (s: GameState) => s.zones['p1.lands'];
+  // the same name throughout, so only what the test sets differs
+  const f = (id: string, extra: Partial<CardInstance> = {}) => card(id, 'p1', { name: 'Forest', ...extra });
+  it('identical cards make one heap at the first one\'s place; any difference in what is drawn keeps a card apart', () => {
+    const s = stateWith({ 'p1.lands': [
+      f('a'), f('b', { defId: 'e' }), f('c'), f('d'),
+      f('t', { tapped: true }), f('u', { tapped: true }),
+      f('k', { counters: { plus: 1, minus: 0, labeled: {} } }), f('m', { changed: { by: 'p1', turn: 1, base: '' } }),
+      f('x1', { isToken: true, expires: 'combat' }), f('x2', { isToken: true, expires: 'turn' }),
+    ] });
+    s.turn = 1;
+    const h = heaps(s, ids(s));
+    expect(h.shown).toEqual(['a', 'b', 't', 'k', 'm', 'x1', 'x2']);
+    expect([...h.members]).toEqual([['a', ['a', 'c', 'd']], ['t', ['t', 'u']]]);
+  });
+  it('attached cards, their hosts, combat marks and face-down cards never heap', () => {
+    const s = stateWith({ 'p1.battlefield': [
+      f('aura', { attachedTo: 'h' }), f('h'), f('p'),
+      f('atk', { attacking: 1 }), f('atk2', { attacking: 2 }),
+      f('fd1', { faceDown: true }), f('fd2', { faceDown: true }), f('q'),
+    ] });
+    const h = heaps(s, s.zones['p1.battlefield']);
+    expect(h.shown).toEqual(['aura', 'h', 'p', 'atk', 'atk2', 'fd1', 'fd2']);
+    expect([...h.members]).toEqual([['p', ['p', 'q']]]);
   });
 });

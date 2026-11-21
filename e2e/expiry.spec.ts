@@ -47,9 +47,11 @@ test('expiring tokens: end of combat goes at End combat, back with Undo; end of 
 test('mana: the Mana sheet makes one end-of-combat mana per drag, also in combat mode; End combat removes it', async ({ page }) => {
   const errs = watchErrors(page);
   await startOneDevice(page);
-  const lands = page.locator('[data-drop="p1.lands"] [data-card]');
+  // counted by the slot label: identical mana tokens make one heap
+  const lands = page.locator('.row-box:has([data-drop="p1.lands"]) .slot-label b');
   await barButton(page, 'Combat');
   await barButton(page, 'Mana');
+  await page.locator('.sheet .token-item').first().hover();
   const sheet = page.locator('.sheet');
   const items = sheet.locator('.token-item');
   await expect(items).toHaveCount(6);
@@ -58,7 +60,7 @@ test('mana: the Mana sheet makes one end-of-combat mana per drag, also in combat
   await expect(sheet.getByRole('radio', { name: 'End of combat' })).toHaveAttribute('aria-checked', 'true');
   await drag(page, items.nth(3), page.locator('[data-drop="p1.lands"]'));
   await drag(page, items.nth(3), page.locator('[data-drop="p1.lands"]'));
-  await expect(lands).toHaveCount(2);
+  await expect(lands).toHaveText('2');
   await expect(page.locator('.ticker-text')).toContainText('created Red mana (until end of combat)');
   await sheet.getByRole('button', { name: 'Done' }).click();
 
@@ -70,6 +72,6 @@ test('mana: the Mana sheet makes one end-of-combat mana per drag, also in combat
   await barButton(page, 'End combat');
   await expect(page.locator('.confirm-box.plain')).toContainText('This removes 2 tokens.');
   await answerDialog(page, true);
-  await expect(lands).toHaveCount(0);
+  await expect(page.locator('[data-drop="p1.lands"] [data-card]')).toHaveCount(0);
   errs.expectNone();
 });

@@ -222,8 +222,18 @@ body.dragging .pile[data-layout="library"].drop-hover:is(.drop-top, .drop-bottom
 
 /* Cards */
 .card { position: relative; flex: none; display: flex; align-items: center; justify-content: center; touch-action: inherit; }
-.card-inner { position: relative; transition: transform .14s ease; }
+.card-inner { position: relative; transition: transform .18s ease; }
 .card.tapped .card-inner { transform: rotate(90deg); }
+/* A heap: two card edges peek out behind the top card, and "×N" sits at the top right. */
+.card.heap .card-face { position: relative; }
+.heap-edges { position: absolute; inset: 0; border-radius: 4.5%/3.2%; background: #1d1f22; border: 1px solid rgba(255,255,255,.3);
+  transform: translate(4px, -4px); box-shadow: 3px -3px 0 -1px #1d1f22, 3px -3px 0 0 rgba(255,255,255,.3); }
+.heap-count { position: absolute; right: 2px; top: 2px; z-index: 2; pointer-events: none; font-size: 11px; font-weight: 800; line-height: 15px;
+  padding: 0 4px; border-radius: 4px; background: #c9a65a; color: #17130a; animation: heap-pulse .15s ease-out; }
+/* The marks wrap before the count, so it never covers one. */
+.card.heap .marks { max-width: calc(100% - 34px); }
+@keyframes heap-pulse { 50% { transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .heap-count { animation: none; } .card-inner { transition: none; } }
 /* Changed this turn or last: a left border in the changer's role colour (see Card). */
 .changed-bar { position: absolute; left: 0; top: 0; height: 100%; width: 4px; border-radius: 2px; z-index: 3; pointer-events: none; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
 .changed-bar.entered { --bar: var(--good); background: var(--bar); } /* entered play: green */

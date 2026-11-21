@@ -73,3 +73,47 @@ export function visibleTo(state: GameState, card: CardInstance, zone: ZoneId): P
 export function handCount(state: GameState, p: PlayerId): number {
   return state.zones[`${p}.hand`].length;
 }
+
+/**
+ * What makes two cards in play look the same, for heaps; null for a card that never joins one: an
+ * attached card or one carrying attachments, a card with a combat mark (each attacker and blocker
+ * must be its own card), and a face-down card (a heap of them would tell the other player they
+ * are the same card). The changed-card border counts, so a heap never hides a change.
+ */
+export function heapKey(state: GameState, card: CardInstance, hosts: ReadonlySet<string>): string | null {
+  if (card.attachedTo || hosts.has(card.id) || card.attacking || card.blocking || card.faceDown || card.ability) return null;
+  const labeled = Object.entries(card.counters.labeled).filter(([, n]) => n).sort(([a], [b]) => (a < b ? -1 : 1));
+  const ch = card.changed;
+  const border = ch ? `${ch.entered ? 'entered' : 'changed'}${ch.turn < state.turn ? ' old' : ''}` : '';
+  return JSON.stringify([
+    card.defId, card.name, card.isToken, card.owner, card.tapped, card.face,
+    card.counters.plus, card.counters.minus, labeled, card.turnPT ?? null, card.expires ?? null, border,
+  ]);
+}
+
+/** Heaps of a battlefield or lands row (see the PRD's Heaps). Drawn by the UI only: no state of their own. */
+export interface Heaps {
+  /** The row's ids as drawn: each heap by its first card, at that card's place. */
+  shown: string[];
+  /** For each heap of two or more, its first card's id → every card in it, in row order. */
+  members: Map<string, string[]>;
+}
+
+/** Group a battlefield or lands row's identical cards into heaps, in row order. */
+export function heaps(state: GameState, ids: readonly string[]): Heaps {
+  const hosts = new Set<string>();
+  for (const id of ids) { const h = state.cards[id]?.attachedTo; if (h) hosts.add(h); }
+  const shown: string[] = [];
+  const byKey = new Map<string, string[]>();
+  for (const id of ids) {
+    const c = state.cards[id];
+    const key = c ? heapKey(state, c, hosts) : null;
+    const heap = key === null ? undefined : byKey.get(key);
+    if (heap) { heap.push(id); continue; }
+    if (key !== null) byKey.set(key, [id]);
+    shown.push(id);
+  }
+  const members = new Map<string, string[]>();
+  for (const m of byKey.values()) if (m.length > 1) members.set(m[0]!, m);
+  return { shown, members };
+}
