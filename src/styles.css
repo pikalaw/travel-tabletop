@@ -226,9 +226,15 @@ body.dragging .pile[data-layout="library"].drop-hover:is(.drop-top, .drop-bottom
 .card.tapped .card-inner { transform: rotate(90deg); }
 /* Changed this turn or last: a left border in the changer's role colour (see Card). */
 .changed-bar { position: absolute; left: 0; top: 0; height: 100%; width: 4px; border-radius: 2px; z-index: 3; pointer-events: none; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
-.changed-bar.entered { background: var(--good); } /* entered play: green */
-.changed-bar.changed { background: #f2c94c; } /* changed in play: yellow */
-.changed-bar.old { opacity: .4; } /* from the previous turn, until the active player's first change */
+.changed-bar.entered { --bar: var(--good); background: var(--bar); } /* entered play: green */
+.changed-bar.changed { --bar: #f2c94c; background: var(--bar); } /* changed in play: yellow */
+/* From the previous turn, until the active player's first change: dashed, in full colour. Each
+   dash gets its own dark edge (drop-shadow follows the dashes; the box-shadow would ring the gaps). */
+.changed-bar.old {
+  background: repeating-linear-gradient(to bottom, var(--bar) 0 7px, transparent 7px 12px);
+  box-shadow: none;
+  filter: drop-shadow(0 0 1px rgba(0,0,0,.7));
+}
 .card-face { width: 100%; height: 100%; border-radius: 4.5%/3.2%; display: block; object-fit: cover; background: #222; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
 .card-face.dim { filter: brightness(.6) saturate(.6); }
 .card-face.missing { display: grid; place-items: center; background: #2a2f2c; border: 1px solid #555; padding: 4px; text-align: center; font-size: 10px; color: var(--ink-2); overflow: hidden; }
