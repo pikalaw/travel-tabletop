@@ -134,6 +134,16 @@ The rewrite is about 4,700 lines of code, 400 of CSS and 630 of tests. Writing i
 
 **Decided (Nov 2):** updates stay on the home screen only, with no game-menu item; v2 adds the one-time "Ready to play offline" message, now in the PRD.
 
+## Token expiry, mana tokens and heaps
+
+Planned (Nov 21, 2026). The features are in the PRD (Heaps, Token expiry, Mana) and the build in the [Technical Design v2](./technical-design-v2.md) (Token expiry, mana tokens and heaps). Three steps, each one commit that ships and is tested on its own, in this order because mana tokens need expiry, and heaps are most useful once mana tokens exist.
+
+| Step | Change | Check |
+| --- | --- | --- |
+| E1 Token expiry | `expires` on `CardInstance`; `createToken` takes it; `expireTokens` called by `endCombat` and `passTurn`; invariants; ticker lines; the End combat button and confirmation; expiry marks; the Tokens sheet's Stays · End of combat · End of turn control; `PROTOCOL_VERSION` 10 | Engine unit and property tests pass; the v1 log still replays to the same final state; browser: an end-of-combat token goes at End combat and comes back with Undo, an end-of-turn token survives End combat and goes at Pass turn |
+| E2 Mana tokens | `builtin-mana` in `fixtures.ts` (next fixture version), `ManaSheet`, the Mana button in both footers | Browser: drag red mana from the sheet in combat mode, tap it, End combat removes it; the Tokens sheet doesn't list mana tokens |
+| E3 Heaps | `heaps` and `heapKey` in `engine/view.ts`; heap rendering, the "×N" badge and one-card actions in `Cards.tsx` and the gesture code | `heaps` unit tests pass; browser: six Forests show "×6", a tap leaves "×5" and a tapped Forest, the next turn's untap shows "×6" again, an attached or attacking card stays apart, and a hand with two copies shows two cards |
+
 ## Test strategy
 
 Most correctness is tested on the pure engine without a browser; real devices are reserved for what only they can show.
