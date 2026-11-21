@@ -20,10 +20,12 @@ test('changed marks: green for a card that entered play, yellow for a change, cl
   expect(Math.abs(tb.x - frame.x)).toBeLessThan(2);
   expect(tb.height).toBeLessThan(frame.height - 10);
 
-  // the pass: Player 1's marks stay, still green
+  await expect(bar(a!)).not.toHaveClass(/\bold\b/);
+  // the pass: Player 1's marks stay, still green but faint
   await resetBar(page); await barButton(page, 'Pass turn'); await answerDialog(page, true);
   await unblind(page, 'Player 2');
-  for (const id of [a!, b!]) await expect(bar(id)).toHaveClass(/\bentered\b/);
+  for (const id of [a!, b!]) await expect(bar(id)).toHaveClass(/\bentered\b.*\bold\b/);
+  expect(Number(await bar(a!).evaluate((e) => getComputedStyle(e).opacity))).toBeLessThan(0.5);
   // drawing changes no card in play, so nothing clears
   await drag(page, page.locator('.my-lib [data-card]').first(), page.locator('.row[data-drop="p2.hand"]'));
   await expect(bar(a!)).toHaveCount(1);
@@ -31,6 +33,7 @@ test('changed marks: green for a card that entered play, yellow for a change, cl
   await drag(page, page.locator('.row[data-drop="p2.hand"] [data-card]').first(), page.locator('[data-drop="p2.battlefield"]'));
   const [c] = await idsIn(page, 'p2.battlefield');
   await expect(bar(c!)).toHaveClass(/\bentered\b/);
+  await expect(bar(c!)).not.toHaveClass(/\bold\b/);
   for (const id of [a!, b!]) await expect(bar(id)).toHaveCount(0);
   // tapping Player 1's untapped card is a change (yellow); untapping it puts it back (no border)
   const away = page.locator('.sheet');
