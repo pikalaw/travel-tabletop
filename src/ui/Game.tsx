@@ -13,7 +13,7 @@ import { saveFile } from './files';
 import { attachGestures, type Drop, type GestureHandlers, type Gestures } from './gestures';
 import { setGameLink } from './link';
 import {
-  CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, AwaySheet, Sheet, gameTokens,
+  CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, Sheet, gameTokens,
   type FullRow, type LogLine, type MenuItem,
 } from './Overlays';
 import { initialUi, uiReducer, clockTime, roleOf, type SheetState } from './gameUi';
@@ -55,9 +55,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   const [tokenDecks, setTokenDecks] = useState<Deck[]>([]);
   const [lines, setLines] = useState<LogLine[]>(() => [...history]);
   const [pointer, setPointer] = useState<PointerRing | null>(null);
-  const seen = useRef<Record<PlayerId, number>>({ p1: 0, p2: 0 });
-  // One device: every action, by actor, for the "while you were away" list on unblinding.
-  const awayLines = useRef<{ actor: Actor; text: string; alert: boolean }[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
   const state = session.state;
   const steps = session.history; // what Undo and Redo would do now
@@ -111,10 +108,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       setTick((t) => t + 1);
       if (info?.text) {
         addLine(info.text, info.alert);
-        // Two devices: the opponent's alerts pop up. One device: every action goes to the "while you
-        // were away" list instead (the ticker's wording, which already hides cards not both could see).
+        // Two devices: the opponent's alerts pop up. One device: the log has them.
         if (info.alert && !same && info.actor !== session.me) toast(info.text, 'warn');
-        if (same && info.actor) awayLines.current.push({ actor: info.actor, text: info.text, alert: !!info.alert });
       }
     });
     const offNotice = session.onNotice((n: Notice) => {
@@ -128,8 +123,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       else if (n.kind === 'randomPick') { toast(text, 'info', 5000); showPointer(n.actor, n.payload.cardId ?? null, n.payload.zone); }
       else if (n.kind === 'coinFlip' || n.kind === 'rollDie') toast(text, 'big', 5000);
       else if (n.alert && !mine && !same) toast(text, 'warn');
-      // Pointing means nothing after the fact, so it stays out of the away list.
-      if (same && text && n.kind !== 'point') awayLines.current.push({ actor: n.actor, text, alert: !!n.alert });
     });
     const offReject = session.onReject((r) => {
       if (r.reason === 'stale') toast('That card had already moved — your action was undone.', 'warn');
@@ -501,9 +494,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   // ----- same-device blind / unblind -----
 
   function doUnblind(pl: PlayerId) {
-    const away = awayLines.current.slice(seen.current[pl]).filter((l) => l.actor !== pl).map((l) => ({ text: l.text, alert: l.alert }));
-    seen.current[pl] = awayLines.current.length;
-    dispatch({ type: 'unblind', player: pl, away: away.length ? { name: state.players[pl].name, lines: away } : null });
+    dispatch({ type: 'unblind', player: pl });
   }
 
   /**
@@ -530,7 +521,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   }
 
   function blind() {
-    if (viewer !== 'nobody') seen.current[viewer] = awayLines.current.length;
     dispatch({ type: 'blind' });
   }
 
@@ -699,7 +689,6 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       case 'tokens': sheetEl = <TokensSheet ctx={ctx} tokens={tokens} onClose={close} />; break;
       case 'dice': sheetEl = <DiceSheet ctx={ctx} P={P} send={send} onClose={close} />; break;
       case 'menu': sheetEl = <MenuSheet items={menuItems} onClose={close} />; break;
-      case 'away': sheetEl = <AwaySheet name={sheet.name} lines={sheet.lines} onClose={close} />; break;
       case 'pair':
         if (pairing) sheetEl = <Sheet title={session.kind === 'host' ? 'Re-pair the guest' : 'Reconnect to the host'} onClose={close} tall>{pairing.render(() => setSheet(null))}</Sheet>;
         break;

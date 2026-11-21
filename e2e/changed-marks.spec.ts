@@ -36,8 +36,6 @@ test('changed marks: green for a card that entered play, yellow for a change, cl
   await expect(bar(c!)).not.toHaveClass(/\bold\b/);
   for (const id of [a!, b!]) await expect(bar(id)).toHaveCount(0);
   // tapping Player 1's untapped card is a change (yellow); untapping it puts it back (no border)
-  const away = page.locator('.sheet');
-  if (await away.count()) await away.getByRole('button', { name: 'Done' }).click(); // the "while away" list
   if (await row.getAttribute('data-collapsed')) await tapCard(page, a!); // from this side too
   await tapCard(page, a!);
   await expect(bar(a!)).toHaveClass(/\bchanged\b/);

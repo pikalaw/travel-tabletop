@@ -144,8 +144,5 @@ test('the attack chip is only in the full view, for the player whose turn it is 
   await inFull(0);
   await barButton(page, 'Blind my hand');
   await unblind(page, 'Player 2');
-  // Player 2 is shown what happened while away, over the half of the board the card is on
-  const away = page.locator('.sheet');
-  if (await away.count()) await away.getByRole('button', { name: 'Done' }).click();
   await inFull(1);
 });

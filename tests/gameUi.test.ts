@@ -23,12 +23,13 @@ describe('game screen state', () => {
     expect(s.mode).toMatchObject({ n: 99 });
     expect(run(initialUi(true, 'p1', 'p1'), { type: 'libraryN', n: 5 }).mode).toEqual({ kind: 'normal' });
   });
-  it('unblinding shows that player’s side, closes slots and the library footer, and shows what happened while away', () => {
+  it('unblinding shows that player’s side, closes slots, the library footer and any sheet', () => {
     const s = run(initialUi(true, 'p1', 'p1'),
       { type: 'openSlot', zone: 'p1.hand' },
       { type: 'mode', mode: { kind: 'library', zone: 'p1.library', n: 3 } },
-      { type: 'unblind', player: 'p2', away: { name: 'Bo', lines: [{ text: 'Ann drew 2 cards', alert: false }] } });
-    expect(s).toMatchObject({ viewer: 'p2', persp: 'p2', openSlots: [], mode: { kind: 'normal' }, sheet: { kind: 'away', name: 'Bo' } });
+      { type: 'sheet', sheet: { kind: 'log' } },
+      { type: 'unblind', player: 'p2' });
+    expect(s).toMatchObject({ viewer: 'p2', persp: 'p2', openSlots: [], mode: { kind: 'normal' }, sheet: null });
   });
   it('blinding closes private trays but keeps other sheets', () => {
     const peek = run(initialUi(false, 'p1', 'p1'), { type: 'sheet', sheet: { kind: 'peek', zone: 'p1.library', ids: [] } }, { type: 'blind' });

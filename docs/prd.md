@@ -229,7 +229,6 @@ Both players can share one device: the board stays visible to both, and only han
 - While the hands are blinded (one device), the hand row (only card backs then) folds away, and the two battlefields get its height: about a quarter taller each, so creatures are easier to read, during combat for example. Your stats still show your hand size and take drops into your hand. Cards can't be dragged out of a blinded hand: unblind first. The row slides away and back over a quarter of a second.
 - While the hands are blinded, the board faces the active player. So passing the turn turns the board to the next player, ready for them before they unblind, and undoing a pass turns it back. Actions taken while blinded count as the active player's.
 - Only one hand is ever unblinded at a time.
-- **While you were away.** On unblinding, a sheet lists every action anyone else took since this player last looked, in the ticker's wording (which never names a card the player couldn't have seen). Alerts (library looks, shuffles, dice and so on) are highlighted. Pointing is left out.
 
 **Private views.** Peek, search and look-through open only while a hand is unblinded, so private cards never show on a blinded screen.
 

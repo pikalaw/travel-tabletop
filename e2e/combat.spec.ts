@@ -183,7 +183,6 @@ test('matchup: the full view row, blocker as main, the board highlight, opponent
 
   // the opponent's stats box takes a dropped card into their hand (unblinded first: a blinded hand's row is folded away)
   await unblind(page, 'Player 1');
-  await page.locator('.sheet').getByRole('button', { name: 'Done' }).click(); // the "while you were away" list
   const oppHand = page.locator('.opp-stats .ctr-hand');
   const before = Number((await oppHand.innerText()).match(/Hand (\d+)/i)![1]);
   await drag(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first(), '.opp-stats .counters-cell');

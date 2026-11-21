@@ -22,11 +22,7 @@ export type Mode =
 export type SheetState =
   | CardSheetState
   | { kind: 'log' | 'tokens' | 'dice' | 'menu' | 'pair' }
-  | { kind: 'counters'; player: PlayerId }
-  | { kind: 'away'; name: string; lines: AwayLine[] };
-
-/** One action in the "while you were away" list; alerts (library looks, dice, …) are highlighted. */
-export interface AwayLine { text: string; alert: boolean }
+  | { kind: 'counters'; player: PlayerId };
 
 /** The full view: the card shown, and the card first opened, whose row stays fixed. */
 export interface FullState { cardId: string; zone: ZoneId; anchor: string }
@@ -61,8 +57,8 @@ export type UiAction =
   | { type: 'shown'; shown: UiState['shown'] }
   | { type: 'choosing'; open: boolean }
   | { type: 'label'; label: string }
-  /** Show the board to `player`; `away` is what happened while they were not looking. */
-  | { type: 'unblind'; player: PlayerId; away: { name: string; lines: AwayLine[] } | null }
+  /** Show the board to `player`. */
+  | { type: 'unblind'; player: PlayerId }
   /** Hide the hand; private trays close. */
   | { type: 'blind' };
 
@@ -102,7 +98,7 @@ export function uiReducer(s: UiState, a: UiAction): UiState {
         persp: a.player,
         openSlots: [],
         mode: s.mode.kind === 'library' ? { kind: 'normal' } : s.mode,
-        sheet: a.away ? { kind: 'away', ...a.away } : null,
+        sheet: null,
       };
     case 'blind':
       return { ...s, viewer: 'nobody', sheet: s.sheet && PRIVATE_TRAYS.has(s.sheet.kind) ? null : s.sheet };
