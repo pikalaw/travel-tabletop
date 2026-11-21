@@ -314,16 +314,20 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         if (same) blind();
       });
   }
-  const hasCombatMarks = Object.values(state.cards).some((c) => c.attacking || c.blocking);
+  // End combat shows while there is something for it to clear: marks, or tokens that expire with combat.
+  const hasCombatMarks = Object.values(state.cards).some((c) => c.attacking || c.blocking || c.expires === 'combat');
   function endCombat() {
     // One tap clears every mark, so ask first (Undo would bring them back, but it is easy to miss).
     const cards = Object.values(state.cards);
     const nA = cards.filter((c) => c.attacking).length;
     const nB = cards.reduce((n, c) => n + (c.blocking || []).length, 0);
-    const what = [nA ? `${nA} attacker${nA > 1 ? 's' : ''}` : '', nB ? `${nB} block${nB > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ');
+    const nT = cards.filter((c) => c.expires === 'combat').length;
+    const marks = [nA ? `${nA} attacker${nA > 1 ? 's' : ''}` : '', nB ? `${nB} block${nB > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ');
+    const tokens = nT ? `removes ${nT} token${nT > 1 ? 's' : ''}` : '';
     const finish = () => { send('endCombat', {}); toNormal(); };
-    if (!what) { finish(); return; }
-    void confirmBox({ title: 'End combat?', body: `This clears ${what}.`, ok: 'Clear marks', cancel: 'Keep fighting' })
+    if (!marks && !tokens) { finish(); return; }
+    const body = `This ${[marks ? `clears ${marks}` : '', tokens].filter(Boolean).join(' and ')}.`;
+    void confirmBox({ title: 'End combat?', body, ok: marks ? 'Clear marks' : 'End combat', cancel: 'Keep fighting' })
       .then((yes) => { if (yes) finish(); });
   }
 
@@ -437,7 +441,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     // A token from the token picker.
     if (src.dataset.tokenDef) {
       if (!dz || !isBattlefieldZone(dz)) return; // dropped anywhere but a battlefield: nothing is made
-      send('createToken', { defId: src.dataset.tokenDef, name: src.dataset.tokenName, to: dz, toIndex: 'index' in d ? d.index : undefined, owner: zoneOwner(dz) || actingPlayer });
+      const exp = src.dataset.tokenExpires;
+      send('createToken', { defId: src.dataset.tokenDef, name: src.dataset.tokenName, to: dz, toIndex: 'index' in d ? d.index : undefined, owner: zoneOwner(dz) || actingPlayer, ...(exp === 'combat' || exp === 'turn' ? { expires: exp } : {}) });
       return;
     }
     // A card.
@@ -619,7 +624,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         <TipButton class={`btn${combat.vigilance ? ' on' : ''}`} aria-pressed={combat.vigilance} tip="The next attacker you tap stays untapped, for a creature with vigilance."
           onClick={() => dispatch({ type: 'mode', mode: { ...combat, vigilance: !combat.vigilance } })}>Vigilance</TipButton>
         {tokensButton}
-        <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton>
+        <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark, and remove the tokens that last until end of combat (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton>
         {/* Leaves combat mode with every mark kept; Combat comes back to it, End combat ends it. */}
         <TipButton class="btn icon primary" label="Pause" tip="Pause combat: back to normal play, for instants and abilities; the marks stay." onClick={toNormal}><PauseIcon /></TipButton>
       </div>
@@ -658,7 +663,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         {same && viewer === 'nobody' ? <TipButton class="btn icon primary" label="Unblind" tip="Show your hand: pick your name." onClick={() => dispatch({ type: 'choosing', open: true })}><EyeIcon /></TipButton> : null}
         <TipButton class="btn icon" label="Combat" tip="Combat: tap creatures to mark attackers and blockers." onClick={() => startCombat(null)}><SwordsIcon /></TipButton>
         {canPass ? <TipButton class="btn icon pass" label="Pass turn" tip="End the turn and pass it to the other player (asks first)." onClick={passTurn}><HourglassIcon /></TipButton> : null}
-        {hasCombatMarks ? <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton> : null}
+        {hasCombatMarks ? <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark, and remove the tokens that last until end of combat (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton> : null}
         {matchSet?.size ? <TipButton class="btn on" tip="Stop highlighting the combat matchup." onClick={() => dispatch({ type: 'match', cardId: null })}>Clear highlight</TipButton> : null}
         {/* No ⚔ Attack chip here: attackers are marked in combat mode. */}
         <CounterChips label={label} attack={false} />

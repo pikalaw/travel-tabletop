@@ -239,7 +239,7 @@ body.dragging .pile[data-layout="library"].drop-hover:is(.drop-top, .drop-bottom
 .marks .mark[data-badge] { pointer-events: auto; touch-action: none; cursor: grab; position: relative; }
 .marks .mark[data-badge]::after { content: ""; position: absolute; inset: -6px -3px; }
 .mark { font-size: 9px; font-weight: 700; background: rgba(0,0,0,.75); border-radius: 3px; padding: 0 3px; line-height: 14px; }
-.mark.token { color: #c9a65a; } .mark.fd { color: #9ec7ff; } .mark.rev { color: var(--warn); } .mark.flip { color: var(--accent); }
+.mark.token { color: #c9a65a; } .mark.expiry { color: #ffd27a; display: inline-flex; align-items: center; padding: 1px 2px; } .mark.fd { color: #9ec7ff; } .mark.rev { color: var(--warn); } .mark.flip { color: var(--accent); }
 .badges { position: absolute; left: 0; right: 0; bottom: 2px; display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
 .card.tapped .badges { transform: none; }
 .badge {
@@ -359,6 +359,8 @@ body.dragging [data-card-target].drop-hover { outline: 3px solid var(--good); bo
 .log-list li.turn-start .ts { color: #5a4a20; }
 /* Two rows that scroll sideways, like the trays: a sideways swipe scrolls (gestures.ts), up or down picks a token up. */
 .token-grid { height: 100%; display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, minmax(0, 1fr)); grid-auto-columns: max-content; gap: 8px; overflow-x: auto; overflow-y: hidden; }
+.expiry-toggle { display: inline-flex; gap: 3px; }
+.expiry-toggle .btn.seg { padding: 4px 7px; font-size: 12px; white-space: nowrap; }
 .token-item { height: 100%; aspect-ratio: 63/88; touch-action: none; cursor: grab; }
 .token-item img, .token-item .card-face { width: 100%; height: 100%; border-radius: 5px; display: block; }
 .dice { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 10px; }

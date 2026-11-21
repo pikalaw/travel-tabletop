@@ -14,7 +14,7 @@ export const cmdArb = fc.oneof(
   fc.record({ type: fc.constant('reveal'), pick: fc.nat() }),
   fc.record({ type: fc.constant('addCounter'), pick: fc.nat(), kind: fc.constantFrom('plus', 'minus') }),
   fc.record({ type: fc.constant('adjustPT'), pick: fc.nat(), power: fc.integer({ min: -2, max: 2 }), toughness: fc.integer({ min: -2, max: 2 }) }),
-  fc.record({ type: fc.constant('createToken'), to: fc.constantFrom('p1.battlefield', 'p2.battlefield', 'p1.lands') }),
+  fc.record({ type: fc.constant('createToken'), to: fc.constantFrom('p1.battlefield', 'p2.battlefield', 'p1.lands'), expires: fc.constantFrom(undefined, 'combat', 'turn') }),
   fc.record({ type: fc.constant('draw'), player: fc.constantFrom('p1', 'p2'), n: fc.integer({ min: 1, max: 3 }) }),
   fc.record({ type: fc.constant('mill'), player: fc.constantFrom('p1', 'p2'), n: fc.integer({ min: 1, max: 3 }) }),
   fc.record({ type: fc.constant('shuffle'), zone: fc.constantFrom('p1.library', 'p2.library', 'p1.hand') }),
@@ -58,7 +58,7 @@ export function concretize(state: GameState, step: any): TestCommand {
       return { type: step.type, actor: 'p2', payload: { cardId: id, from } };
     case 'addCounter': return { type: 'addCounter', actor: 'p1', payload: { cardId: id, from, kind: step.kind } };
     case 'adjustPT': return { type: 'adjustPT', actor: 'p1', payload: { cardId: id, from, power: step.power, toughness: step.toughness } };
-    case 'createToken': return { type: 'createToken', actor: 'p1', payload: { defId: 'tok', name: 'T', to: step.to } };
+    case 'createToken': return { type: 'createToken', actor: 'p1', payload: { defId: 'tok', name: 'T', to: step.to, ...(step.expires ? { expires: step.expires } : {}) } };
     case 'draw': case 'mill': return { type: step.type, actor: step.player, payload: { player: step.player, n: step.n } };
     case 'shuffle': return { type: 'shuffle', actor: 'p1', payload: { zone: step.zone } };
     case 'untapAll': return { type: 'untapAll', actor: step.player, payload: { player: step.player } };

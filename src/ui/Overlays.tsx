@@ -12,7 +12,7 @@ import type { FullModel } from './fullModel';
 import { DRAG_OUT_PX } from './cardGestures';
 import { CardFrame } from './CardFrame';
 import { useRulings, RulingsPanel } from './Rulings';
-import type { CardInstance, GameState, PlayerId, ZoneId } from '../types/state';
+import type { CardInstance, GameState, PlayerId, TokenExpiry, ZoneId } from '../types/state';
 import type { Deck } from '../types/storage';
 import { roleOf } from './gameUi';
 
@@ -501,16 +501,33 @@ export function gameTokens(state: GameState, tokenDecks: readonly Deck[], art: R
   return [...ids].sort((x, y) => name(x).localeCompare(name(y)) || x.localeCompare(y));
 }
 
+const EXPIRY_LABEL: Record<TokenExpiry | 'stays', string> = { stays: 'Stays', combat: 'End of combat', turn: 'End of turn' };
+
+/** A segmented control choosing how long the tokens dragged out of a sheet last. */
+function ExpiryToggle<T extends TokenExpiry | 'stays'>({ options, value, onChange }: { options: readonly T[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div class="expiry-toggle" role="radiogroup" aria-label="Lasts until">
+      {options.map((o) => (
+        <button class={`btn seg${o === value ? ' on' : ''}`} role="radio" aria-checked={o === value} onClick={() => onChange(o)}>
+          {EXPIRY_LABEL[o]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** One list of the game's tokens: drag one onto a battlefield to create it; long-press or spread to see it full screen. */
 export function TokensSheet({ ctx, tokens, onClose }: { ctx: BoardCtx; tokens: readonly string[]; onClose: () => void }) {
+  // How long the tokens dragged out last; starts at Stays each time the sheet opens.
+  const [expiry, setExpiry] = useState<TokenExpiry | 'stays'>('stays');
   return (
-    <Sheet title="Tokens · drag one onto a battlefield" onClose={onClose} tall>
+    <Sheet title="Tokens" onClose={onClose} tall actions={<ExpiryToggle options={['stays', 'combat', 'turn'] as const} value={expiry} onChange={setExpiry} />}>
       {tokens.length === 0 ? <p>No tokens for the decks in this game.</p> : null}
       <div class="token-grid">
         {tokens.map((defId) => {
           const art = ctx.art.get(defId);
           return (
-            <div class="token-item" data-token-def={defId} data-token-name={art?.name || 'Token'}>
+            <div class="token-item" data-token-def={defId} data-token-name={art?.name || 'Token'} data-token-expires={expiry === 'stays' ? undefined : expiry}>
               {art?.front ? (
                 <img src={artUrl(art, 'front', sizeFor(110)) ?? undefined} alt={art.name} draggable={false} />
               ) : (

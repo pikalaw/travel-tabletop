@@ -88,6 +88,32 @@ describe('engine basics', () => {
     expect(checkInvariants(h.state)).toBeNull();
   });
 
+  it('expiring tokens: end combat removes the combat ones, passing the turn removes both, on both sides', () => {
+    const h = started();
+    const make = (to: string, expires?: string) => {
+      const r = h.dispatch({ type: 'createToken', actor: 'p1', payload: { defId: 'mana-r', name: 'Red mana', to, ...(expires ? { expires } : {}) } });
+      expect(r.ok).toBe(true);
+      return h.state.zones[to as 'p1.lands'].at(-1)!;
+    };
+    const stays = make('p1.lands'), combat = make('p1.lands', 'combat'), turn = make('p2.battlefield', 'turn'), combat2 = make('p2.battlefield', 'combat');
+    expect(h.state.cards[combat].expires).toBe('combat');
+    expect(h.state.cards[stays].expires).toBeUndefined();
+    expect(h.dispatch({ type: 'createToken', actor: 'p1', payload: { defId: 'x', name: 'X', to: 'p1.lands', expires: 'soon' } })).toMatchObject({ ok: false, error: 'invalid' });
+    const res = apply(h.state, { type: 'endCombat', actor: 'p1', payload: {} });
+    if ('error' in res) throw new Error(res.error);
+    expect(res.moved).toEqual([{ id: combat, from: 'p1.lands', to: null }, { id: combat2, from: 'p2.battlefield', to: null }]);
+    h.dispatch({ type: 'endCombat', actor: 'p1', payload: {} });
+    expect(h.state.cards[combat]).toBeUndefined();
+    expect(h.state.cards[combat2]).toBeUndefined();
+    expect(h.state.cards[turn]).toBeDefined();
+    h.dispatch({ type: 'undo', actor: 'p1', payload: {} });
+    expect(h.state.cards[combat]).toBeDefined();
+    h.dispatch({ type: 'passTurn', actor: 'p1', payload: {} });
+    expect(Object.values(h.state.cards).filter((c) => c.expires)).toEqual([]);
+    expect(h.state.cards[stays]).toBeDefined();
+    expect(checkInvariants(h.state)).toBeNull();
+  });
+
   it('an ability goes on top of the stack with its source picture, and is deleted when it leaves', () => {
     const h = started();
     const [src, spell] = h.state.zones['p1.hand'];

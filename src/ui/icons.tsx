@@ -3,7 +3,7 @@
 
 import type { ComponentChildren } from 'preact';
 
-function Icon({ children, size = 22 }: { children: ComponentChildren; size?: number }) {
+function Icon({ children, size = 22 }: { children: ComponentChildren; size?: number | undefined }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="none" stroke="currentColor"
       stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{children}</svg>
@@ -21,8 +21,8 @@ export const EyeIcon = () => <Icon>{eye}</Icon>;
 export const EyeOffIcon = () => <Icon>{eye}<path d="M3 3l18 18" /></Icon>;
 
 /** Combat: two crossed swords, as on the attack marks. */
-export const SwordsIcon = () => (
-  <Icon>
+export const SwordsIcon = ({ size }: { size?: number } = {}) => (
+  <Icon size={size}>
     <path d="M4 4l12 12" /><path d="M13.5 18.5l5-5" /><path d="M17 17l3 3" />
     <path d="M20 4L8 16" /><path d="M5.5 13.5l5 5" /><path d="M7 17l-3 3" />
   </Icon>
@@ -44,8 +44,8 @@ export const PauseIcon = () => <Icon><path d="M9 5v14M15 5v14" stroke-width="2.6
 export const CloseIcon = () => <Icon><path d="M6 6l12 12M18 6L6 18" /></Icon>;
 
 /** End turn: an hourglass. */
-export const HourglassIcon = () => (
-  <Icon><path d="M6 2h12M6 22h12" /><path d="M7 2v3c0 3 5 4.5 5 7 0-2.5 5-4 5-7V2" /><path d="M7 22v-3c0-3 5-4.5 5-7 0 2.5 5 4 5 7v3" /></Icon>
+export const HourglassIcon = ({ size }: { size?: number } = {}) => (
+  <Icon size={size}><path d="M6 2h12M6 22h12" /><path d="M7 2v3c0 3 5 4.5 5 7 0-2.5 5-4 5-7V2" /><path d="M7 22v-3c0-3 5-4.5 5-7 0 2.5 5 4 5 7v3" /></Icon>
 );
 
 /** Tokens: a pawn, a stand-in piece. */

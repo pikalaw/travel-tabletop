@@ -2,7 +2,7 @@
 // `Command` is a discriminated union on `type`; the engine switches on it and ends with
 // `assertNever`, so a command added here without being handled fails the type check.
 
-import type { Actor, GameMode, GameState, PlayerId, ZoneId } from './state';
+import type { Actor, GameMode, GameState, PlayerId, TokenExpiry, ZoneId } from './state';
 
 /** A card spec for startGame: what a deck contributes. */
 export interface CardSpec {
@@ -37,7 +37,8 @@ export interface StatePayloads {
   reveal: { cardId: string; from: ZoneId; value?: boolean };
   addCounter: { cardId: string; from?: ZoneId; kind: CounterKind; label?: string; n?: number };
   removeCounter: { cardId: string; from?: ZoneId; kind: CounterKind; label?: string; n?: number };
-  createToken: { defId: string; name: string; to: ZoneId; toIndex?: number; owner?: PlayerId };
+  /** `expires` added in protocol 10. */
+  createToken: { defId: string; name: string; to: ZoneId; toIndex?: number; owner?: PlayerId; expires?: TokenExpiry };
   removeToken: { cardId: string; from: ZoneId };
   draw: { player: PlayerId; n: number };
   mill: { player: PlayerId; n: number };

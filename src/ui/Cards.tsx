@@ -3,6 +3,7 @@
 import { useRef } from 'preact/hooks';
 import type { ComponentChildren, JSX } from 'preact';
 import { useSize } from './hooks';
+import { SwordsIcon, HourglassIcon } from './icons';
 import { canSeeFace, zoneKind, ptText } from '../engine/view';
 import { sizeFor, artUrl, type Art, type ImageSize } from '../storage/art';
 import type { CardInstance, GameState, Viewer, ZoneId } from '../types/state';
@@ -110,6 +111,13 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
   const changed = inPlay && card.changed ? `${card.changed.entered ? 'entered' : 'changed'}${card.changed.turn < ctx.state.turn ? ' old' : ''}` : null;
   const markers: JSX.Element[] = [];
   if (card.isToken) markers.push(<span class="mark token">T</span>);
+  // An expiring token: the icon of the button that removes it (End combat's swords, Pass turn's hourglass).
+  if (card.expires)
+    markers.push(
+      <span class="mark expiry" title={`Expires at end of ${card.expires}`} aria-label={`expires end of ${card.expires}`}>
+        {card.expires === 'combat' ? <SwordsIcon size={11} /> : <HourglassIcon size={11} />}
+      </span>,
+    );
   if (card.faceDown)
     markers.push(
       <span class="mark fd" title="Face down">
