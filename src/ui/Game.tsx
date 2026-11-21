@@ -49,6 +49,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   const [ui, dispatch] = useReducer(uiReducer, undefined, () => initialUi(same, session.me, session.state.activePlayer || 'p1'));
   const { viewer, persp, openSlots, mode, sheet, full, match, shown, choosing, label } = ui;
   const setSheet = (s: SheetState | null) => dispatch({ type: 'sheet', sheet: s });
+  // A footer button opens its sheet, and a second tap on it closes it again (a mistaken tap in the crowded footer is undone where it was made).
+  const toggleSheet = (kind: 'tokens' | 'mana' | 'dice' | 'menu') => setSheet(sheet?.kind === kind ? null : { kind });
   const openSlot = (zone: ZoneId) => dispatch({ type: 'openSlot', zone });
   const closeSlot = (zone: ZoneId) => dispatch({ type: 'closeSlot', zone });
   const toNormal = () => dispatch({ type: 'mode', mode: { kind: 'normal' } });
@@ -580,9 +582,9 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
 
   // ----- footer -----
   // In both footers: tokens often arrive mid-combat (tapped and attacking).
-  const tokensButton = <TipButton class="btn icon token-btn" data-trash label="Tokens" tip="Tokens: drag one onto the battlefield. Drop a token here to remove it." onClick={() => setSheet({ kind: 'tokens' })}><PawnIcon /></TipButton>;
+  const tokensButton = <TipButton class="btn icon token-btn" data-trash label="Tokens" tip="Tokens: drag one onto the battlefield. Drop a token here to remove it." aria-pressed={sheet?.kind === 'tokens'} onClick={() => toggleSheet('tokens')}><PawnIcon /></TipButton>;
   // Mana that lasts until end of combat (firebending) or end of turn; also in both footers.
-  const manaButton = <TipButton class="btn icon" label="Mana" tip="Mana: drag one onto your lands for mana that lasts until end of combat or end of turn." onClick={() => setSheet({ kind: 'mana' })}><DropIcon /></TipButton>;
+  const manaButton = <TipButton class="btn icon" label="Mana" tip="Mana: drag one onto your lands for mana that lasts until end of combat or end of turn." aria-pressed={sheet?.kind === 'mana'} onClick={() => toggleSheet('mana')}><DropIcon /></TipButton>;
   let footer;
   if (model) {
     const { card, zone: fullZone, actions: a } = model;
@@ -675,7 +677,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         <CounterChips label={label} attack={false} />
         {tokensButton}
         {manaButton}
-        <TipButton class="btn icon" label="Dice" tip="Dice, a coin flip, or a random card." onClick={() => setSheet({ kind: 'dice' })}><DieIcon /></TipButton>
+        <TipButton class="btn icon" label="Dice" tip="Dice, a coin flip, or a random card." aria-pressed={sheet?.kind === 'dice'} onClick={() => toggleSheet('dice')}><DieIcon /></TipButton>
         <TipButton class={`btn icon ${pointMode ? 'on' : ''}`} aria-pressed={pointMode} label="Point" tip="Point: tap a card or slot to highlight it for the other player."
           onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}><PointIcon /></TipButton>
         <span class="spacer" />
@@ -683,7 +685,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
             back, and both are logged for both players. Each one's tip names the move. */}
         {steps.undo ? <TipButton class="btn icon" label="Undo" tip={`Undo: ${steps.undo}`} onClick={() => send('undo', {})}><UndoIcon /></TipButton> : null}
         {steps.redo ? <TipButton class="btn icon" label="Redo" tip={`Redo: ${steps.redo}`} onClick={() => send('redo', {})}><RedoIcon /></TipButton> : null}
-        <TipButton class="btn icon" label="Menu" tip="More: re-pair, export the log, concede, rematch, leave." onClick={() => setSheet({ kind: 'menu' })}>☰</TipButton>
+        <TipButton class="btn icon" label="Menu" tip="More: re-pair, export the log, concede, rematch, leave." aria-pressed={sheet?.kind === 'menu'} onClick={() => toggleSheet('menu')}>☰</TipButton>
       </div>
     );
   }

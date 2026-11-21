@@ -35,7 +35,7 @@ button { font: inherit; color: inherit; }
 .btn.primary { background: #c9a65a; color: #17130a; border-color: transparent; font-weight: 600; }
 .btn.danger { color: #ffb3ad; border-color: rgba(229,83,75,.4); }
 .btn.warn { color: #ffd2b8; border-color: rgba(240,138,75,.5); }
-.btn.on { background: #3a5a4c; border-color: rgba(255,255,255,.25); }
+.btn.on, .bar .btn[aria-pressed="true"] { background: #3a5a4c; border-color: rgba(255,255,255,.25); }
 .btn.big { min-height: 48px; font-size: 16px; padding: 10px 18px; }
 .btn.round { min-height: 34px; min-width: 34px; padding: 0; border-radius: 50%; font-size: 18px; }
 input, textarea {
