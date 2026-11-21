@@ -542,6 +542,25 @@ export function TokensSheet({ ctx, tokens, onClose }: { ctx: BoardCtx; tokens: r
     </Sheet>
   );
 }
+/** The mana tokens, one row: drag one onto a battlefield or lands row for one mana that lasts until end of combat or turn. */
+export function ManaSheet({ ctx, defs, onClose }: { ctx: BoardCtx; defs: readonly string[]; onClose: () => void }) {
+  // Starts at End of combat each time the sheet opens: firebending, the common case.
+  const [expiry, setExpiry] = useState<TokenExpiry>('combat');
+  return (
+    <Sheet title="Mana" onClose={onClose} tall actions={<ExpiryToggle options={['combat', 'turn'] as const} value={expiry} onChange={setExpiry} />}>
+      <div class="mana-row">
+        {defs.map((defId) => {
+          const art = ctx.art.get(defId);
+          return (
+            <div class="token-item" data-token-def={defId} data-token-name={art?.name || 'Mana'} data-token-expires={expiry}>
+              {art?.front ? <img src={artUrl(art, 'front', sizeFor(110)) ?? undefined} alt={art.name} draggable={false} /> : <div class="card-face missing"><span>{art?.name || 'Mana'}</span></div>}
+            </div>
+          );
+        })}
+      </div>
+    </Sheet>
+  );
+}
 export function DiceSheet({ ctx, P, send, onClose }: { ctx: BoardCtx; P: PlayerId; send: Send; onClose: () => void }) {
   const st = ctx.state;
   const [sides, setSides] = useState(100);

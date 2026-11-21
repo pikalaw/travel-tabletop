@@ -53,6 +53,9 @@ export const PawnIcon = () => (
   <Icon><circle cx="12" cy="6" r="2.6" /><path d="M9.5 10.5h5" /><path d="M10.2 10.5C10.2 14 8.5 16 7.5 18h9c-1-2-2.7-4-2.7-7.5" /><path d="M6 21h12" /></Icon>
 );
 
+/** Mana: a drop. */
+export const DropIcon = () => <Icon><path d="M12 3C9 7.5 6 10.6 6 14.5a6 6 0 0 0 12 0C18 10.6 15 7.5 12 3z" /></Icon>;
+
 /** Dice and random. */
 export const DieIcon = () => (
   <Icon>

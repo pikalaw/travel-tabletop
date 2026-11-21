@@ -43,3 +43,33 @@ test('expiring tokens: end of combat goes at End combat, back with Undo; end of 
   await expect(field).toHaveCount(0);
   errs.expectNone();
 });
+
+test('mana: the Mana sheet makes one end-of-combat mana per drag, also in combat mode; End combat removes it', async ({ page }) => {
+  const errs = watchErrors(page);
+  await startOneDevice(page);
+  const lands = page.locator('[data-drop="p1.lands"] [data-card]');
+  await barButton(page, 'Combat');
+  await barButton(page, 'Mana');
+  const sheet = page.locator('.sheet');
+  const items = sheet.locator('.token-item');
+  await expect(items).toHaveCount(6);
+  expect(await items.evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.tokenName))).toEqual(
+    ['White mana', 'Blue mana', 'Black mana', 'Red mana', 'Green mana', 'Colourless mana']);
+  await expect(sheet.getByRole('radio', { name: 'End of combat' })).toHaveAttribute('aria-checked', 'true');
+  await drag(page, items.nth(3), page.locator('[data-drop="p1.lands"]'));
+  await drag(page, items.nth(3), page.locator('[data-drop="p1.lands"]'));
+  await expect(lands).toHaveCount(2);
+  await expect(page.locator('.ticker-text')).toContainText('created Red mana (until end of combat)');
+  await sheet.getByRole('button', { name: 'Done' }).click();
+
+  // the Tokens sheet doesn't offer mana tokens
+  await barButton(page, 'Tokens');
+  expect(await page.locator('.sheet .token-item').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.tokenName))).not.toContain('Red mana');
+  await page.locator('.sheet').getByRole('button', { name: 'Done' }).click();
+
+  await barButton(page, 'End combat');
+  await expect(page.locator('.confirm-box.plain')).toContainText('This removes 2 tokens.');
+  await answerDialog(page, true);
+  await expect(lands).toHaveCount(0);
+  errs.expectNone();
+});

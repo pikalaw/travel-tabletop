@@ -4,7 +4,8 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { toast } from './toast';
 import { TipButton } from './TipButton';
-import { UndoIcon, RedoIcon, EyeIcon, EyeOffIcon, SwordsIcon, EndCombatIcon, PauseIcon, CloseIcon, HourglassIcon, PawnIcon, DieIcon, PointIcon } from './icons';
+import { UndoIcon, RedoIcon, EyeIcon, EyeOffIcon, SwordsIcon, EndCombatIcon, PauseIcon, CloseIcon, HourglassIcon, PawnIcon, DropIcon, DieIcon, PointIcon } from './icons';
+import { MANA_DECK_ID } from '../storage/fixtures';
 import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
 import { Board } from './Board';
@@ -13,7 +14,7 @@ import { saveFile } from './files';
 import { attachGestures, type Drop, type GestureHandlers, type Gestures } from './gestures';
 import { setGameLink } from './link';
 import {
-  CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, Sheet, gameTokens,
+  CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, ManaSheet, DiceSheet, MenuSheet, Sheet, gameTokens,
   type FullRow, type LogLine, type MenuItem,
 } from './Overlays';
 import { initialUi, uiReducer, clockTime, roleOf, type SheetState } from './gameUi';
@@ -84,6 +85,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   }, []);
   // The Tokens sheet's list, and the token shown full screen from it (long-press or spread).
   const tokens = useMemo(() => gameTokens(state, tokenDecks, art), [state, tokenDecks, art]);
+  // The Mana sheet's six tokens, from the built-in mana deck.
+  const manaDefs = useMemo(() => tokenDecks.find((d) => d.id === MANA_DECK_ID)?.cards ?? [], [tokenDecks]);
   const [tokenView, setTokenView] = useState<CardView | null>(null);
   const defIds = useMemo(() => {
     const ids = new Set(Object.values(state.cards).map((c) => c.defId));
@@ -578,6 +581,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   // ----- footer -----
   // In both footers: tokens often arrive mid-combat (tapped and attacking).
   const tokensButton = <TipButton class="btn icon token-btn" data-trash label="Tokens" tip="Tokens: drag one onto the battlefield. Drop a token here to remove it." onClick={() => setSheet({ kind: 'tokens' })}><PawnIcon /></TipButton>;
+  // Mana that lasts until end of combat (firebending) or end of turn; also in both footers.
+  const manaButton = <TipButton class="btn icon" label="Mana" tip="Mana: drag one onto your lands for mana that lasts until end of combat or end of turn." onClick={() => setSheet({ kind: 'mana' })}><DropIcon /></TipButton>;
   let footer;
   if (model) {
     const { card, zone: fullZone, actions: a } = model;
@@ -624,6 +629,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         <TipButton class={`btn${combat.vigilance ? ' on' : ''}`} aria-pressed={combat.vigilance} tip="The next attacker you tap stays untapped, for a creature with vigilance."
           onClick={() => dispatch({ type: 'mode', mode: { ...combat, vigilance: !combat.vigilance } })}>Vigilance</TipButton>
         {tokensButton}
+        {manaButton}
         <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark, and remove the tokens that last until end of combat (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton>
         {/* Leaves combat mode with every mark kept; Combat comes back to it, End combat ends it. */}
         <TipButton class="btn icon primary" label="Pause" tip="Pause combat: back to normal play, for instants and abilities; the marks stay." onClick={toNormal}><PauseIcon /></TipButton>
@@ -668,6 +674,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         {/* No ⚔ Attack chip here: attackers are marked in combat mode. */}
         <CounterChips label={label} attack={false} />
         {tokensButton}
+        {manaButton}
         <TipButton class="btn icon" label="Dice" tip="Dice, a coin flip, or a random card." onClick={() => setSheet({ kind: 'dice' })}><DieIcon /></TipButton>
         <TipButton class={`btn icon ${pointMode ? 'on' : ''}`} aria-pressed={pointMode} label="Point" tip="Point: tap a card or slot to highlight it for the other player."
           onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}><PointIcon /></TipButton>
@@ -691,6 +698,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       case 'counters': sheetEl = <CountersSheet ctx={ctx} pl={sheet.player} send={send} onClose={close} />; break;
       case 'log': sheetEl = <LogSheet lines={lines} onClose={close} onExport={() => void exportLog()} />; break;
       case 'tokens': sheetEl = <TokensSheet ctx={ctx} tokens={tokens} onClose={close} />; break;
+      case 'mana': sheetEl = <ManaSheet ctx={ctx} defs={manaDefs} onClose={close} />; break;
       case 'dice': sheetEl = <DiceSheet ctx={ctx} P={P} send={send} onClose={close} />; break;
       case 'menu': sheetEl = <MenuSheet items={menuItems} onClose={close} />; break;
       case 'pair':
