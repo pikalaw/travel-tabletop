@@ -4,7 +4,8 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { toast } from './toast';
 import { TipButton } from './TipButton';
-import { UndoIcon, RedoIcon, EyeIcon, EyeOffIcon, SwordsIcon, EndCombatIcon, PauseIcon, CloseIcon, HourglassIcon, PawnIcon, DieIcon, PointIcon } from './icons';
+import { UndoIcon, RedoIcon, EyeIcon, EyeOffIcon, SwordsIcon, EndCombatIcon, PauseIcon, CloseIcon, HourglassIcon, PawnIcon, DropIcon, DieIcon, PointIcon } from './icons';
+import { MANA_DECK_ID } from '../storage/fixtures';
 import { useOutsideTap } from './hooks';
 import { confirmBox, promptBox } from './Dialogs';
 import { Board } from './Board';
@@ -13,13 +14,13 @@ import { saveFile } from './files';
 import { attachGestures, type Drop, type GestureHandlers, type Gestures } from './gestures';
 import { setGameLink } from './link';
 import {
-  CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, DiceSheet, MenuSheet, Sheet, gameTokens,
+  CardSheet, FullCard, CountersSheet, LogSheet, TokensSheet, ManaSheet, DiceSheet, MenuSheet, Sheet, gameTokens,
   type FullRow, type LogLine, type MenuItem,
 } from './Overlays';
 import { initialUi, uiReducer, clockTime, roleOf, type SheetState } from './gameUi';
 import { fullModel } from './fullModel';
 import { CardViewer, type CardView } from './CardViewer';
-import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone, isBattlefieldZone } from '../engine/view';
+import { zoneKind, zoneOwner, other, findZone, canSeeFace, isZone, isBattlefieldZone, heaps } from '../engine/view';
 import { listDecks, loadLog } from '../storage/db';
 import { loadArt, type Art } from '../storage/art';
 import type { Session } from '../client/session';
@@ -84,6 +85,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   }, []);
   // The Tokens sheet's list, and the token shown full screen from it (long-press or spread).
   const tokens = useMemo(() => gameTokens(state, tokenDecks, art), [state, tokenDecks, art]);
+  // The Mana sheet's six tokens, from the built-in mana deck.
+  const manaDefs = useMemo(() => tokenDecks.find((d) => d.id === MANA_DECK_ID)?.cards ?? [], [tokenDecks]);
   const [tokenView, setTokenView] = useState<CardView | null>(null);
   const defIds = useMemo(() => {
     const ids = new Set(Object.values(state.cards).map((c) => c.defId));
@@ -314,16 +317,20 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         if (same) blind();
       });
   }
-  const hasCombatMarks = Object.values(state.cards).some((c) => c.attacking || c.blocking);
+  // End combat shows while there is something for it to clear: marks, or tokens that expire with combat.
+  const hasCombatMarks = Object.values(state.cards).some((c) => c.attacking || c.blocking || c.expires === 'combat');
   function endCombat() {
     // One tap clears every mark, so ask first (Undo would bring them back, but it is easy to miss).
     const cards = Object.values(state.cards);
     const nA = cards.filter((c) => c.attacking).length;
     const nB = cards.reduce((n, c) => n + (c.blocking || []).length, 0);
-    const what = [nA ? `${nA} attacker${nA > 1 ? 's' : ''}` : '', nB ? `${nB} block${nB > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ');
+    const nT = cards.filter((c) => c.expires === 'combat').length;
+    const marks = [nA ? `${nA} attacker${nA > 1 ? 's' : ''}` : '', nB ? `${nB} block${nB > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ');
+    const tokens = nT ? `removes ${nT} token${nT > 1 ? 's' : ''}` : '';
     const finish = () => { send('endCombat', {}); toNormal(); };
-    if (!what) { finish(); return; }
-    void confirmBox({ title: 'End combat?', body: `This clears ${what}.`, ok: 'Clear marks', cancel: 'Keep fighting' })
+    if (!marks && !tokens) { finish(); return; }
+    const body = `This ${[marks ? `clears ${marks}` : '', tokens].filter(Boolean).join(' and ')}.`;
+    void confirmBox({ title: 'End combat?', body, ok: marks ? 'Clear marks' : 'End combat', cancel: 'Keep fighting' })
       .then((yes) => { if (yes) finish(); });
   }
 
@@ -437,7 +444,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     // A token from the token picker.
     if (src.dataset.tokenDef) {
       if (!dz || !isBattlefieldZone(dz)) return; // dropped anywhere but a battlefield: nothing is made
-      send('createToken', { defId: src.dataset.tokenDef, name: src.dataset.tokenName, to: dz, toIndex: 'index' in d ? d.index : undefined, owner: zoneOwner(dz) || actingPlayer });
+      const exp = src.dataset.tokenExpires;
+      send('createToken', { defId: src.dataset.tokenDef, name: src.dataset.tokenName, to: dz, toIndex: 'index' in d ? d.index : undefined, owner: zoneOwner(dz) || actingPlayer, ...(exp === 'combat' || exp === 'turn' ? { expires: exp } : {}) });
       return;
     }
     // A card.
@@ -573,6 +581,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   // ----- footer -----
   // In both footers: tokens often arrive mid-combat (tapped and attacking).
   const tokensButton = <TipButton class="btn icon token-btn" data-trash label="Tokens" tip="Tokens: drag one onto the battlefield. Drop a token here to remove it." onClick={() => setSheet({ kind: 'tokens' })}><PawnIcon /></TipButton>;
+  // Mana that lasts until end of combat (firebending) or end of turn; also in both footers.
+  const manaButton = <TipButton class="btn icon" label="Mana" tip="Mana: drag one onto your lands for mana that lasts until end of combat or end of turn." onClick={() => setSheet({ kind: 'mana' })}><DropIcon /></TipButton>;
   let footer;
   if (model) {
     const { card, zone: fullZone, actions: a } = model;
@@ -619,7 +629,8 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         <TipButton class={`btn${combat.vigilance ? ' on' : ''}`} aria-pressed={combat.vigilance} tip="The next attacker you tap stays untapped, for a creature with vigilance."
           onClick={() => dispatch({ type: 'mode', mode: { ...combat, vigilance: !combat.vigilance } })}>Vigilance</TipButton>
         {tokensButton}
-        <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton>
+        {manaButton}
+        <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark, and remove the tokens that last until end of combat (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton>
         {/* Leaves combat mode with every mark kept; Combat comes back to it, End combat ends it. */}
         <TipButton class="btn icon primary" label="Pause" tip="Pause combat: back to normal play, for instants and abilities; the marks stay." onClick={toNormal}><PauseIcon /></TipButton>
       </div>
@@ -658,11 +669,12 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
         {same && viewer === 'nobody' ? <TipButton class="btn icon primary" label="Unblind" tip="Show your hand: pick your name." onClick={() => dispatch({ type: 'choosing', open: true })}><EyeIcon /></TipButton> : null}
         <TipButton class="btn icon" label="Combat" tip="Combat: tap creatures to mark attackers and blockers." onClick={() => startCombat(null)}><SwordsIcon /></TipButton>
         {canPass ? <TipButton class="btn icon pass" label="Pass turn" tip="End the turn and pass it to the other player (asks first)." onClick={passTurn}><HourglassIcon /></TipButton> : null}
-        {hasCombatMarks ? <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton> : null}
+        {hasCombatMarks ? <TipButton class="btn icon" label="End combat" tip="End combat: clear every attack and block mark, and remove the tokens that last until end of combat (asks first)." onClick={endCombat}><EndCombatIcon /></TipButton> : null}
         {matchSet?.size ? <TipButton class="btn on" tip="Stop highlighting the combat matchup." onClick={() => dispatch({ type: 'match', cardId: null })}>Clear highlight</TipButton> : null}
         {/* No ⚔ Attack chip here: attackers are marked in combat mode. */}
         <CounterChips label={label} attack={false} />
         {tokensButton}
+        {manaButton}
         <TipButton class="btn icon" label="Dice" tip="Dice, a coin flip, or a random card." onClick={() => setSheet({ kind: 'dice' })}><DieIcon /></TipButton>
         <TipButton class={`btn icon ${pointMode ? 'on' : ''}`} aria-pressed={pointMode} label="Point" tip="Point: tap a card or slot to highlight it for the other player."
           onClick={() => dispatch({ type: 'mode', mode: pointMode ? { kind: 'normal' } : { kind: 'point' } })}><PointIcon /></TipButton>
@@ -686,6 +698,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       case 'counters': sheetEl = <CountersSheet ctx={ctx} pl={sheet.player} send={send} onClose={close} />; break;
       case 'log': sheetEl = <LogSheet lines={lines} onClose={close} onExport={() => void exportLog()} />; break;
       case 'tokens': sheetEl = <TokensSheet ctx={ctx} tokens={tokens} onClose={close} />; break;
+      case 'mana': sheetEl = <ManaSheet ctx={ctx} defs={manaDefs} onClose={close} />; break;
       case 'dice': sheetEl = <DiceSheet ctx={ctx} P={P} send={send} onClose={close} />; break;
       case 'menu': sheetEl = <MenuSheet items={menuItems} onClose={close} />; break;
       case 'pair':
@@ -827,7 +840,11 @@ function hostOf(state: GameState, id: string): string {
  */
 export function slotSteps(state: GameState, cardId: string, zone: ZoneId, viewer: Viewer, sheet: SheetState | null): { prev: string | null; next: string | null } {
   const tray = sheet && sheet.kind !== 'zone' && 'zone' in sheet && sheet.zone === zone && ['peek', 'reveal', 'search', 'inspect'].includes(sheet.kind);
-  const all = state.zones[zone] || [];
+  const zoneIds = state.zones[zone] || [];
+  // A heap is one stop, by its first card (the one the board draws).
+  const heap = isBattlefieldZone(zone) ? heaps(state, zoneIds) : null;
+  const all = heap ? heap.shown : zoneIds;
+  if (heap) for (const [first, m] of heap.members) if (m.includes(cardId)) cardId = first;
   const ids = tray && 'ids' in sheet ? all.filter((id) => sheet.ids.includes(id)) : all;
   const units: string[] = [];
   for (const id of ids) {

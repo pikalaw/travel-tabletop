@@ -20,6 +20,8 @@ export default defineConfig({
     viewport: { width: 412, height: 840 },
     deviceScaleFactor: 2,
     trace: 'retain-on-failure',
+    // Cards that move glide for a moment (heaps); a script taps at once, so it should find them already in place.
+    reducedMotion: 'reduce',
   },
   // WebRTC between two browser contexts on one machine needs real local candidates, not mDNS names.
   projects: [{

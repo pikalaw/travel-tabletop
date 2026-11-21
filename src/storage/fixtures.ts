@@ -18,7 +18,7 @@ export interface Face {
   back?: Face;
 }
 
-const FIXTURE_VERSION = 3; // 3: the basic tokens are made for the two sample decks (forDecks)
+const FIXTURE_VERSION = 4; // 3: the basic tokens are made for the two sample decks (forDecks); 4: mana tokens
 
 const PALETTE: Record<Color, { frame: string; bg: string; art: [string, string] }> = {
   red: { frame: '#b8432c', bg: '#f3ddd3', art: ['#e8794a', '#7a2414'] },
@@ -119,10 +119,33 @@ const TOKENS: Face[] = [
   { name: 'Copy', type: 'Token — copy of a card', text: 'Write what this copies here in a counter label, or just remember it.', color: 'gray', art: 'sigil' },
 ];
 
+/** The six mana tokens' colours, in the Mana sheet's order (white, blue, black, red, green, colourless). */
+const MANA: { name: string; letter: string; disc: string; ink: string }[] = [
+  { name: 'White mana', letter: 'W', disc: '#f4ecd0', ink: '#3b3420' },
+  { name: 'Blue mana', letter: 'U', disc: '#3a78c2', ink: '#ffffff' },
+  { name: 'Black mana', letter: 'B', disc: '#2b2a2e', ink: '#e8e4ee' },
+  { name: 'Red mana', letter: 'R', disc: '#c8452f', ink: '#ffffff' },
+  { name: 'Green mana', letter: 'G', disc: '#3c8a4a', ink: '#ffffff' },
+  { name: 'Colourless mana', letter: 'C', disc: '#a3a8ae', ink: '#24272b' },
+];
+/** The id of the built-in mana token deck, which the Mana sheet reads (its cards in `MANA`'s order). */
+export const MANA_DECK_ID = 'builtin-mana';
+
+/** A mana token: the app's own art (not Wizards' mana symbols), a coloured disc with the colour's letter and its name. */
+export function manaSvg({ name, letter, disc, ink }: (typeof MANA)[number]): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 630 880" width="630" height="880">
+<rect width="630" height="880" rx="34" fill="#141414"/>
+<rect x="22" y="22" width="586" height="836" rx="22" fill="#2a2f33"/>
+<circle cx="315" cy="380" r="220" fill="${disc}" stroke="#0d0d0d" stroke-width="10"/>
+<text x="315" y="455" font-size="230" font-family="Georgia,serif" font-weight="bold" text-anchor="middle" fill="${ink}">${letter}</text>
+<text x="315" y="740" font-size="56" font-family="Helvetica,Arial,sans-serif" font-weight="bold" text-anchor="middle" fill="#f0f0f0">${esc(name)}</text>
+</svg>`;
+}
+
 const svgBlob = (svg: string) => new Blob([svg], { type: 'image/svg+xml' });
 
-async function makeDef(face: Face): Promise<string> {
-  const front = await putImage(svgBlob(cardSvg(face)));
+async function makeDef(face: Face, svg = cardSvg(face)): Promise<string> {
+  const front = await putImage(svgBlob(svg));
   const back = face.back ? await putImage(svgBlob(cardSvg(face.back))) : null;
   const name = face.back ? `${face.name} // ${face.back.name}` : face.name;
   const id = await defIdFor(name, front, back);
@@ -154,6 +177,10 @@ async function makeFixtures(): Promise<boolean> {
   await makeDeck('sample-grove', 'Sample: Grove (green)', 'deck', GROVE);
   // The basic tokens belong to the sample decks, so the Tokens sheet offers them in a sample game.
   await makeDeck('builtin-tokens', 'Basic tokens', 'token', TOKENS.map((t): [number, Face] => [1, t]), ['sample-ember', 'sample-grove']);
+  // Mana tokens, for mana that lasts until end of combat or turn; made for no deck, so only the Mana sheet offers them.
+  const mana: string[] = [];
+  for (const m of MANA) mana.push(await makeDef({ name: m.name, type: 'Token — mana' }, manaSvg(m)));
+  await putDeck({ id: MANA_DECK_ID, name: 'Mana', kind: 'token', cards: mana, builtin: true, createdAt: 0 });
   await setMeta('fixtures', FIXTURE_VERSION);
   return true;
 }

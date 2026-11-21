@@ -111,9 +111,26 @@ export function idsIn(page: Page, zone: string) {
   return page.locator(`[data-drop="${zone}"]:not(.counters-cell)`).evaluate((e) => [...e.querySelectorAll('[data-card]')].map((c) => (c as HTMLElement).dataset.card!));
 }
 
-/** Move the first n hand cards of Player 1 onto a zone by dragging. */
+/**
+ * Move n hand cards of Player 1 onto a zone by dragging: the first ones whose name the zone does
+ * not show yet, so each is a card of its own there (identical cards in play make one heap).
+ */
 export async function playFromHand(page: Page, zone: string, n = 1) {
-  for (let i = 0; i < n; i++) await drag(page, page.locator('.row[data-drop="p1.hand"] [data-card]').first(), page.locator(`[data-drop="${zone}"]:not(.counters-cell)`));
+  const dst = page.locator(`[data-drop="${zone}"]:not(.counters-cell)`);
+  const pick = () => page.evaluate((z) => {
+    const names = (sel: string) => [...document.querySelectorAll<HTMLElement>(sel)].map((e) => ({ id: e.dataset.card!, name: e.querySelector('img')?.alt ?? '' }));
+    const there = new Set(names(`[data-drop="${z}"] [data-card]`).map((c) => c.name));
+    return names('.row[data-drop="p1.hand"] [data-card]').find((c) => !there.has(c.name))?.id ?? null;
+  }, zone);
+  for (let i = 0; i < n; i++) {
+    let id = await pick();
+    // no card of a new name in hand: draw until there is one
+    for (let tries = 0; !id && tries < 15; tries++) {
+      await drag(page, page.locator('[data-drop="p1.library"] [data-card]').first(), page.locator('.row[data-drop="p1.hand"]'));
+      id = await pick();
+    }
+    await drag(page, page.locator(`.row[data-drop="p1.hand"] [data-card="${id ?? ''}"]`), dst);
+  }
 }
 
 /** Collect page errors; call expectNoErrors at the end of a test. */

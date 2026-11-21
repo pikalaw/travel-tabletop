@@ -37,6 +37,12 @@ function cardName(before: GameState, after: GameState | null, id: string, fromZo
   return publicBefore || publicAfter ? c.name || 'a card' : (c.isToken ? 'a token' : 'a card');
 }
 
+/** "; 2 tokens expired" for the expiring tokens a command removed (`endCombat`, `passTurn`), or ''. */
+function expired(moved: readonly Movement[]): string {
+  const n = moved.filter((m) => !m.to).length;
+  return n ? `; ${n} token${n === 1 ? '' : 's'} expired` : '';
+}
+
 export function describeCommand(cmd: Command, before: GameState, after: GameState | null, moved: readonly Movement[] = []): string {
   const st = after || before;
   const name = who(st, cmd.actor);
@@ -74,7 +80,7 @@ export function describeCommand(cmd: Command, before: GameState, after: GameStat
       const num = st.cards[p.attackerId]?.attacking;
       return `${name}: ${cn(p.cardId, p.from, p.from)} ${blocks ? 'blocks' : 'stops blocking'} ${an}${num ? ` (⚔${num})` : ''}`;
     }
-    case 'endCombat': return `${name} ended combat`;
+    case 'endCombat': return `${name} ended combat${expired(moved)}`;
     case 'detach': return `${name} detached ${cn(cmd.payload.cardId, cmd.payload.from, cmd.payload.from)}`;
     case 'detachAll': return `${name} detached ${moved.length} card${moved.length === 1 ? '' : 's'} from ${cn(cmd.payload.cardId, cmd.payload.from, cmd.payload.from)}`;
     case 'setLead': return `${name} made ${cn(cmd.payload.cardId, cmd.payload.from, cmd.payload.from)} the lead card of its group`;
@@ -97,7 +103,10 @@ export function describeCommand(cmd: Command, before: GameState, after: GameStat
       const from = p.from ?? null;
       return `${name} ${add ? 'added' : 'removed'} a ${label} counter ${add ? 'on' : 'from'} ${cn(p.cardId, from, from)}`;
     }
-    case 'createToken': return `${name} created ${cmd.payload.name || 'a token'}`;
+    case 'createToken': {
+      const until = cmd.payload.expires === 'combat' ? ' (until end of combat)' : cmd.payload.expires === 'turn' ? ' (until end of turn)' : '';
+      return `${name} created ${cmd.payload.name || 'a token'}${until}`;
+    }
     case 'removeToken': return `${name} removed ${before.cards[cmd.payload.cardId]?.name || 'a token'}`;
     case 'draw': return `${name} drew ${moved.length} card${moved.length === 1 ? '' : 's'}`;
     case 'mill': return `${name} milled ${moved.length} card${moved.length === 1 ? '' : 's'}`;
@@ -113,7 +122,7 @@ export function describeCommand(cmd: Command, before: GameState, after: GameStat
     }
     case 'addPlayerCounter': return `${name} added counter "${cmd.payload.key}" for ${st.players[cmd.payload.player].name}`;
     case 'removePlayerCounter': return `${name} removed counter "${cmd.payload.key}" for ${st.players[cmd.payload.player].name}`;
-    case 'passTurn': return `Turn ${st.turn}: ${st.players[st.activePlayer].name}`;
+    case 'passTurn': return `Turn ${st.turn}: ${st.players[st.activePlayer].name}${expired(moved)}`;
     case 'putAbility': {
       const p = cmd.payload;
       const t = p.text.trim();

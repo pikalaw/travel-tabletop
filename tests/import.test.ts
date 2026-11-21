@@ -60,7 +60,10 @@ describe('sample cards', () => {
     expect(await ensureFixtures()).toBe(true);
     expect(await ensureFixtures()).toBe(false);
     const decks = await listDecks();
-    expect(decks.map((d) => d.id).sort()).toEqual(records.decks.map((d) => d.id).sort());
+    // v1's decks, plus the mana tokens added since (fixture version 4)
+    expect(decks.map((d) => d.id).sort()).toEqual([...records.decks.map((d) => d.id), 'builtin-mana'].sort());
+    expect(decks.find((d) => d.id === 'builtin-mana')).toMatchObject({ kind: 'token', builtin: true, name: 'Mana' });
+    expect(decks.find((d) => d.id === 'builtin-mana')?.cards).toHaveLength(6);
     for (const d of records.decks) expect(decks.find((x) => x.id === d.id)?.cards).toEqual(d.cards);
     const defs = await getDefs(records.defs.map((d) => d.id));
     expect(defs.map((d) => d.id).sort()).toEqual(records.defs.map((d) => d.id).sort());

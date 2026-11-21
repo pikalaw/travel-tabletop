@@ -58,7 +58,16 @@ export interface CardInstance {
    * It exists only on the stack: moving it anywhere else deletes it. Added in protocol 5.
    */
   ability?: { text: string; sourceId: string };
+  /**
+   * Tokens only: the token is removed at end of combat (`endCombat`, and `passTurn`) or at end of
+   * turn (`passTurn`), e.g. firebending mana. Set when the token is created and never changed.
+   * Added in protocol 10.
+   */
+  expires?: TokenExpiry;
 }
+
+/** When an expiring token is removed (`CardInstance.expires`). */
+export type TokenExpiry = 'combat' | 'turn';
 
 export interface PlayerCounter {
   key: string;

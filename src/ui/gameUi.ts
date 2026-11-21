@@ -21,7 +21,7 @@ export type Mode =
 
 export type SheetState =
   | CardSheetState
-  | { kind: 'log' | 'tokens' | 'dice' | 'menu' | 'pair' }
+  | { kind: 'log' | 'tokens' | 'mana' | 'dice' | 'menu' | 'pair' }
   | { kind: 'counters'; player: PlayerId };
 
 /** The full view: the card shown, and the card first opened, whose row stays fixed. */

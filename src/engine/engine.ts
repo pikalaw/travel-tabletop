@@ -7,7 +7,7 @@
 
 import { PLAYERS, ZONE_KINDS, isZone, isBattlefieldZone, isPlayer, zoneOwner, other } from './view';
 import { STATE_COMMAND_TYPES, assertNever, type ApplyResult, type Command, type Movement, type PlayerSetup } from '../types/commands';
-import type { CardInstance, GameMode, GameState, PlayerId, ZoneId } from '../types/state';
+import type { CardInstance, GameMode, GameState, PlayerId, TokenExpiry, ZoneId } from '../types/state';
 
 export const SCHEMA_VERSION = 1;
 
@@ -111,6 +111,21 @@ function changeZone(c: CardInstance, from: ZoneId, to: ZoneId): void {
 /** Cards in `zone` attached to `hostId`, in zone order. */
 function attachmentsOf(state: GameState, zone: ZoneId, hostId: string): string[] {
   return state.zones[zone].filter((id) => state.cards[id]?.attachedTo === hostId);
+}
+
+const isExpiry = (x: unknown): x is TokenExpiry => x === 'combat' || x === 'turn';
+
+/** Remove every token whose `expires` is in `kinds`, as `removeToken` does, recording each in `moved`. */
+function expireTokens(state: GameState, kinds: readonly TokenExpiry[], moved: Movement[]): void {
+  for (const [z, ids] of zoneEntries(state)) {
+    for (const id of [...ids]) {
+      const c = state.cards[id]!;
+      if (!c.expires || !kinds.includes(c.expires)) continue;
+      ids.splice(ids.indexOf(id), 1);
+      delete state.cards[id];
+      moved.push({ id, from: z, to: null });
+    }
+  }
 }
 
 /** Remove every combat mark. */
@@ -326,6 +341,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
 
     case 'endCombat': {
       clearCombat(state);
+      expireTokens(state, ['combat'], moved);
       break;
     }
 
@@ -443,8 +459,11 @@ function run(input: GameState, cmd: Command): ApplyResult {
       if (!isZone(p.to)) return fail('invalid', 'bad zone');
       if (!isBattlefieldZone(p.to)) return fail('invalid', 'Tokens go onto a battlefield.');
       const owner = isPlayer(p.owner) ? p.owner : (zoneOwner(p.to) || 'p1');
+      if (p.expires !== undefined && !isExpiry(p.expires)) return fail('invalid', 'bad expiry');
       const id = `t${state.nextId++}`;
-      state.cards[id] = newCard(id, typeof p.defId === 'string' ? p.defId : '', typeof p.name === 'string' && p.name ? p.name : 'Token', null, owner, true);
+      const token = newCard(id, typeof p.defId === 'string' ? p.defId : '', typeof p.name === 'string' && p.name ? p.name : 'Token', null, owner, true);
+      if (p.expires !== undefined) token.expires = p.expires;
+      state.cards[id] = token;
       const dst = state.zones[p.to];
       const idx = isInt(p.toIndex) ? Math.max(0, Math.min(p.toIndex, dst.length)) : dst.length;
       dst.splice(idx, 0, id);
@@ -526,6 +545,7 @@ function run(input: GameState, cmd: Command): ApplyResult {
       state.turn += 1;
       clearCombat(state);
       for (const c of Object.values(state.cards)) delete c.turnPT; // "until end of turn" ends
+      expireTokens(state, ['combat', 'turn'], moved);
       for (const z of [`${to}.battlefield`, `${to}.lands`] as const) {
         for (const id of state.zones[z]) state.cards[id]!.tapped = false;
       }
@@ -698,6 +718,7 @@ export function checkInvariants(state: GameState): string | null {
   for (const c of Object.values(state.cards)) {
     const z = seen.get(c.id)!;
     if (c.isToken && !isBattlefieldZone(z)) return `token ${c.id} is off the battlefield`;
+    if (c.expires !== undefined && (!c.isToken || !isExpiry(c.expires))) return `card ${c.id} has expiry ${String(c.expires)}`;
     if (c.turnPT && (!isBattlefieldZone(z) || (!c.turnPT.power && !c.turnPT.toughness))) return `card ${c.id} has a turn P/T change ${JSON.stringify(c.turnPT)} in ${z}`;
     if ((c.attacking || c.blocking) && !isBattlefieldZone(z)) return `card ${c.id} has combat marks off the battlefield`;
     if (c.attacking && zoneOwner(z) !== state.activePlayer) return `card ${c.id} attacks from the defending side`;

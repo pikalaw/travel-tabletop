@@ -73,6 +73,21 @@ describe('host', () => {
     expect(seen).toEqual(['2:Ann drew 2 cards', expect.stringMatching(/^notice:Bo flipped a coin: (heads|tails)$/), '3:Table undid: Ann drew 2 cards (undo)']);
   });
 
+  it('the ticker names an expiring token and counts the tokens that expire', () => {
+    const h = newHost();
+    const lines: string[] = [];
+    h.on('state', (_s, info) => lines.push(info.text));
+    h.dispatch({ type: 'createToken', actor: 'p1', payload: { defId: 'mana-r', name: 'Red mana', to: 'p1.lands', expires: 'combat' } });
+    h.dispatch({ type: 'createToken', actor: 'p1', payload: { defId: 'mana-g', name: 'Green mana', to: 'p1.lands', expires: 'turn' } });
+    h.dispatch({ type: 'endCombat', actor: 'p1', payload: {} });
+    h.dispatch({ type: 'endCombat', actor: 'p1', payload: {} });
+    h.dispatch({ type: 'passTurn', actor: 'p1', payload: {} });
+    expect(lines).toEqual([
+      'Ann created Red mana (until end of combat)', 'Ann created Green mana (until end of turn)',
+      'Ann ended combat; 1 token expired', 'Ann ended combat', 'Turn 2: Bo; 1 token expired',
+    ]);
+  });
+
   it('redo brings back what undo took back, exactly; a new move ends redo; only moves are steps', () => {
     const h = newHost();
     const lines: string[] = [];

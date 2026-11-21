@@ -75,7 +75,7 @@ e2e/                       Playwright scenarios (see Testing)
 
 - `base: '/travel-tabletop/'`, the GitHub Pages project path; every asset URL and the service worker scope derive from it.
 - `plugins: [preact(), VitePWA({ … })]`, configured as in the next section.
-- `define`: `__APP_VERSION__` from `package.json` and `__BUILD_ID__` from the first 7 characters of `GITHUB_SHA` (or `dev` locally). `version.ts` exports them as `APP_VERSION` and `BUILD_ID`; `PROTOCOL_VERSION` is a literal, bumped when host and guest messages change (2: `detachAll`; 3: `setLead`, and new attachments go farthest from the lead; 4: `changed` marks; 5: `putAbility`; 6: `attack` takes `tap`; 7: `redo`, and `state` messages carry `history`; 8: `adjustPT`; 9: `changed` carries `entered` and `base`).
+- `define`: `__APP_VERSION__` from `package.json` and `__BUILD_ID__` from the first 7 characters of `GITHUB_SHA` (or `dev` locally). `version.ts` exports them as `APP_VERSION` and `BUILD_ID`; `PROTOCOL_VERSION` is a literal, bumped when host and guest messages change (2: `detachAll`; 3: `setLead`, and new attachments go farthest from the lead; 4: `changed` marks; 5: `putAbility`; 6: `attack` takes `tap`; 7: `redo`, and `state` messages carry `history`; 8: `adjustPT`; 9: `changed` carries `entered` and `base`; 10: token `expires`, removed by `endCombat` and `passTurn`).
 - `build.target: 'es2022'`, `build.sourcemap: true` (source maps are served, so errors on a device point at real lines).
 
 **Scripts** (`package.json`): `dev` (Vite dev server), `build` (`tsc --noEmit && vite build`), `preview` (serves `dist/` the way Pages will), `typecheck`, `lint`, `test` (Vitest), `e2e` (Playwright against `preview`).
@@ -153,6 +153,7 @@ interface CardInstance {
   changed?: { by: PlayerId; turn: number; entered?: true; base?: string }; // last changed in play, by whom and in which turn (protocol 4); entered play, or the look before the change (protocol 9)
   turnPT?: { power: number; toughness: number }; // change until end of turn, in play only, never 0/0 (protocol 8)
   ability?: { text: string; sourceId: string }; // an ability on the stack (id a<n>), and its source (protocol 5)
+  expires?: 'combat' | 'turn'; // tokens only: removed by endCombat (combat) or passTurn (both) (protocol 10)
 }
 
 interface PlayerState {
@@ -177,7 +178,7 @@ interface GameState {
 ```
 
 - **Zones.** 15 in all: seven kinds per player plus the shared `stack`. "Battlefield zones" are a player's `battlefield` and `lands`. A zone's owner (the part before the dot) is the player whose side it is on, which the app also treats as control.
-- **Invariants** (`checkInvariants`, run by the property tests after every command): every card id is in exactly one zone; every zone entry exists in `cards`; a token is only in a battlefield zone; `turnPT` is only on a card in a battlefield zone and never 0/0; the attachment and combat rules below hold.
+- **Invariants** (`checkInvariants`, run by the property tests after every command): every card id is in exactly one zone; every zone entry exists in `cards`; a token is only in a battlefield zone; `turnPT` is only on a card in a battlefield zone and never 0/0; `expires` is only on a token and is `'combat'` or `'turn'`; the attachment and combat rules below hold.
 - **Not in state:** viewer and perspective, open slots, sheets, the full view, the matchup highlight, pointer and combat modes. These are local UI state per device.
 - **Card definitions** live in storage; the state carries `defId` and `name` only.
 
@@ -201,14 +202,14 @@ interface CommandEnvelope { type: string; actor: Actor; clientSeq?: number; payl
 | `setFaceDown` | cardId, from, value? | Sets `faceDown` |
 | `reveal` | cardId, from, value? | Sets `revealed` (kept for compatibility; the UI uses the `showCard` notice) |
 | `addCounter` / `removeCounter` | cardId, from?, kind: plus, minus or label, label?, n? (default 1) | A label's count of 0 deletes it; removing below 0 is invalid |
-| `createToken` | defId, name, to, toIndex?, owner? | New card `t<n>`, owner = given or the zone's owner; `to` must be a battlefield zone, and the UI sends nothing for a drop anywhere else |
+| `createToken` | defId, name, to, toIndex?, owner?, expires? | New card `t<n>`, owner = given or the zone's owner; `to` must be a battlefield zone, and the UI sends nothing for a drop anywhere else. `expires` (`'combat'` or `'turn'`, protocol 10) is stored on the token; any other value is invalid |
 | `removeToken` | cardId, from | Only tokens |
 | `draw` / `mill` | player, n | Moves up to n from the library top: draw appends to hand, mill puts each on top of the graveyard; clears faceDown, revealed, tapped |
 | `shuffle` | zone | Fisher–Yates over the zone with host randomness |
 | `setLibraryTopFaceUp` | player, value |  |
 | `setPlayerCounter` | player, key, value | Rounded to an integer |
 | `addPlayerCounter` / `removePlayerCounter` | player, key, value? | Names unique (case-insensitive); `life` cannot be removed |
-| `passTurn` | to? | activePlayer = to (default the other); turn + 1; untaps the new active player's battlefield and lands; clears combat marks and every card's `turnPT` |
+| `passTurn` | to? | activePlayer = to (default the other); turn + 1; untaps the new active player's battlefield and lands; clears combat marks and every card's `turnPT`; removes every token with `expires` (see Token expiry) |
 | `concede` | player | result = { winner: other, reason: 'concede' } |
 | `endGame` | winner? | result = { winner, reason: 'ended' } |
 | `attach` / `detach` | see Attachments |  |
@@ -241,7 +242,7 @@ After every command `fixAttachments` restores these rules:
 
 - `attack { cardId, from, value?, tap? }`: `from` must be a battlefield zone. Marking on requires `from`'s owner to be the active player; marking off is always allowed. A new attacker gets `attacking = (largest number in use) + 1`, so numbers never change under a blocker and restart once all marks are cleared. With `tap: true` the command also sets `tapped` to the new mark (marking taps, unmarking untaps); left out, `tapped` is untouched (protocol 6). Combat-mode taps send `tap: !vigilance`, the full view's Attack button and the ⚔ tag send `tap: true`, and dragging a ⚔ mark off sends none, so a creature tidied up after damage stays tapped. The default is "no tap" so that game logs from before protocol 6, which resume by replay, replay exactly as they were played. The log says "attacks untapped (⚔1)" for a vigilance mark.
 - `block { cardId, from, attackerId, attackerZone, value? }`: both cards must be in battlefield zones, the attacker must be attacking, and a card cannot block itself. Adding a block requires `from`'s owner not to be the active player; removing is always allowed. It toggles `attackerId` in `blocking`, and an empty list is deleted.
-- `endCombat` and `passTurn` delete every `attacking` and `blocking`; neither untaps (`passTurn` untaps only the new active player's cards).
+- `endCombat` and `passTurn` delete every `attacking` and `blocking`; neither untaps (`passTurn` untaps only the new active player's cards). Both also remove expiring tokens (see Token expiry).
 
 `fixCombat` runs after every command, after `fixAttachments`. A card not in a battlefield zone loses both marks. A card off the active player's side loses `attacking`, and a card on the active player's side loses `blocking`, so a change of control removes a creature from combat. A blocker's references to cards no longer attacking are dropped.
 
@@ -421,7 +422,7 @@ A card in play with `changed` gets a `.changed-bar` (4 px; `.entered`, `--good` 
 - **Open.** The row scrolls sideways. If it holds groups, they fan out: 3 px inside a group, 14 px between groups.
 - **Overlays.** The label and the open-slot outline sit outside the scroller so they don't scroll. Data attributes on the row (`data-collapsed`, `data-groups`, `data-fanned`) drive the tap logic. The row gets `can-open` (which shows "tap to open") when it is collapsed, or holds groups and isn't open; the open box shows "tap to close".
 
-**Cards.** Each card element carries `data-card`, `data-zone`, `data-card-target` and `data-attached-to`. Marks sit at the visible top-left corner, outside the rotated image, offset down by (height − width) / 2 when tapped: "+N" attachments (gold); ⚔n attacking (red) and 🛡n per blocked attacker (blue), both draggable; T token, FD face down, R revealed, ↻ back face. Counter badges (+n, −n, label n) sit at the bottom centre, draggable, with an invisible 8 px margin for fingers. Tucked attachments hide their badges.
+**Cards.** Each card element carries `data-card`, `data-zone`, `data-card-target` and `data-attached-to`. Marks sit at the visible top-left corner, outside the rotated image, offset down by (height − width) / 2 when tapped: "+N" attachments (gold); ⚔n attacking (red) and 🛡n per blocked attacker (blue), both draggable; T token, FD face down, R revealed, ↻ back face, and the expiry icon of an expiring token (see Token expiry). A heap's "×N" sits at the top right (see Heaps). Counter badges (+n, −n, label n) sit at the bottom centre, draggable, with an invisible 8 px margin for fingers. Tucked attachments hide their badges.
 
 **Gestures** (`gestures.ts`). One handler on the game root, plain DOM code (not a component), typed.
 
@@ -487,6 +488,31 @@ Status: built (steps 1 to 4: card text and rulings; abilities and ability items;
 **Tests.** Unit: paragraph splitting and joins on real Oracle texts (modal, keywords, reminder text, double-faced faces); `putAbility` and deletion on leaving the stack; an ability item deleted when moved off the stack; `fullModel` for each subject kind. Browser: put an ability on the stack from the full view; step through a mixed stack; drag up an ability off the stack (removed, its source unmoved) and a creature onto the battlefield; drag up a spell to the graveyard; the face-down case.
 
 **Decided.** No Resolve button and no moves by type line: resolving is done by dragging. No automatic blind on stack additions. The "Stack 1 of 3" caption shows only for stack items, so it also signals that the players are looking at the stack.
+
+## Token expiry, mana tokens and heaps
+
+Status: built (Nov 21, 2026; steps E1 to E3). The PRD sections are Heaps, Token expiry and Mana. Token expiry is protocol 10; mana tokens are built-in token definitions with no engine change of their own; heaps are drawn by the UI and change no state or protocol.
+
+**Token expiry (protocol 10).** `CardInstance.expires?: 'combat' | 'turn'`, set only by `createToken` and never changed afterwards. A helper `expireTokens(state, kinds, moved)` removes every token whose `expires` is in `kinds`, exactly as `removeToken` does (out of its zone, out of `cards`, `{ id, from, to: null }` pushed onto `moved`), so the log, the ticker and `fixChanged` treat it like any token removal. `endCombat` calls it with `['combat']` after `clearCombat`; `passTurn` calls it with `['combat', 'turn']`. The host's snapshot undo restores the tokens with the rest of the state, so one Undo brings them back. Older logs replay unchanged, because no token in them has `expires`. `checkInvariants` adds: `expires` only on a token (`isToken`), and only one of the two values. `cardLook` leaves `expires` out (it never changes, so it can't make a changed mark, and saved `base` looks stay valid); `heapKey` includes it, so a heap never mixes expiries.
+
+- **Ticker** (`describe.ts`): `<who> created <token> (until end of combat|turn)`; `endCombat` appends `; <n> token(s) expired` when it removed any, and so does the turn line (`Turn <n>: <player>; <n> tokens expired`).
+- **End combat** stays in the footer while marks exist or any token has `expires: 'combat'`, and its `confirmBox` counts both ("This clears 2 attackers and removes 2 tokens.").
+- **Marks** (`Badges`): an expiring token shows the Combat icon (crossed swords) or the Pass turn icon (hourglass) among its top-left marks, from `icons.tsx` at mark size, with `aria-label` "expires end of combat" or "expires end of turn". The T token mark stays.
+- **Tokens sheet**: a segmented control (`ExpiryToggle`, radio buttons) in the sheet header, Stays · End of combat · End of turn, in local UI state, reset to Stays when the sheet opens; the sheet's title is just "Tokens". Each token element carries `data-token-expires`, and a drop on a battlefield zone sends `createToken` with that `expires` (none for Stays).
+
+**Mana tokens.** A built-in token deck `builtin-mana` (`MANA_DECK_ID`), "Mana", with six definitions drawn in code like the sample cards (`fixtures.ts`, fixture version 4), named "White mana" … "Colourless mana", in that order. Their ids come from `defIdFor` like every other built-in card, so the Mana sheet reads them from the deck's `cards`. Each is a card-sized SVG (`manaSvg`): a coloured disc with the colour's letter (W, U, B, R, G, C) and the name. The art is the app's own, not Wizards' mana symbols. The deck is `builtin: true` and has no `forDecks`, so `gameTokens` leaves it out of the Tokens sheet and backups skip it like the other built-ins; every device has it because pairing requires the same app version. A **Mana** button (a drop icon in `icons.tsx`, `aria-label` "Mana") sits after Tokens in the main footer and in combat mode. It opens `ManaSheet` at the top of the board like Tokens: the six tokens in one row (a six-column grid, each as large as the sheet allows), and the `ExpiryToggle` End of combat · End of turn in the header, starting at End of combat each time the sheet opens. Dragging one onto a battlefield zone sends `createToken { defId, name: 'Red mana', to, toIndex, owner, expires }`; a tap shows the drag hint, and a drop anywhere else creates nothing, as in the Tokens sheet. No count: one drag, one token. Created mana tokens are ordinary tokens in every other way (tap, remove on the Tokens button, deleted when they leave play, heaped).
+
+**Heaps.** Drawn by the UI only: no state field, no command, no protocol change. `heaps(state, ids)` in `engine/view.ts` (pure, unit-tested) returns `{ shown, members }` for a battlefield or lands row: `shown` is the row as drawn, each heap by its first card at that card's place, and `members` maps a heap's first card to all of its cards. `heapKey(state, card, hosts)` is null, so the card is its own unit as now, for an attached card, a host, a card with `attacking` or `blocking`, a face-down card (a heap would tell the other player the cards are the same) and an ability item; otherwise it is `defId`, `name`, `isToken`, `owner`, tapped, face, counters, `turnPT`, `expires` and the changed-mark class (none, green or yellow, this turn or the previous one), so cards in a heap look identical in every way the board draws. `Row` in `Cards.tsx` lays out `shown` (so collapsing, opening and scroll widths count a heap as one card), and `Card` takes `heapN`: two offset card edges (`.heap-edges`) behind the picture and `.heap-count` "×N" at the top right, outside the rotated picture, not draggable; on a heap the marks wrap before the count.
+
+- **Every action names one card:** the heap's first card. A tap sends `tap` for it; a drag picks up only it (the drag ghost is one card; the heap shows N − 1 once it is dropped); a counter or tag drop, a combat-mode tap, Attach's target tap and Point all use it. The long-press opens it in the full view, and `slotSteps` counts a heap as one stop.
+- **Motion:** `useSlideIn` in `Row` notes each drawn card's box after every render; after the next one, a card whose box moved animates from its old box to none (FLIP, Web Animations, 180 ms, ease), together with the `.card-inner` rotate (now 0.18 s). A card that was hidden in a heap starts from where its heap was drawn, so a tap on a heap shows which card left it. Only changes to the cards move anything: a resize redraws without motion. `.heap-count` is re-keyed by N, so it pulses (scale 1.15 at the middle, 150 ms) when N changes. Both are off under `prefers-reduced-motion`; the browser tests run with `reducedMotion: 'reduce'`, so a script finds cards already in place.
+- **Combat:** a combat-mode tap on a heap sends `attack` for its first card. `attacking` makes that card a unit of its own, so it renders alone with its ⚔ number, and `block` pairs with it like any card. After `endCombat` the attackers share tapped state and changed-mark class, so they form one heap; a vigilance attacker, put back as it was, loses its mark and rejoins the untapped heap.
+- **No split or merge code.** A card that stops matching leaves the heap at the next render, and cards that become identical again (the untap in `passTurn`) heap again, because heaps are recomputed from state on every render.
+- Heaps are made only for `battlefield` and `lands` zones. Hands are excluded on purpose: the other player's view of card backs would show the heap, and so whether the hand holds duplicates.
+
+**Browser tests.** `playFromHand` (e2e helpers) now plays the first hand card of a name the zone doesn't show yet, drawing if the hand has none, so tests that need separate cards still get them.
+
+**Tests.** Unit: `createToken` with each `expires` and an invalid one; `endCombat` removes only combat tokens and `passTurn` both, on both sides, with `moved` filled; undo restores them; the invariants; `heaps` for identical, differently tapped, countered, attached, attacking and differently marked cards. Property: `expires` in the random token payloads. Browser: drag red mana from the Mana sheet, tap one, End combat removes it and Undo brings it back; an end-of-turn token survives End combat and goes at Pass turn; six Forests show "×6", a tap leaves "×5" and a tapped Forest, and the next turn's untap makes "×6" again; a hand with two copies shows two cards.
 
 ## Testing
 
