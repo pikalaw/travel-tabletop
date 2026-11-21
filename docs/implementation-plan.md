@@ -136,7 +136,7 @@ The rewrite is about 4,700 lines of code, 400 of CSS and 630 of tests. Writing i
 
 ## Token expiry, mana tokens and heaps
 
-Planned (Nov 21, 2026). The features are in the PRD (Heaps, Token expiry, Mana) and the build in the [Technical Design v2](./technical-design-v2.md) (Token expiry, mana tokens and heaps). Three steps, each one commit that ships and is tested on its own, in this order because mana tokens need expiry, and heaps are most useful once mana tokens exist.
+Built (Nov 21, 2026): E1–E3 are done, with the unit, property and browser suites passing. The features are in the PRD (Heaps, Token expiry, Mana) and the build in the [Technical Design v2](./technical-design-v2.md) (Token expiry, mana tokens and heaps). Three steps, each one commit that ships and is tested on its own, in this order because mana tokens need expiry, and heaps are most useful once mana tokens exist.
 
 | Step | Change | Check |
 | --- | --- | --- |
