@@ -50,7 +50,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
   const { viewer, persp, openSlots, mode, sheet, full, match, shown, choosing, label } = ui;
   const setSheet = (s: SheetState | null) => dispatch({ type: 'sheet', sheet: s });
   // A footer button opens its sheet, and a second tap on it closes it again (a mistaken tap in the crowded footer is undone where it was made).
-  const toggleSheet = (kind: 'tokens' | 'mana' | 'dice' | 'menu') => setSheet(sheet?.kind === kind ? null : { kind });
+  const toggleSheet = (kind: 'log' | 'tokens' | 'mana' | 'dice' | 'menu') => setSheet(sheet?.kind === kind ? null : { kind });
   const openSlot = (zone: ZoneId) => dispatch({ type: 'openSlot', zone });
   const closeSlot = (zone: ZoneId) => dispatch({ type: 'closeSlot', zone });
   const toNormal = () => dispatch({ type: 'mode', mode: { kind: 'normal' } });
@@ -257,7 +257,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
     }
     const tap = el.dataset.tap;
     if (tap === 'counters') { setSheet({ kind: 'counters', player: el.dataset.player as PlayerId }); return; }
-    if (tap === 'ticker') { setSheet({ kind: 'log' }); return; }
+    if (tap === 'ticker') { toggleSheet('log'); return; }
     if (el.dataset.card) {
       const zone = zoneAttr(el);
       if (!zone) return;
@@ -756,7 +756,7 @@ export function Game({ session, onExit, onRematch, pairing, history = [] }: Game
       </div>
       <footer class="footer">
         <div class="ticker">
-          <button class={`ticker-text ${last?.alert ? 'alert' : ''}`} data-tap="ticker">{last ? last.text : `Turn ${state.turn} · ${state.players[state.activePlayer].name}`}</button>
+          <button class={`ticker-text ${last?.alert ? 'alert' : ''}`} data-tap="ticker" aria-pressed={sheet?.kind === 'log'}>{last ? last.text : `Turn ${state.turn} · ${state.players[state.activePlayer].name}`}</button>
           {status}
         </div>
         {footer}
