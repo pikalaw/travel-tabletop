@@ -218,6 +218,10 @@ export function Card({ ctx, card, zone, h, override = false, style = '', interac
 
 /** How much of an attached card shows from behind the card it is attached to. */
 export const PEEK = 0.25;
+/** In a collapsed row, the least share of each card left showing before the cards shrink instead. */
+const MIN_PEEK = 0.3;
+/** How far a collapsed row may shrink its cards to keep MIN_PEEK of each in view. */
+const MIN_SCALE = 0.6;
 
 /**
  * A horizontal row of cards in a slot. Overlaps cards when they do not fit, unless `open`.
@@ -240,13 +244,10 @@ export interface RowProps {
 export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'row', offset = 0, override = false, emptyText = '' }: RowProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { w, h } = useSize(ref);
-  const cardH = Math.max(28, h - 14);
-  const cardW = cardH * RATIO;
   const field = zoneKind(zone) === 'battlefield' || zoneKind(zone) === 'lands';
   // Identical cards in play are drawn as one heap, by its first card (see `heaps`).
   const heap = field ? heaps(ctx.state, ids) : null;
   const cards = (heap ? heap.shown : ids).map((id) => ctx.state.cards[id]).filter((c): c is CardInstance => !!c);
-  const widths = cards.map((c) => (c.tapped && field ? cardH : cardW));
   const groupOf = (c: CardInstance) => (field && c.attachedTo) || c.id;
   const hasGroups = field && cards.some((c) => c.attachedTo);
   const sameGroup = (i: number) => i > 0 && groupOf(cards[i]!) === groupOf(cards[i - 1]!);
@@ -254,16 +255,37 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
     innerGap = 10,
     groupGap = 14;
   const fanned = open && hasGroups;
-  const units = cards.filter((c, i) => !sameGroup(i)).length;
-  // Width of the row before any collapsing: tucked attachments show PEEK of their width.
-  let natural = 0;
-  cards.forEach((c, i) => {
-    if (sameGroup(i)) natural += fanned ? innerGap + widths[i]! : widths[i]! - widths[i - 1]! * (1 - PEEK);
-    else natural += (i ? (fanned ? groupGap : gap) : 0) + widths[i]!;
-  });
-  const overflow = natural > w - 8 && units > 1;
+  const avail = w - 8;
+  // Card sizes at full height; a tapped card in play is as wide as an untapped one is tall.
+  const fullH = Math.max(28, h - 14);
+  const widthsAt = (cardH: number) => cards.map((c) => (c.tapped && field ? cardH : cardH * RATIO));
+  // Each unit (a card with the attachments tucked behind it) and its width before any collapsing.
+  const unitsAt = (widths: number[]) => {
+    const out: number[] = [];
+    cards.forEach((c, i) => {
+      if (sameGroup(i)) out[out.length - 1]! += fanned ? innerGap + widths[i]! : widths[i]! - widths[i - 1]! * (1 - PEEK);
+      else out.push(widths[i]!);
+    });
+    return out;
+  };
+  const full = unitsAt(widthsAt(fullH));
+  const units = full.length;
+  const natural = full.reduce((n, u) => n + u, 0) + (units - 1) * (fanned ? groupGap : gap);
+  const overflow = natural > avail && units > 1;
   const collapsed = overflow && !open;
-  const overlap = collapsed ? (natural - (w - 8) + gap * (units - 1)) / (units - 1) : 0;
+  // Collapsed, each unit shows the same share of its own width under the next, so a tapped card (as
+  // wide as the row is tall) doesn't leave only a sliver of the one before. Below MIN_PEEK the cards
+  // shrink, down to MIN_SCALE, rather than hide each other.
+  const others = full.slice(0, -1).reduce((n, u) => n + u, 0);
+  const last = full[full.length - 1] ?? 0;
+  const scale = collapsed && avail - last < MIN_PEEK * others ? Math.max(MIN_SCALE, avail / (MIN_PEEK * others + last)) : 1;
+  const cardH = fullH * scale;
+  const widths = widthsAt(cardH);
+  const peek = collapsed ? Math.min(1, Math.max(0, (avail - last * scale) / (others * scale))) : 1;
+  const unitW = unitsAt(widths);
+  /** Which unit each card belongs to. */
+  const unitOf: number[] = [];
+  cards.forEach((_, i) => unitOf.push(i === 0 ? 0 : unitOf[i - 1]! + (sameGroup(i) ? 0 : 1)));
   const scrolls = open && (overflow || natural > w - 8);
   const attachedN = new Map<string, number>();
   if (field) for (const c of cards) if (c.attachedTo) attachedN.set(c.attachedTo, (attachedN.get(c.attachedTo) || 0) + 1);
@@ -295,7 +317,7 @@ export function Row({ ctx, zone, ids, open, label, extraClass = '', layout = 'ro
             cards.map((card, i) => {
               let ml = 0;
               if (sameGroup(i)) ml = fanned ? innerGap : -widths[i - 1]! * (1 - PEEK);
-              else if (i > 0) ml = fanned ? groupGap : collapsed ? gap - overlap : gap;
+              else if (i > 0) ml = fanned ? groupGap : collapsed ? -(1 - peek) * unitW[unitOf[i]! - 1]! : gap;
               const tucked = field && !fanned && !!card.attachedTo;
               return (
                 <Card
